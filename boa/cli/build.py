@@ -1,6 +1,7 @@
 import sys, os
 
-
+from collections import deque, OrderedDict
+import shutil
 from conda.models.match_spec import MatchSpec
 from conda.models.channel import Channel
 from conda.core.index import calculate_channel_urls, check_whitelist
@@ -17,6 +18,15 @@ from conda.core.solve import diff_for_unlink_link_precs
 from conda.models.prefix_graph import PrefixGraph
 from conda.plan import get_blank_actions
 from conda.models.dist import Dist
+
+import conda_build
+from conda_build import api
+from conda_build.build import build
+
+from conda_build.config import get_or_merge_config, get_channel_urls
+
+from conda_build.conda_interface import get_rc_urls
+
 
 
 def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
@@ -57,10 +67,6 @@ def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
 def get_index(channel_urls=(), prepend=True, platform=None,
               use_local=False, use_cache=False, unknown=None, prefix=None,
               repodata_fn="repodata.json"):
-    """Get an index?
-    Function from @wolfv here:
-    https://gist.github.com/wolfv/cd12bd4a448c77ff02368e97ffdf495a.
-    """
     real_urls = calculate_channel_urls(channel_urls, prepend, platform, use_local)
     check_whitelist(real_urls)
 
@@ -75,7 +81,6 @@ def get_index(channel_urls=(), prepend=True, platform=None,
             create_cache_dir(),
             cache_fn_url(full_url, repodata_fn))
 
-        print("Channel: ", channel.name, channel.subdir)
         sd = mamba_api.SubdirData(channel.name + '/' + channel.subdir,
                             full_url,
                             full_path_cache)
@@ -92,21 +97,11 @@ def get_index(channel_urls=(), prepend=True, platform=None,
     return index
 
 class MambaSolver:
-    """Run the mamba solver.
-    Parameters
-    ----------
-    channels : list of str
-        A list of the channels (e.g., `[conda-forge/linux-64]`, etc.)
-    Example
-    -------
-    >>> solver = MambaSolver(['conda-forge/linux-64', 'conda-forge/noarch'])
-    >>> solver.solve(["xtensor 0.18"])
-    """
     def __init__(self, channels, platform):
         self.channels = channels
         self.platform = platform
         self.index = get_index(channels, platform=platform)
-
+        self.local_index = []
         self.pool = mamba_api.Pool()
         self.repos = []
 
@@ -123,6 +118,42 @@ class MambaSolver:
             repo.set_priority(start_prio, subpriority)
             start_prio -= 1
             self.repos.append(repo)
+
+        self.local_repos = {}
+
+    def replace_channels(self, channel_urls):
+        self.local_index = get_index(('local',), platform=self.platform, prepend=False)
+
+        for k, v in self.local_repos.items():
+            v.clear(True)
+
+        start_prio = len(self.channels) + len(self.index)
+        for subdir, channel in self.local_index:
+            cp = subdir.cache_path()
+
+            if cp.endswith('.solv'):
+                os.remove(subdir.cache_path())
+                cp = cp.replace('.solv', '.json')
+
+            import json
+            with open(cp, "r") as fi:
+                xxx = json.load(fi)
+                for p in xxx["packages"]:
+                    if p.startswith("test"):
+                        print(p)
+
+            self.local_repos[str(channel)] = mamba_api.Repo(
+                self.pool,
+                str(channel),
+                cp,
+                channel.url(with_credentials=True)
+            )
+            self.local_repos[str(channel)].set_priority(start_prio, 0)
+            start_prio -= 1
+
+        print(self.local_index)
+
+        # self.local_ = api.Repo()
 
     def solve(self, specs, prefix):
         """Solve given a set of specs.
@@ -147,11 +178,10 @@ class MambaSolver:
         success = api_solver.solve()
 
         if not success:
-            logger.warning(
-                "MAMBA failed to solve specs \n\n%s\n\nfor channels "
-                "\n\n%s\n\nThe reported errors are:\n\n%s",
-                pprint.pformat(_specs),
-                pprint.pformat(self.channels),
+            print(
+                "MAMBA failed to solve specs \n\n, _spcs, \n\nfor channels "
+                "\n\n%s\n\nThe reported errors are:\n\n",
+                self.channels,
                 api_solver.problems_to_str()
             )
         print(pkgs_dirs)
@@ -163,7 +193,7 @@ class MambaSolver:
         specs_to_add = [MatchSpec(m) for m in mmb_specs[0]]
         specs_to_remove = [MatchSpec(m) for m in mmb_specs[1]]
 
-        return to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, self.index)
+        return to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, self.index + self.local_index)
         # return success
 
 solver = None
@@ -180,106 +210,58 @@ def mamba_get_install_actions(prefix, specs, env,
                               verbose=True, debug=False, locking=True,
                               bldpkgs_dirs=None, timeout=900, disable_pip=False,
                               max_env_retry=3, output_folder=None, channel_urls=None):
-    print(specs)
+    print("Specs to install: ", specs)
+    print("Channel urls: ", channel_urls)
     _specs = [MatchSpec(s).conda_build_form() for s in specs]
-    print(channel_urls)
+    solver.replace_channels(channel_urls)
     solution = solver.solve(_specs, prefix)
     return solution
 
 conda_build.environ.get_install_actions = mamba_get_install_actions
 
-import conda_build
-from conda_build import api
-from conda_build.build import build
-
-from conda_build.config import get_or_merge_config, get_channel_urls
-
-from conda_build.conda_interface import get_rc_urls
-
 def main():
     recipe_dir = sys.argv[1]
     config = get_or_merge_config(None, {})
     config.channel_urls = get_rc_urls() + get_channel_urls({})
-    config = conda_build.config.get_or_merge_config(
-        None
-        # exclusive_config_file=cbc_path
-        # platform=platform,
-        # arch=arch
-    )
-
-    # print(config.platform)
+    config = conda_build.config.get_or_merge_config(None)
 
     global solver
     solver = MambaSolver(config.channel_urls, 'linux-64')
-
+    solver.replace_channels([])
     cbc, _ = conda_build.variants.get_package_combined_spec(
         recipe_dir,
         config=config
     )
 
-    # now we render the meta.yaml into an actual recipe
-    metas = conda_build.api.render(
-        recipe_dir,
-        # platform=platform,
-        # arch=arch,
-        # ignore_system_variants=True,
-        # variants=cbc,
-        permit_undefined_jinja=True,
-        finalize=False,
-        bypass_env_check=True,
-        # channel_urls=channel_sources,
-    )
-
+    api.build(recipe_dir)
     stats = {}
-    # import IPython; IPython.embed()
-
-    build(metas, stats)
-    for m, _, _, in metas:
-        stats = {}
-        import IPython; IPython.embed()
-        print(m.name())
-        print("------------")
-        print(m.get_value('requirements/host'))
-        print(m.get_value('requirements/build'))
-        print(m.get_value('requirements/run'))
-
-        # outputs = api.build(args.recipe, post=args.post, test_run_post=args.test_run_post,
-        #                     build_only=args.build_only, notest=args.notest, already_built=None, config=config,
-        #                     verify=args.verify, variants=args.variants)
-
-
-        print("BUILDING", m.name())
-        build(m, stats, post=False, test_run_post=False, build_only=False, notest=False, verify=True, variants=None)
 
     exit()
-    # import IPython; IPython.embed()
 
-    # now we loop through each one and check if we can solve it
-    # we check run and host and ignore the rest
-    mamba_solver = _mamba_factory(tuple(channel_sources), "%s-%s" % (platform, arch))
+    # mamba_solver = _mamba_factory(tuple(channel_sources), "%s-%s" % (platform, arch))
 
-    solvable = True
-    for m, _, _ in metas:
-        host_req = (
-            m.get_value('requirements/host', [])
-            or m.get_value('requirements/build', [])
-        )
-        solvable &= mamba_solver.solve(host_req)
+    # solvable = True
+    # for m, _, _ in metas:
+    #     host_req = (
+    #         m.get_value('requirements/host', [])
+    #         or m.get_value('requirements/build', [])
+    #     )
+    #     solvable &= mamba_solver.solve(host_req)
 
-        run_req = m.get_value('requirements/run', [])
-        solvable &= mamba_solver.solve(run_req)
+    #     run_req = m.get_value('requirements/run', [])
+    #     solvable &= mamba_solver.solve(run_req)
 
-        tst_req = (
-            m.get_value('test/requires', [])
-            + m.get_value('test/requirements', [])
-            + run_req
-        )
-        solvable &= mamba_solver.solve(tst_req)
+    #     tst_req = (
+    #         m.get_value('test/requires', [])
+    #         + m.get_value('test/requirements', [])
+    #         + run_req
+    #     )
+    #     solvable &= mamba_solver.solve(tst_req)
 
-    # return solvable
+    # # return solvable
 
 
-    metadata_tuples = api.render(recipe, config=config)
-                             # no_download_source=args.no_source,
-                             # variants=args.variants)
+    # metadata_tuples = api.render(recipe, config=config)
+    #                          # no_download_source=args.no_source,
+    #                          # variants=args.variants)
 
