@@ -234,7 +234,6 @@ def main():
     )
 
     api.build(recipe_dir)
-    stats = {}
 
     exit()
 

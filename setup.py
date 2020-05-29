@@ -20,7 +20,10 @@ setup(
     long_description=open('README.md').read(),
     packages=['boa', 'boa.cli'],
     entry_points={
-        'console_scripts': ['boa = boa.cli.build:main']
+        'console_scripts': [
+            'boa = boa.cli.build:main',
+            'boar = boa.cli.render:main'
+        ]
     },
     install_requires=deps,
     package_data={'boa': []},
