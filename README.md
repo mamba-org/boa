@@ -2,10 +2,10 @@
 
 **boa** is very much a work-in-progress right now.
 
-Boa is a package builder for conda packages. It is re-using a lot of the `conda-build` infrastructure, but replaces some parts, namely the solving stage is done using `mamba`, the fast C++ `conda`-alternative based on `libsolv`.
+**boa** is a package builder for conda packages. It is re-using a lot of the `conda-build` infrastructure, but replaces some parts. Specifically the solving stage is done using `mamba`, the fast `conda`-alternative (implemented in C++ and based on `libsolv`).
 
 We are also working towards a new "meta.yaml" format in the `boa/cli/render.py` source file. 
-This is absolutely a work-in-progress, and you should not expect it to work or be stable.
+This is absolutely a work-in-progress, and you should not expect it to work or to be stable.
 
 You can find (and participate!) in discussions regarding the new `meta.yaml` format in this hackmd: https://hackmd.io/axI1tQdwQB2pTJKt5XdY5w
 
