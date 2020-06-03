@@ -72,6 +72,9 @@ class CondaBuildSpec:
         self.is_pin = len(self.splitted) > 1 and self.splitted[1].startswith("PIN_")
         self.is_simple = len(self.splitted) == 1
 
+    def __repr__(self):
+        return self.raw
+
 class Recipe:
 
     def __init__(self, ydoc):
@@ -139,12 +142,147 @@ def get_dependency_variants(requirements, conda_build_config, config):
                     if len(filtered):
                         variants[cb_spec.name] = filtered
 
-        print(variants)
+        return variants
 
-    get_variants(host)
-    get_variants(build)
+    v = get_variants(host)
+    # get_variants(build)
+    return v
 
-    return 
+from conda_build.metadata import eval_selector, ns_cfg
+def flatten_selectors(ydoc, namespace):
+    if isinstance(ydoc, str):
+        return ydoc
+
+    if isinstance(ydoc, collections.Mapping):
+        has_sel = any(k.startswith('sel(') for k in ydoc.keys())
+        # print(f"Has sel: {has_sel}")
+        if has_sel:
+            for k, v in ydoc.items():
+                selected = eval_selector(k[3:], namespace, [])
+                if selected:
+                    return v
+
+            return None
+
+        for k, v in ydoc.items():
+            # print(f"Checking {k}: {v}")
+            ydoc[k] = flatten_selectors(v, namespace)
+
+    elif isinstance(ydoc, collections.Iterable):
+        to_delete = []
+        for idx, el in enumerate(ydoc):
+            res = flatten_selectors(el, namespace)
+            if res == None:
+                to_delete.append(idx)
+            else:
+                ydoc[idx] = res
+
+        if len(to_delete):
+            ydoc = [ydoc[idx] for idx in range(len(ydoc)) if idx not in to_delete]
+
+    return ydoc
+
+import copy
+
+class Output:
+
+    def __init__(self, d, config, parent=None):
+        self.data = d
+        self.config = config
+        self.name = d["package"]["name"]
+        self.requirements = copy.copy(d.get("requirements"))
+        self.parent = parent
+
+        for section in ('build', 'host', 'run'):
+            self.requirements[section] = [CondaBuildSpec(r) for r in (self.requirements.get(section) or [])]
+
+    def all_requirements(self):
+        requirements = self.requirements.get("build") + \
+                       self.requirements.get("host") + \
+                       self.requirements.get("run")
+        return requirements
+
+    def apply_variant(self, variant):
+        copied = copy.copy(self)
+
+        for idx, r in enumerate(self.requirements['build']):
+            if r.name.startswith('COMPILER_'):
+                self.requirements['build'][idx] = CondaBuildSpec(conda_build.jinja_context.compiler(r.splitted[1].lower(), self.config))
+        for idx, r in enumerate(self.requirements['host']):
+            if r.name.startswith('COMPILER_'):
+                self.requirements['host'][idx] = CondaBuildSpec(conda_build.jinja_context.compiler(r.splitted[1].lower(), self.config))
+
+        # # insert compiler_cxx, compiler_c and compiler_fortran
+        # variant['COMPILER_C'] = conda_build.jinja_context.compiler('c', self.config)
+        # variant['COMPILER_CXX'] = conda_build.jinja_context.compiler('cxx', self.config)
+        # variant['COMPILER_FORTRAN'] = conda_build.jinja_context.compiler('fortran', self.config)
+
+        copied.variant = variant
+        for idx, r in enumerate(self.requirements['build']):
+            if r.name in variant:
+                copied.requirements['build'][idx] = CondaBuildSpec(r.name + ' ' + variant[r.name])
+        for idx, r in enumerate(self.requirements['host']):
+            if r.name in variant:
+                copied.requirements['host'][idx] = CondaBuildSpec(r.name + ' ' + variant[r.name])
+
+        # todo figure out if we should pin like that in the run reqs as well?
+        for idx, r in enumerate(self.requirements['run']):
+            if r.name in variant:
+                copied.requirements['run'][idx] = CondaBuildSpec(r.name + ' ' + variant[r.name])
+        return copied
+
+    # def apply_pinnings()
+
+    def __repr__(self):
+        s = f"Output: {self.name}\n"
+        s += "Build:\n"
+        for r in self.requirements["build"]:
+            s += f" - {r}\n"
+        s += "Host:\n"
+        for r in self.requirements["host"]:
+            s += f" - {r}\n"
+        s += "Run:\n"
+        for r in self.requirements["run"]:
+            s += f" - {r}\n"
+        return s
+
+import itertools
+from conda.common import toposort
+def to_build_tree(ydoc, variants, config):
+    # first we need to perform a topological sort taking into account all the outputs
+    if ydoc.get("outputs"):
+        outputs = [Output(o, config, parent=None) for o in ydoc["outputs"]]
+        outputs = {o.name: o for o in outputs}
+    else:
+        outputs = [Output(ydoc, config, parent=None)]
+        outputs = {o.name: o for o in outputs}
+
+    final_outputs = []
+    if len(outputs) > 1:
+        sort_dict = {k: [x.name for x in o.all_requirements()] for k, o in outputs.items()}
+        tsorted = toposort.toposort(sort_dict)
+        tsorted = [o for o in tsorted if o in sort_dict.keys()]
+        print(tsorted)
+
+    for name, output in outputs.items():
+        if variants.get(output.name):
+            v = variants[output.name]
+            print(v)
+            combos = []
+            for k in v:
+                combos.append([(k, x) for x in v[k]])
+            print(combos)
+            all_combinations = tuple(itertools.product(*combos))
+            all_combinations = [dict(x) for x in all_combinations]
+
+            for c in all_combinations:
+                final_outputs.append(output.apply_variant(c))
+
+    for x in final_outputs:
+        print("FINAL OUTPUT:")
+        print(x)
+
+    return final_outputs
 
 def main(config=None):
 
@@ -155,7 +293,13 @@ def main(config=None):
     for f in config_files:
         parsed_cfg[f] = parse_config_file(f, config)
         print(parsed_cfg[f])
-
+        normalized = {}
+        for k in parsed_cfg[f].keys():
+            if '_' in k:
+                n = k.replace('_', '-')
+                normalized[n] =  parsed_cfg[f][k]
+        parsed_cfg[f].update(normalized)
+        print(parsed_cfg[f].keys())
     # TODO just using latest config here, should merge!
     cbc = parsed_cfg[config_files[-1]]
 
@@ -183,20 +327,33 @@ def main(config=None):
     for key in ydoc:
         render_recursive(ydoc[key], context_dict, jenv)
 
+    flatten_selectors(ydoc, ns_cfg(config))
+
     # We need to assemble the variants for each output
 
+    variants = {}
     # if we have a outputs section, use that order the outputs
     if ydoc.get("outputs"):
-        if ydoc.get("build"):
-            raise InvalidRecipeError("You can either declare outputs, or build?")
+        # if ydoc.get("build"):
+        #     raise InvalidRecipeError("You can either declare outputs, or build?")
         for o in ydoc["outputs"]:
-            print(o["name"])
-            print("rest not implemented ...")
+            variants[o["package"]["name"]] = get_dependency_variants(o["requirements"], cbc, config)
     else:
         # we only have one output
-        get_dependency_variants(ydoc["requirements"], cbc, config)
+        variants[ydoc["package"]["name"]] = get_dependency_variants(ydoc["requirements"], cbc, config)
 
-    loader.dump(ydoc, sys.stdout)
+    # this takes in all variants and outputs, builds a dependency tree and returns 
+    # the final metadata
+    sorted_outputs = to_build_tree(ydoc, variants, config)
+
+    # then we need to solve and build from the bottom up
+    # we can't first solve all packages without finalizing everything
+
+    # - solve the package
+    #   - solv build, add weak run exports to 
+    # - add run exports from deps!
+    # - 
+    # loader.dump(ydoc, sys.stdout)
 
 if __name__ == '__main__':
     main()
