@@ -26,7 +26,7 @@ from conda_build.build import build
 from conda_build.config import get_or_merge_config, get_channel_urls
 
 from conda_build.conda_interface import get_rc_urls
-
+from conda.base.context import context
 
 
 def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
@@ -186,7 +186,7 @@ class MambaSolver:
                 error_string += f' - {c} \n'
             pstring = api_solver.problems_to_str()
             pstring = '\n'.join(['   ' + l for l in pstring.split('\n')])
-            error_string += f'\nThe reported errors are:\n\n{pstring}'
+            error_string += f'\nThe reported errors are:\n⇟{pstring}'
 
             raise RuntimeError(error_string)
 
@@ -224,7 +224,7 @@ def mamba_get_install_actions(prefix, specs, env,
     for idx, s in enumerate(_specs):
         if s.version:
             vspec = str(s.version)
-            if re.match(only_dot_or_digit_re, vspec) and vspec.count('.') == 1:
+            if re.match(only_dot_or_digit_re, vspec) and vspec.count('.') <= 1:
                 n = s.conda_build_form()
                 sn = n.split()
                 sn[1] = vspec + '.*'
@@ -244,6 +244,9 @@ def main():
     config = get_or_merge_config(None, {})
     config.channel_urls = get_rc_urls() + get_channel_urls({})
     config = conda_build.config.get_or_merge_config(None)
+    
+    # setting the repodata timeout to very high for conda
+    context.local_repodata_ttl = 100000
 
     global solver
     solver = MambaSolver(config.channel_urls, 'linux-64')
@@ -254,33 +257,3 @@ def main():
     )
 
     api.build(recipe_dir)
-
-    exit()
-
-    # mamba_solver = _mamba_factory(tuple(channel_sources), "%s-%s" % (platform, arch))
-
-    # solvable = True
-    # for m, _, _ in metas:
-    #     host_req = (
-    #         m.get_value('requirements/host', [])
-    #         or m.get_value('requirements/build', [])
-    #     )
-    #     solvable &= mamba_solver.solve(host_req)
-
-    #     run_req = m.get_value('requirements/run', [])
-    #     solvable &= mamba_solver.solve(run_req)
-
-    #     tst_req = (
-    #         m.get_value('test/requires', [])
-    #         + m.get_value('test/requirements', [])
-    #         + run_req
-    #     )
-    #     solvable &= mamba_solver.solve(tst_req)
-
-    # # return solvable
-
-
-    # metadata_tuples = api.render(recipe, config=config)
-    #                          # no_download_source=args.no_source,
-    #                          # variants=args.variants)
-
