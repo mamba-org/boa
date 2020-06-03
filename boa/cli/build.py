@@ -178,12 +178,18 @@ class MambaSolver:
         success = api_solver.solve()
 
         if not success:
-            print(
-                "MAMBA failed to solve specs \n\n, _spcs, \n\nfor channels "
-                "\n\n%s\n\nThe reported errors are:\n\n",
-                self.channels,
-                api_solver.problems_to_str()
-            )
+            error_string = "Mamba failed to solve:\n"
+            for s in _specs:
+                error_string += f' - {s} \n'
+            error_string += "\nwith channels:\n"
+            for c in self.channels:
+                error_string += f' - {c} \n'
+            pstring = api_solver.problems_to_str()
+            pstring = '\n'.join(['   ' + l for l in pstring.split('\n')])
+            error_string += f'\nThe reported errors are:\n\n{pstring}'
+
+            raise RuntimeError(error_string)
+
         print(pkgs_dirs)
         package_cache = mamba_api.MultiPackageCache(pkgs_dirs)
 
