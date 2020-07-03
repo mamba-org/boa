@@ -1,10 +1,19 @@
 ![boa header image](docs/assets/boa_header.png)
 
-#### Snake Pit
-
-| Package Installer  | Package Server | Package Builder  |
-| :-: | :-: | :-: |
-| [mamba](https://github.com/thesnakepit/mamba)  | [quetz](https://github.com/thesnakepit/quetz)  | [boa](https://github.com/thesnakepit/boa) |
+<table>
+<thead align="center" cellspacing="10">
+  <tr>
+    <th colspan="3" align="center" border="">part of snakepit</th>
+  </tr>
+</thead>
+<tbody>
+  <tr background="#FFF">
+    <td align="center">Package Manager <a href="https://github.com/thesnakepit/mamba">mamba</a></td>
+    <td align="center">Package Server <a href="https://github.com/thesnakepit/quetz">quetz</a></td>
+    <td align="center">Package Builder <a href="https://github.com/thesnakepit/boa">boa</a></td>
+  </tr>
+</tbody>
+</table>
 
 # boa, the fast build tool for conda packages
 
