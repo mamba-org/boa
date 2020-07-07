@@ -16,7 +16,22 @@ from conda_build.utils import apply_pin_expressions
 
 import copy
 from conda_build.metadata import eval_selector, ns_cfg
+from conda.core.package_cache_data import PackageCacheData
 
+from pprint import pprint
+
+from colorama import Fore, Style
+import colorama
+
+colorama.init()
+
+banner = """
+           _
+          | |__   ___   __ _
+          | '_ \ / _ \ / _` |
+          | |_) | (_) | (_| |
+          |_.__/ \___/ \__,_|
+"""
 
 def render_recursive(dict_or_array, context_dict, jenv):
     # check if it's a dict?
@@ -49,7 +64,14 @@ def pin_subpackage(name, max_pin="x.x.x.x.x", exact=False):
     return f"{name} PIN_SUBPACKAGE[{max_pin},{exact}]"
 
 
-def pin_compatible(name, lower_bound=None, upper_bound=None, min_pin='x.x.x.x.x.x', max_pin='x', exact=False):
+def pin_compatible(
+    name,
+    lower_bound=None,
+    upper_bound=None,
+    min_pin="x.x.x.x.x.x",
+    max_pin="x",
+    exact=False,
+):
     return f"{name} PIN_COMPATIBLE[{lower_bound},{upper_bound},{min_pin},{max_pin},{exact}]"
 
 
@@ -86,6 +108,11 @@ class CondaBuildSpec:
     is_pin_compatible: bool = False
     is_compiler: bool = False
 
+    # final: String
+
+    from_run_export: bool = False
+    from_pinnings: bool = False
+
     def __init__(self, ms):
         self.raw = ms
         self.splitted = ms.split()
@@ -103,10 +130,9 @@ class CondaBuildSpec:
 
     @property
     def final_name(self):
-        return self.final.split(' ')[0]
+        return self.final.split(" ")[0]
 
     def loosen_spec(self):
-        print(self.name, self.is_compiler, self.final)
         if self.is_compiler or self.is_pin:
             return
 
@@ -135,7 +161,6 @@ class CondaBuildSpec:
         if not self.splitted[1].startswith("PIN_SUBPACKAGE"):
             return
         pkg_name = self.name
-        # print(self.splitted)
         max_pin, exact = self.splitted[1][len("PIN_SUBPACKAGE") + 1 : -1].split(",")
         exact = exact == "True"
 
@@ -149,9 +174,6 @@ class CondaBuildSpec:
         version = output.version
         build_string = output.build_string
 
-        # print("Eval result :")
-        # print(f"{pkg_name} {version} {build_string or ''}")
-
         if exact:
             self.final = f"{pkg_name} {version} {build_string}"
         else:
@@ -163,30 +185,38 @@ class CondaBuildSpec:
 
     def eval_pin_compatible(self, build, host):
 
-        # print(self.splitted)
-        lower_bound, upper_bound, min_pin, max_pin, exact = self.splitted[1][len('PIN_COMPATIBLE') + 1 : -1].split(',')
-        if lower_bound == 'None': lower_bound = None
-        if upper_bound == 'None': upper_bound = None
-        exact = exact == 'True'
+        lower_bound, upper_bound, min_pin, max_pin, exact = self.splitted[1][
+            len("PIN_COMPATIBLE") + 1 : -1
+        ].split(",")
+        if lower_bound == "None":
+            lower_bound = None
+        if upper_bound == "None":
+            upper_bound = None
+        exact = exact == "True"
 
         versions = {b.name: b for b in build}
         versions.update({h.name: h for h in host})
 
         if versions:
             if exact and versions.get(self.name):
-                compatibility = ' '.join(versions[self.name].final_version)
+                compatibility = " ".join(versions[self.name].final_version)
             else:
                 version = lower_bound or versions.get(self.name).final_version[0]
                 if version:
                     if upper_bound:
                         if min_pin or lower_bound:
                             compatibility = ">=" + str(version) + ","
-                        compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
+                        compatibility += "<{upper_bound}".format(
+                            upper_bound=upper_bound
+                        )
                     else:
                         compatibility = apply_pin_expressions(version, min_pin, max_pin)
 
-        # print(f"FINALIZED COMPAT VERSION: {compatibility}")
-        self.final = " ".join((self.name, compatibility)) if compatibility is not None else self.name
+        self.final = (
+            " ".join((self.name, compatibility))
+            if compatibility is not None
+            else self.name
+        )
 
     # def eval_compiler(self, compiler):
 
@@ -195,14 +225,12 @@ class Recipe:
     def __init__(self, ydoc):
         self.ydoc = ydoc
 
+
 def get_dependency_variants(requirements, conda_build_config, config):
     host = requirements.get("host") or []
     build = requirements.get("build") or []
     run = requirements.get("run") or []
 
-    # print(host)
-    # print(build)
-    # print(run)
     used_vars = {}
 
     def get_variants(env):
@@ -219,7 +247,7 @@ def get_dependency_variants(requirements, conda_build_config, config):
                 _, lang = cb_spec.raw.split()
                 compiler = conda_build.jinja_context.compiler(lang, config)
                 cb_spec.final = compiler
-                print("COMPILER: ", compiler)
+                # print("COMPILER: ", compiler)
                 config_key = f"{lang}_compiler"
                 config_version_key = f"{lang}_compiler_version"
 
@@ -280,7 +308,6 @@ def flatten_selectors(ydoc, namespace):
 
     if isinstance(ydoc, collections.Mapping):
         has_sel = any(k.startswith("sel(") for k in ydoc.keys())
-        # print(f"Has sel: {has_sel}")
         if has_sel:
             for k, v in ydoc.items():
                 selected = eval_selector(k[3:], namespace, [])
@@ -290,7 +317,6 @@ def flatten_selectors(ydoc, namespace):
             return None
 
         for k, v in ydoc.items():
-            # print(f"Checking {k}: {v}")
             ydoc[k] = flatten_selectors(v, namespace)
 
     elif isinstance(ydoc, collections.Iterable):
@@ -335,7 +361,7 @@ class Output:
         return requirements
 
     def apply_variant(self, variant):
-        copied = copy.copy(self)
+        copied = copy.deepcopy(self)
         # # insert compiler_cxx, compiler_c and compiler_fortran
         # variant['COMPILER_C'] = conda_build.jinja_context.compiler('c', self.config)
         # variant['COMPILER_CXX'] = conda_build.jinja_context.compiler('cxx', self.config)
@@ -347,11 +373,13 @@ class Output:
                 copied.requirements["build"][idx] = CondaBuildSpec(
                     r.name + " " + variant[r.name]
                 )
+                copied.requirements["build"][idx].from_pinnings = True
         for idx, r in enumerate(self.requirements["host"]):
             if r.name in variant:
                 copied.requirements["host"][idx] = CondaBuildSpec(
                     r.name + " " + variant[r.name]
                 )
+                copied.requirements["host"][idx].from_pinnings = True
 
         # todo figure out if we should pin like that in the run reqs as well?
         for idx, r in enumerate(self.requirements["run"]):
@@ -359,25 +387,19 @@ class Output:
                 copied.requirements["run"][idx] = CondaBuildSpec(
                     r.name + " " + variant[r.name]
                 )
+                copied.requirements["run"][idx].from_pinnings = True
 
         for idx, r in enumerate(self.requirements["build"]):
             if r.name.startswith("COMPILER_"):
-                copied.requirements["build"][
-                    idx
-                ].final = conda_build.jinja_context.compiler(
-                    r.splitted[1].lower(), self.config
-                )
+                lang = r.splitted[1].lower()
+                version = variant[lang + "_compiler_version"]
+                compiler = conda_build.jinja_context.compiler(lang, self.config)
+                copied.requirements["build"][idx].final = f"{compiler} {version}*"
+                copied.requirements["build"][idx].from_pinnings = True
 
         for idx, r in enumerate(self.requirements["host"]):
             if r.name.startswith("COMPILER_"):
-                copied.requirements["host"][
-                    idx
-                ].final = conda_build.jinja_context.compiler(
-                    r.splitted[1].lower(), self.config
-                )
-
-        # for x in copied.requirements['build']:
-        #     print(x.is_compiler, x.final)
+                raise RuntimeError("Compiler should be in build section")
 
         return copied
 
@@ -386,12 +408,27 @@ class Output:
         s += "Build:\n"
 
         def format(x):
-            version, fv = ' ', ' '
-            if len(r.final.split(' ')) > 1:
-                version = r.final.split(' ')[1]
-            if hasattr(x, 'final_version'):
+            version, fv = " ", " "
+            if len(x.final.split(" ")) > 1:
+                version = " ".join(r.final.split(" ")[1:])
+            if hasattr(x, "final_version"):
                 fv = x.final_version
-            return f" - {r.final_name:<30} {version:<20} {' '.join(fv)}\n"
+            color = Fore.WHITE
+            if x.from_run_export:
+                color = Fore.BLUE
+            if x.from_pinnings:
+                color = Fore.GREEN
+            if x.is_pin:
+                if x.is_pin_compatible:
+                    version = "PC " + version
+                else:
+                    version = "PS " + version
+                color = Fore.CYAN
+
+            if len(fv) >= 2:
+                return f" - {r.final_name:<30} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<10} {fv[1]:<10}\n"
+            else:
+                return f" - {r.final_name:<30} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<10}\n"
 
         for r in self.requirements["build"]:
             s += format(r)
@@ -403,35 +440,108 @@ class Output:
             s += format(r)
         return s
 
+    def propagate_run_exports(self, env):
+        # find all run exports
+        collected_run_exports = []
+        for s in self.requirements[env]:
+            if hasattr(s, "final_version"):
+                final_triple = (
+                    f"{s.final_name}-{s.final_version[0]}-{s.final_version[1]}"
+                )
+            else:
+                print(f"{s} has no final version")
+                continue
+            path = os.path.join(
+                PackageCacheData.first_writable().pkgs_dir,
+                final_triple,
+                "info/run_exports.json",
+            )
+            if os.path.exists(path):
+                with open(path) as fi:
+                    run_exports_info = json.load(fi)
+                    s.run_exports_info = run_exports_info
+                    collected_run_exports.append(run_exports_info)
+            else:
+                s.run_exports_info = None
+
+        def append_or_replace(env, spec):
+            spec = CondaBuildSpec(spec)
+            name = spec.name
+            spec.from_run_export = True
+            for idx, r in enumerate(self.requirements[env]):
+                if r.final_name == name:
+                    self.requirements[env][idx] = spec
+                    return
+            self.requirements[env].append(spec)
+
+        if env == "build":
+            for rex in collected_run_exports:
+                if "strong" in rex:
+                    for r in rex["strong"]:
+                        append_or_replace("host", r)
+                        append_or_replace("run", r)
+                if "weak" in rex:
+                    for r in rex["weak"]:
+                        append_or_replace("host", r)
+
+        if env == "host":
+            for rex in collected_run_exports:
+                if "strong" in rex:
+                    for r in rex["strong"]:
+                        append_or_replace("run", r)
+                if "weak" in rex:
+                    for r in rex["weak"]:
+                        append_or_replace("run", r)
+
     def _solve_env(self, env, all_outputs, solver):
         if self.requirements.get(env):
-            print(f"Finalizing {env} for {self.name}")
+            print(f"Finalizing {Fore.YELLOW}{env}{Style.RESET_ALL} for {self.name}")
             specs = self.requirements[env]
             for idx, s in enumerate(specs):
                 if s.is_pin:
                     s.eval_pin_subpackage(all_outputs)
-                if env == 'run' and s.is_pin_compatible:
-                    s.eval_pin_compatible(self.requirements['build'], self.requirements['host'])
+                if env == "run" and s.is_pin_compatible:
+                    s.eval_pin_compatible(
+                        self.requirements["build"], self.requirements["host"]
+                    )
 
-            spec_map = {s.name: s for s in specs}
+            spec_map = {s.final_name: s for s in specs}
             specs = [str(x) for x in specs]
             t = solver.solve(specs, "")
 
             _, install_pkgs, _ = t.to_conda()
             for _, _, p in install_pkgs:
                 p = json.loads(p)
-                if p['name'] in spec_map:
-                    spec_map[p['name']].final_version = (p['version'], p['build_string'])
-                # print(f"- {p['name']}, {p['version']}, {p['build_string']}")
+                if p["name"] in spec_map:
+                    spec_map[p["name"]].final_version = (
+                        p["version"],
+                        p["build_string"],
+                    )
+
+            downloaded = t.fetch_extract_packages(
+                PackageCacheData.first_writable().pkgs_dir, solver.repos
+            )
+            if not downloaded:
+                raise RuntimeError("Did not succeed in downloading packages.")
+
+            if env in ("build", "host"):
+                self.propagate_run_exports(env)
 
     def finalize_solve(self, all_outputs, solver):
+        print("\n")
         self._solve_env("build", all_outputs, solver)
         # TODO run_exports
         self._solve_env("host", all_outputs, solver)
         self._solve_env("run", all_outputs, solver)
 
+
 def to_build_tree(ydoc, variants, config):
-    print("VARIANTS: ", variants)
+    print("\nVARIANTS:")
+    for k in variants:
+        print(f"Output: {k}\n----------------------------\n")
+        pprint(variants[k])
+        print("\n")
+
     # first we need to perform a topological sort taking into account all the outputs
     if ydoc.get("outputs"):
         outputs = [Output(o, config, parent=None) for o in ydoc["outputs"]]
@@ -448,7 +558,6 @@ def to_build_tree(ydoc, variants, config):
         }
         tsorted = toposort.toposort(sort_dict)
         tsorted = [o for o in tsorted if o in sort_dict.keys()]
-        print(tsorted)
 
     for name, output in outputs.items():
         if variants.get(output.name):
@@ -461,6 +570,7 @@ def to_build_tree(ydoc, variants, config):
 
             for c in all_combinations:
                 final_outputs.append(output.apply_variant(c))
+
         else:
             final_outputs.append(output)
 
@@ -468,7 +578,7 @@ def to_build_tree(ydoc, variants, config):
 
 
 def main(config=None):
-
+    print(banner)
     folder = sys.argv[1]
     config = get_or_merge_config(None, {})
     config_files = find_config_files(folder)
@@ -494,7 +604,6 @@ def main(config=None):
     with open(recipe_path) as fi:
         loader = YAML(typ="safe")
         ydoc = loader.load(fi)
-    print(ydoc)
 
     # step 2: fill out context dict
     context_dict = ydoc.get("context") or {}
@@ -534,7 +643,6 @@ def main(config=None):
             build_meta.update(ydoc.get("build"))
             build_meta.update(o.get("build"))
             o["build"] = build_meta
-            print(o)
             variants[o["package"]["name"]] = get_dependency_variants(
                 o["requirements"], cbc, config
             )
@@ -549,10 +657,9 @@ def main(config=None):
     sorted_outputs = to_build_tree(ydoc, variants, config)
 
     solver = MambaSolver(["conda-forge"], "linux-64")
-    print(len(sorted_outputs))
     for o in sorted_outputs:
-        print(f"O: {o}")
         o.finalize_solve(sorted_outputs, solver)
+
     # then we need to solve and build from the bottom up
     # we can't first solve all packages without finalizing everything
 
@@ -562,6 +669,7 @@ def main(config=None):
     # -
 
     for o in sorted_outputs:
+        print("\n")
         print(o)
 
     # loader.dump(ydoc, sys.stdout)

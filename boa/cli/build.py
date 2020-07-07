@@ -163,7 +163,7 @@ class MambaSolver:
             self.local_repos[str(channel)].set_priority(start_prio, 0)
             start_prio -= 1
 
-        print(self.local_index)
+        # print(self.local_index)
 
         # self.local_ = api.Repo()
 
@@ -200,7 +200,7 @@ class MambaSolver:
 
             raise RuntimeError(error_string)
 
-        print(pkgs_dirs)
+        # print(pkgs_dirs)
         package_cache = mamba_api.MultiPackageCache(pkgs_dirs)
 
         t = mamba_api.Transaction(api_solver, package_cache)
