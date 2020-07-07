@@ -101,7 +101,12 @@ class CondaBuildSpec:
         if self.is_pin_compatible:
             self.final[len("PIN_COMPATIBLE") + 1 : -1]
 
+    @property
+    def final_name(self):
+        return self.final.split(' ')[0]
+
     def loosen_spec(self):
+        print(self.name, self.is_compiler, self.final)
         if self.is_compiler or self.is_pin:
             return
 
@@ -183,6 +188,9 @@ class CondaBuildSpec:
         # print(f"FINALIZED COMPAT VERSION: {compatibility}")
         self.final = " ".join((self.name, compatibility)) if compatibility is not None else self.name
 
+    # def eval_compiler(self, compiler):
+
+
 class Recipe:
     def __init__(self, ydoc):
         self.ydoc = ydoc
@@ -206,12 +214,12 @@ def get_dependency_variants(requirements, conda_build_config, config):
             specs[spec.name] = spec
 
         for n, cb_spec in specs.items():
-            if cb_spec.raw.startswith("COMPILER_"):
-                # print(n)
+            if cb_spec.is_compiler:
                 # This is a compiler package
                 _, lang = cb_spec.raw.split()
                 compiler = conda_build.jinja_context.compiler(lang, config)
-
+                cb_spec.final = compiler
+                print("COMPILER: ", compiler)
                 config_key = f"{lang}_compiler"
                 config_version_key = f"{lang}_compiler_version"
 
@@ -261,8 +269,8 @@ def get_dependency_variants(requirements, conda_build_config, config):
 
         return variants
 
-    v = get_variants(host)
-    # get_variants(build)
+    v = get_variants(host + build)
+    # v = get_variants(build)
     return v
 
 
@@ -328,27 +336,6 @@ class Output:
 
     def apply_variant(self, variant):
         copied = copy.copy(self)
-
-        for idx, r in enumerate(self.requirements["build"]):
-            if r.name.startswith("COMPILER_"):
-                copied.requirements["build"][
-                    idx
-                ].final = conda_build.jinja_context.compiler(
-                    r.splitted[1].lower(), self.config
-                )
-
-                print("finalized compiler: ", conda_build.jinja_context.compiler(
-                    r.splitted[1].lower(), self.config
-                ))
-
-        for idx, r in enumerate(self.requirements["host"]):
-            if r.name.startswith("COMPILER_"):
-                copied.requirements["host"][
-                    idx
-                ].final = conda_build.jinja_context.compiler(
-                    r.splitted[1].lower(), self.config
-                )
-
         # # insert compiler_cxx, compiler_c and compiler_fortran
         # variant['COMPILER_C'] = conda_build.jinja_context.compiler('c', self.config)
         # variant['COMPILER_CXX'] = conda_build.jinja_context.compiler('cxx', self.config)
@@ -372,19 +359,48 @@ class Output:
                 copied.requirements["run"][idx] = CondaBuildSpec(
                     r.name + " " + variant[r.name]
                 )
+
+        for idx, r in enumerate(self.requirements["build"]):
+            if r.name.startswith("COMPILER_"):
+                copied.requirements["build"][
+                    idx
+                ].final = conda_build.jinja_context.compiler(
+                    r.splitted[1].lower(), self.config
+                )
+
+        for idx, r in enumerate(self.requirements["host"]):
+            if r.name.startswith("COMPILER_"):
+                copied.requirements["host"][
+                    idx
+                ].final = conda_build.jinja_context.compiler(
+                    r.splitted[1].lower(), self.config
+                )
+
+        # for x in copied.requirements['build']:
+        #     print(x.is_compiler, x.final)
+
         return copied
 
     def __repr__(self):
         s = f"Output: {self.name}\n"
         s += "Build:\n"
+
+        def format(x):
+            version, fv = ' ', ' '
+            if len(r.final.split(' ')) > 1:
+                version = r.final.split(' ')[1]
+            if hasattr(x, 'final_version'):
+                fv = x.final_version
+            return f" - {r.final_name:<30} {version:<20} {' '.join(fv)}\n"
+
         for r in self.requirements["build"]:
-            s += f" - {r}\n"
+            s += format(r)
         s += "Host:\n"
         for r in self.requirements["host"]:
-            s += f" - {r}\n"
+            s += format(r)
         s += "Run:\n"
         for r in self.requirements["run"]:
-            s += f" - {r}\n"
+            s += format(r)
         return s
 
     def _solve_env(self, env, all_outputs, solver):
