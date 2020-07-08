@@ -2,6 +2,8 @@ context:
   name: 'scikit-geometry'
   version: '0.1.2'
 
+recipe_version: 1.1
+
 package:
   name: "{{ name|lower }}"
   version: "{{ version }}"
@@ -12,7 +14,8 @@ source:
 
 build:
   number: 3
-  # TODO skip: true  # [py<35]
+  skip:
+    - py<35
 
 requirements:
   build:

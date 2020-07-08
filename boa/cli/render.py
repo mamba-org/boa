@@ -25,7 +25,7 @@ import colorama
 
 colorama.init()
 
-banner = """
+banner = r"""
            _
           | |__   ___   __ _
           | '_ \ / _ \ / _` |
@@ -107,7 +107,7 @@ class CondaBuildSpec:
     is_pin: bool = False
     is_pin_compatible: bool = False
     is_compiler: bool = False
-
+    is_transitive_dependency: bool = False
     # final: String
 
     from_run_export: bool = False
@@ -254,8 +254,10 @@ def get_dependency_variants(requirements, conda_build_config, config):
                 variants[config_key] = conda_build_config[config_key]
                 variants[config_version_key] = conda_build_config[config_version_key]
 
-            if n in conda_build_config:
-                vlist = conda_build_config[n]
+            variant_key = n.replace('_', '-')
+            print(f"Variant Key: {variant_key}")
+            if variant_key in conda_build_config:
+                vlist = conda_build_config[variant_key]
                 # we need to check if v matches the spec
                 if cb_spec.is_simple:
                     variants[cb_spec.name] = vlist
@@ -418,6 +420,8 @@ class Output:
                 color = Fore.BLUE
             if x.from_pinnings:
                 color = Fore.GREEN
+            if x.is_transitive_dependency:
+                return f" - {r.final_name:<51} {fv[0]:<10} {fv[1]:<10}\n"
             if x.is_pin:
                 if x.is_pin_compatible:
                     version = "PC " + version
@@ -426,9 +430,9 @@ class Output:
                 color = Fore.CYAN
 
             if len(fv) >= 2:
-                return f" - {r.final_name:<30} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<10} {fv[1]:<10}\n"
+                return f" - {Style.BRIGHT}{r.final_name:<30}{Style.RESET_ALL} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<10} {fv[1]:<10}\n"
             else:
-                return f" - {r.final_name:<30} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<10}\n"
+                return f" - {Style.BRIGHT}{r.final_name:<30}{Style.RESET_ALL} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<10}\n"
 
         for r in self.requirements["build"]:
             s += format(r)
@@ -444,6 +448,8 @@ class Output:
         # find all run exports
         collected_run_exports = []
         for s in self.requirements[env]:
+            if s.is_transitive_dependency:
+                continue
             if hasattr(s, "final_version"):
                 final_triple = (
                     f"{s.final_name}-{s.final_version[0]}-{s.final_version[1]}"
@@ -517,6 +523,11 @@ class Output:
                         p["version"],
                         p["build_string"],
                     )
+                else:
+                    cbs = CondaBuildSpec(f"{p['name']}")
+                    cbs.is_transitive_dependency = True
+                    cbs.final_version = (p['version'], p['build_string'])
+                    self.requirements[env].append(cbs)
 
             downloaded = t.fetch_extract_packages(
                 PackageCacheData.first_writable().pkgs_dir, solver.repos

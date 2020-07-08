@@ -5,7 +5,7 @@ from setuptools import setup
 # deps = ['conda', 'requests', 'filelock', 'pyyaml', 'jinja2', 'pkginfo',
 #         'beautifulsoup4', 'chardet', 'pytz', 'tqdm', 'psutil', 'six',
 #         'libarchive-c', 'setuptools']
-deps = ['pyyaml', 'jinja2', 'setuptools']
+deps = ['pyyaml', 'jinja2', 'setuptools', 'colorama']
 
 setup(
     name="boa",
