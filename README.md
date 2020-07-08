@@ -36,3 +36,13 @@ We have two small tools included with boa:
 boa my_recipe_folder  # this is equivalent to running conda build my_recipe_folder
 boar my_recipe.yaml  # this is running a "render" of the recipe
 ```
+
+### Dev Installation
+
+You will have to install the dependencies of boa, and then execute pip to install:
+
+```
+mamba install conda-build colorama pip -c conda-forge
+# now install boa into your prefix with pip
+pip install -e .
+```
