@@ -652,7 +652,7 @@ def main(config=None):
 
             build_meta = {}
             build_meta.update(ydoc.get("build"))
-            build_meta.update(o.get("build"))
+            build_meta.update(o.get("build") or {})
             o["build"] = build_meta
             variants[o["package"]["name"]] = get_dependency_variants(
                 o["requirements"], cbc, config
