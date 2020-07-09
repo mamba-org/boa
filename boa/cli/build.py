@@ -135,7 +135,7 @@ class MambaSolver:
 
         self.local_repos = {}
 
-    def replace_channels(self, channel_urls):
+    def replace_channels(self):
         self.local_index = get_index(("local",), platform=self.platform, prepend=False)
 
         for k, v in self.local_repos.items():
@@ -207,10 +207,9 @@ class MambaSolver:
         return t
 
     def solve_for_action(self, specs, prefix):
-        self.solve(self, specs, prefix)
-
-        t = mamba_api.Transaction(api_solver, package_cache)
+        t = self.solve(specs, prefix)
         t.print()
+
         mmb_specs, to_link, to_unlink = t.to_conda()
         specs_to_add = [MatchSpec(m) for m in mmb_specs[0]]
         specs_to_remove = [MatchSpec(m) for m in mmb_specs[1]]
@@ -258,7 +257,7 @@ def mamba_get_install_actions(
 
     _specs = [s.conda_build_form() for s in _specs]
 
-    solver.replace_channels(channel_urls)
+    solver.replace_channels()
     solution = solver.solve_for_action(_specs, prefix)
     return solution
 
@@ -277,7 +276,7 @@ def main():
 
     global solver
     solver = MambaSolver(config.channel_urls, "linux-64")
-    solver.replace_channels([])
+    solver.replace_channels()
     cbc, _ = conda_build.variants.get_package_combined_spec(recipe_dir, config=config)
 
     api.build(recipe_dir)
