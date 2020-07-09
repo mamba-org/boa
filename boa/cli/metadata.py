@@ -15,6 +15,13 @@ import sys
 import re
 import json
 
+def get_package_version_pin(specs, name):
+    for s in specs:
+        x = s.split(' ')
+        if x[0] == name and len(x) > 1:
+            return x[1]
+    return None
+
 def build_string_from_metadata(metadata):
     if metadata.meta.get('build', {}).get('string'):
         build_str = metadata.get_value('build/string')
@@ -257,9 +264,15 @@ class MetaData:
         # always exclude older stuff that's always in the build string (py, np, pl, r, lua)
         if build_string_excludes:
             exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc)
-                                                  for exc in build_string_excludes))
-            dependencies = [req for req in dependencies if not exclude_pattern.match(req) or
-                                ' ' in self.config.variant[req]]
+                                         for exc in build_string_excludes))
+            filtered_deps = []
+            for req in dependencies:
+                if exclude_pattern.match(req):
+                    continue
+                if req in self.config.variant:
+                    if ' ' in self.config.variant[req]:
+                        continue
+                filtered_deps.append(req)
 
         take_keys = set(self.config.variant.keys())
         if 'python' not in dependencies:

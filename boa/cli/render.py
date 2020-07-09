@@ -24,7 +24,7 @@ from boa.cli.metadata import MetaData
 from mamba.utils import to_txn
 from mamba.mamba_api import PrefixData
 from conda.gateways.disk.create import mkdir_p
-
+from conda_build.index import update_index
 
 from pprint import pprint
 
@@ -553,7 +553,7 @@ class Output:
             self.transactions[env] = t
 
             downloaded = t.fetch_extract_packages(
-                PackageCacheData.first_writable().pkgs_dir, solver.repos
+                PackageCacheData.first_writable().pkgs_dir, solver.repos + list(solver.local_repos.values())
             )
             if not downloaded:
                 raise RuntimeError("Did not succeed in downloading packages.")
@@ -602,7 +602,8 @@ def to_build_tree(ydoc, variants, config):
         tsorted = toposort.toposort(sort_dict)
         tsorted = [o for o in tsorted if o in sort_dict.keys()]
 
-    for name, output in outputs.items():
+    for name in tsorted:
+        output = outputs[name]
         if variants.get(output.name):
             v = variants[output.name]
             combos = []
@@ -622,6 +623,7 @@ def to_build_tree(ydoc, variants, config):
 
 def main(config=None):
     print(banner)
+
     folder = sys.argv[1]
     config = get_or_merge_config(None, {})
     config_files = find_config_files(folder)
@@ -640,6 +642,8 @@ def main(config=None):
         cbc = parsed_cfg[config_files[-1]]
     else:
         cbc = {}
+
+    update_index(os.path.dirname(config.output_folder), verbose=config.debug, threads=1)
 
     recipe_path = os.path.join(folder, "recipe.yaml")
 
@@ -708,10 +712,10 @@ def main(config=None):
 
     solver = MambaSolver(["conda-forge"], "linux-64")
     for o in sorted_outputs:
+        solver.replace_channels()
         o.finalize_solve(sorted_outputs, solver)
         print(o)
 
-    for o in sorted_outputs:
         o.config.compute_build_id(o.name)
 
         print(o.config.host_prefix)
@@ -731,8 +735,6 @@ def main(config=None):
         print(config.variant)
         print(o.variant)
         build(MetaData(recipe_path, o), None)
-
-
 
     # sorted_outputs
     # print(sorted_outputs[0].config.host_prefix)
