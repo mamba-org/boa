@@ -3,6 +3,7 @@ from ruamel.yaml import YAML
 import jinja2, json
 import collections
 import re
+import argparse
 
 from conda_build.config import get_or_merge_config
 from dataclasses import dataclass
@@ -624,7 +625,18 @@ def to_build_tree(ydoc, variants, config):
 def main(config=None):
     print(banner)
 
-    folder = sys.argv[1]
+    parser = argparse.ArgumentParser(description='Boa, the fast build tool for conda packages.')
+    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
+    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument('recipe_dir', type=str)
+
+    render_parser = subparsers.add_parser('render', parents=[parent_parser], help='render a recipe')
+    build_parser = subparsers.add_parser('build', parents=[parent_parser], help='build a recipe')
+    args = parser.parse_args()
+
+    command = args.command
+
+    folder = args.recipe_dir
     config = get_or_merge_config(None, {})
     config_files = find_config_files(folder)
     parsed_cfg = collections.OrderedDict()
@@ -710,6 +722,11 @@ def main(config=None):
     #   - solv build, add weak run exports to
     # - add run exports from deps!
 
+    if command == 'render':
+        for o in sorted_outputs:
+            print(o)
+        exit()
+
     solver = MambaSolver(["conda-forge"], "linux-64")
     for o in sorted_outputs:
         solver.replace_channels()
@@ -745,7 +762,6 @@ def main(config=None):
         print(o)
 
     # loader.dump(ydoc, sys.stdout)
-
 
 if __name__ == "__main__":
     main()

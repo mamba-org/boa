@@ -207,10 +207,9 @@ class MambaSolver:
         return t
 
     def solve_for_action(self, specs, prefix):
-        self.solve(self, specs, prefix)
-
-        t = mamba_api.Transaction(api_solver, package_cache)
+        t = self.solve(specs, prefix)
         t.print()
+
         mmb_specs, to_link, to_unlink = t.to_conda()
         specs_to_add = [MatchSpec(m) for m in mmb_specs[0]]
         specs_to_remove = [MatchSpec(m) for m in mmb_specs[1]]
