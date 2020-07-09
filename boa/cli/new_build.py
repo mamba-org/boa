@@ -32,27 +32,27 @@ import yaml
 import conda_package_handling.api
 
 # used to get version
-from .conda_interface import env_path_backup_var_exists, conda_45, conda_46
-from .conda_interface import PY3
-from .conda_interface import prefix_placeholder
-from .conda_interface import TemporaryDirectory
-from .conda_interface import VersionOrder
-from .conda_interface import text_type
-from .conda_interface import CrossPlatformStLink
-from .conda_interface import PathType, FileMode
-from .conda_interface import EntityEncoder
-from .conda_interface import get_rc_urls
-from .conda_interface import url_path
-from .conda_interface import root_dir
-from .conda_interface import conda_private
-from .conda_interface import MatchSpec
-from .conda_interface import reset_context
-from .conda_interface import context
-from .conda_interface import UnsatisfiableError
-from .conda_interface import NoPackagesFoundError
-from .conda_interface import CondaError
-from .conda_interface import pkgs_dirs
-from .utils import env_var, glob, tmp_chdir, CONDA_TARBALL_EXTENSIONS
+from conda_build.conda_interface import env_path_backup_var_exists, conda_45, conda_46
+from conda_build.conda_interface import PY3
+from conda_build.conda_interface import prefix_placeholder
+from conda_build.conda_interface import TemporaryDirectory
+from conda_build.conda_interface import VersionOrder
+from conda_build.conda_interface import text_type
+from conda_build.conda_interface import CrossPlatformStLink
+from conda_build.conda_interface import PathType, FileMode
+from conda_build.conda_interface import EntityEncoder
+from conda_build.conda_interface import get_rc_urls
+from conda_build.conda_interface import url_path
+from conda_build.conda_interface import root_dir
+from conda_build.conda_interface import conda_private
+from conda_build.conda_interface import MatchSpec
+from conda_build.conda_interface import reset_context
+from conda_build.conda_interface import context
+from conda_build.conda_interface import UnsatisfiableError
+from conda_build.conda_interface import NoPackagesFoundError
+from conda_build.conda_interface import CondaError
+from conda_build.conda_interface import pkgs_dirs
+from conda_build.utils import env_var, glob, tmp_chdir, CONDA_TARBALL_EXTENSIONS
 
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
@@ -85,13 +85,15 @@ else:
     shell_path = '/bin/bash'
 
 
-from conda_build.build import stats_key, seconds_to_text, log_stats, \
-    prefix_replacement_excluded, have_prefix_files, chunks, get_bytes_or_text_as_bytes, regex_files_rg, mmap_or_read, \
-    regex_files_py, regex_matches_tighten_re, sort_matches, check_matches, have_regex_files, rewrite_file_with_new_prefix, \
-    perform_replacements, _copy_top_level_recipe, sanitize_channel, check_external, guess_interpreter
-
+from conda_build.build import stats_key, seconds_to_text, log_stats, guess_interpreter, have_regex_files, \
+    have_prefix_files, get_bytes_or_text_as_bytes, regex_files_rg, mmap_or_read, \
+    regex_files_py, regex_matches_tighten_re, sort_matches, check_matches, rewrite_file_with_new_prefix, \
+    perform_replacements, _copy_top_level_recipe, sanitize_channel, check_external, prefix_replacement_excluded, chunks
 
 def create_post_scripts(m):
+    # TODO (Wolf)
+    return
+
     '''
     Create scripts to run after build step
     '''
@@ -677,23 +679,23 @@ def create_info_files(m, files, prefix):
     write_link_json(m)
     write_run_exports(m)
 
-    copy_recipe(m)
-    copy_readme(m)
-    copy_license(m)
-    copy_recipe_log(m)
-    files.extend(jsonify_info_yamls(m))
+    # copy_recipe(m)
+    # copy_readme(m)
+    # copy_license(m)
+    # copy_recipe_log(m)
+    # files.extend(jsonify_info_yamls(m))
 
-    create_all_test_files(m, test_dir=join(m.config.info_dir, 'test'))
-    if m.config.copy_test_source_files:
-        copy_test_source_files(m, join(m.config.info_dir, 'test'))
+    # create_all_test_files(m, test_dir=join(m.config.info_dir, 'test'))
+    # if m.config.copy_test_source_files:
+    #     copy_test_source_files(m, join(m.config.info_dir, 'test'))
 
-    write_info_files_file(m, files)
+    # write_info_files_file(m, files)
 
     files_with_prefix = get_files_with_prefix(m, files, prefix)
     files_with_prefix = record_prefix_files(m, files_with_prefix)
     checksums = create_info_files_json_v1(m, m.config.info_dir, prefix, files, files_with_prefix)
 
-    write_no_link(m, files)
+    # write_no_link(m, files)
 
     sources = m.get_section('source')
     if hasattr(sources, 'keys'):
@@ -895,10 +897,11 @@ def bundle_conda(output, metadata, env, stats, **kw):
 
     # need to treat top-level stuff specially.  build/script in top-level stuff should not be
     #     re-run for an output with a similar name to the top-level recipe
-    is_output = 'package:' not in metadata.get_recipe_text()
-    top_build = metadata.get_top_level_recipe_without_outputs().get('build', {}) or {}
+    # is_output = 'package:' not in metadata.get_recipe_text()
+    # top_build = metadata.get_top_level_recipe_without_outputs().get('build', {}) or {}
     activate_script = metadata.activate_build_script
-    if (script and not output.get('script')) and (is_output or not top_build.get('script')):
+    # if (script and not output.get('script')) and (is_output or not top_build.get('script')):
+    if False: # script and not output.get('script'):
         # do add in activation, but only if it's not disabled
         activate_script = metadata.config.activate
         script = '\n'.join(script)
@@ -958,7 +961,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         if stats is not None:
             stats[stats_key(metadata, 'bundle_{}'.format(metadata.name()))] = bundle_stats
 
-    elif files:
+    if files:
         # Files is specified by the output
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
         keep_files = set(os.path.normpath(pth)
@@ -1019,13 +1022,12 @@ def bundle_conda(output, metadata, env, stats, **kw):
     prefix_files = set(utils.prefix_files(metadata.config.host_prefix))
     files = utils.filter_files(prefix_files - initial_files, prefix=metadata.config.host_prefix)
 
-    basename = '-'.join([output['name'], metadata.version(), metadata.build_id()])
+    # basename = '-'.join([output['name'], metadata.version(), metadata.build_id()])
+    basename = metadata.dist()
     tmp_archives = []
     final_outputs = []
     ext = '.conda' if (output.get('type') == 'conda_v2' or
                        metadata.config.conda_pkg_format == "2") else '.tar.bz2'
-
-    # import IPython; IPython.embed()
 
     with TemporaryDirectory() as tmp:
         conda_package_handling.api.create(metadata.config.host_prefix, files,
@@ -1034,27 +1036,27 @@ def bundle_conda(output, metadata, env, stats, **kw):
 
         # we're done building, perform some checks
         for tmp_path in tmp_archives:
-            if tmp_path.endswith('.tar.bz2'):
-                tarcheck.check_all(tmp_path, metadata.config)
+        #     if tmp_path.endswith('.tar.bz2'):
+        #         tarcheck.check_all(tmp_path, metadata.config)
             output_filename = os.path.basename(tmp_path)
 
-            # we do the import here because we want to respect logger level context
-            try:
-                from conda_verify.verify import Verify
-            except ImportError:
-                Verify = None
-                log.warn("Importing conda-verify failed.  Please be sure to test your packages.  "
-                    "conda install conda-verify to make this message go away.")
-            if getattr(metadata.config, "verify", False) and Verify:
-                verifier = Verify()
-                checks_to_ignore = (utils.ensure_list(metadata.config.ignore_verify_codes) +
-                                    metadata.ignore_verify_codes())
-                try:
-                    verifier.verify_package(path_to_package=tmp_path, checks_to_ignore=checks_to_ignore,
-                                            exit_on_error=metadata.config.exit_on_verify_error)
-                except KeyError as e:
-                    log.warn("Package doesn't have necessary files.  It might be too old to inspect."
-                             "Legacy noarch packages are known to fail.  Full message was {}".format(e))
+        #     # we do the import here because we want to respect logger level context
+        #     try:
+        #         from conda_verify.verify import Verify
+        #     except ImportError:
+        #         Verify = None
+        #         log.warn("Importing conda-verify failed.  Please be sure to test your packages.  "
+        #             "conda install conda-verify to make this message go away.")
+        #     if getattr(metadata.config, "verify", False) and Verify:
+        #         verifier = Verify()
+        #         checks_to_ignore = (utils.ensure_list(metadata.config.ignore_verify_codes) +
+        #                             metadata.ignore_verify_codes())
+        #         try:
+        #             verifier.verify_package(path_to_package=tmp_path, checks_to_ignore=checks_to_ignore,
+        #                                     exit_on_error=metadata.config.exit_on_verify_error)
+        #         except KeyError as e:
+        #             log.warn("Package doesn't have necessary files.  It might be too old to inspect."
+        #                      "Legacy noarch packages are known to fail.  Full message was {}".format(e))
             try:
                 crossed_subdir = metadata.config.target_subdir
             except AttributeError:
@@ -1332,190 +1334,175 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         return default_return
 
     log = utils.get_logger(__name__)
-    host_actions = []
-    build_actions = []
-    output_metas = []
+    # host_actions = []
+    # build_actions = []
+    # output_metas = []
 
     with utils.path_prepended(m.config.build_prefix):
-        env = environ.get_dict(m=m)
+        # TODO!
+        # env = environ.get_dict(m=m)
+        env = {'CONDA_BUILD': 'TODO'}
     env["CONDA_BUILD_STATE"] = "BUILD"
     if env_path_backup_var_exists:
         env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     # this should be a no-op if source is already here
-    if m.needs_source_for_render:
-        try_download(m, no_download_source=False)
+    # if m.needs_source_for_render:
+    #     try_download(m, no_download_source=False)
 
-    if post in [False, None]:
-        output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
+    # if post in [False, None]:
+        # output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
 
-        skipped = []
-        package_locations = []
-        # TODO: should we check both host and build envs?  These are the same, except when
-        #    cross compiling.
-        top_level_pkg = m
-        top_level_needs_finalizing = True
-        for _, om in output_metas:
-            if om.skip() or (m.config.skip_existing and is_package_built(om, 'host')):
-                skipped.append(bldpkg_path(om))
-            else:
-                package_locations.append(bldpkg_path(om))
-            if om.name() == m.name():
-                top_level_pkg = om
-                top_level_needs_finalizing = False
-        if not package_locations:
-            print("Packages for ", m.path or m.name(), "with variant {} "
-                  "are already built and available from your configured channels "
-                  "(including local) or are otherwise specified to be skipped."
-                  .format(m.get_hash_contents()))
-            return default_return
+        # skipped = []
+        # package_locations = []
+        # # TODO: should we check both host and build envs?  These are the same, except when
+        # #    cross compiling.
+        # top_level_pkg = m
+        # top_level_needs_finalizing = True
+        # for _, om in output_metas:
+        #     if om.skip() or (m.config.skip_existing and is_package_built(om, 'host')):
+        #         skipped.append(bldpkg_path(om))
+        #     else:
+        #         package_locations.append(bldpkg_path(om))
+        #     if om.name() == m.name():
+        #         top_level_pkg = om
+        #         top_level_needs_finalizing = False
+        # if not package_locations:
+        #     print("Packages for ", m.path or m.name(), "with variant {} "
+        #           "are already built and available from your configured channels "
+        #           "(including local) or are otherwise specified to be skipped."
+        #           .format(m.get_hash_contents()))
+        #     return default_return
 
-        if not provision_only:
-            printed_fns = []
-            for pkg in package_locations:
-                if (os.path.splitext(pkg)[1] and any(
-                        os.path.splitext(pkg)[1] in ext for ext in CONDA_TARBALL_EXTENSIONS)):
-                    printed_fns.append(os.path.basename(pkg))
-                else:
-                    printed_fns.append(pkg)
-            print("BUILD START:", printed_fns)
+        # if not provision_only:
+        #     printed_fns = []
+        #     for pkg in package_locations:
+        #         if (os.path.splitext(pkg)[1] and any(
+        #                 os.path.splitext(pkg)[1] in ext for ext in CONDA_TARBALL_EXTENSIONS)):
+        #             printed_fns.append(os.path.basename(pkg))
+        #         else:
+        #             printed_fns.append(pkg)
+        #     print("BUILD START:", printed_fns)
 
-        environ.remove_existing_packages([m.config.bldpkgs_dir],
-                [pkg for pkg in package_locations if pkg not in built_packages], m.config)
+        # environ.remove_existing_packages([m.config.bldpkgs_dir],
+        #         [pkg for pkg in package_locations if pkg not in built_packages], m.config)
 
-        specs = [ms.spec for ms in m.ms_depends('build')]
-        if any(out.get('type') == 'wheel' for out in m.meta.get('outputs', [])):
-            specs.extend(['pip', 'wheel'])
+        # specs = [ms.spec for ms in m.ms_depends('build')]
 
-        vcs_source = m.uses_vcs_in_build
-        if vcs_source and vcs_source not in specs:
-            vcs_executable = "hg" if vcs_source == "mercurial" else vcs_source
-            has_vcs_available = os.path.isfile(external.find_executable(vcs_executable,
-                                                                m.config.build_prefix) or "")
-            if not has_vcs_available:
-                if (vcs_source != "mercurial" or not any(spec.startswith('python') and "3." in spec for spec in specs)):
-                    specs.append(vcs_source)
+        # if any(out.get('type') == 'wheel' for out in m.meta.get('outputs', [])):
+        #     specs.extend(['pip', 'wheel'])
 
-                    log.warn("Your recipe depends on %s at build time (for templates), "
-                             "but you have not listed it as a build dependency.  Doing "
-                             "so for this build.", vcs_source)
-                else:
-                    raise ValueError("Your recipe uses mercurial in build, but mercurial"
-                                    " does not yet support Python 3.  Please handle all of "
-                                    "your mercurial actions outside of your build script.")
+        # if top_level_needs_finalizing:
+        #     utils.insert_variant_versions(
+        #         top_level_pkg.meta.get('requirements', {}), top_level_pkg.config.variant, 'build')
+        #     utils.insert_variant_versions(
+        #         top_level_pkg.meta.get('requirements', {}), top_level_pkg.config.variant, 'host')
 
-        if top_level_needs_finalizing:
-            utils.insert_variant_versions(
-                top_level_pkg.meta.get('requirements', {}), top_level_pkg.config.variant, 'build')
-            utils.insert_variant_versions(
-                top_level_pkg.meta.get('requirements', {}), top_level_pkg.config.variant, 'host')
+        #     exclude_pattern = None
+        #     excludes = set(top_level_pkg.config.variant.get('ignore_version', []))
+        #     for key in top_level_pkg.config.variant.get('pin_run_as_build', {}).keys():
+        #         if key in excludes:
+        #             excludes.remove(key)
+        #     if excludes:
+        #         exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
+        #                                         for exc in excludes))
+        #     add_upstream_pins(m, False, exclude_pattern)
 
-            exclude_pattern = None
-            excludes = set(top_level_pkg.config.variant.get('ignore_version', []))
-            for key in top_level_pkg.config.variant.get('pin_run_as_build', {}).keys():
-                if key in excludes:
-                    excludes.remove(key)
-            if excludes:
-                exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
-                                                for exc in excludes))
-            add_upstream_pins(m, False, exclude_pattern)
-
-        create_build_envs(top_level_pkg, notest)
+        # create_build_envs(top_level_pkg, notest)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
-        warn_on_use_of_SRC_DIR(m)
+        # warn_on_use_of_SRC_DIR(m)
 
-        # Execute any commands fetching the source (e.g., git) in the _build environment.
-        # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
-        # dependencies.
-        with utils.path_prepended(m.config.build_prefix):
-            try_download(m, no_download_source=False, raise_error=True)
-        if need_source_download and not m.final:
-            m.parse_until_resolved(allow_no_other_outputs=True)
-        elif need_reparse_in_env:
-            m = reparse(m)
+    # Execute any commands fetching the source (e.g., git) in the _build environment.
+    # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
+    # dependencies.
+    with utils.path_prepended(m.config.build_prefix):
+        try_download(m, no_download_source=False)
 
-        print("BUILDNG BUDILDLDAS")
-        # Write out metadata for `conda debug`, making it obvious that this is what it is, must be done
-        # after try_download()
-        output_yaml(m, os.path.join(m.config.work_dir, 'metadata_conda_debug.yaml'))
+    # if need_source_download and not m.final:
+    #     m.parse_until_resolved(allow_no_other_outputs=True)
+    # elif need_reparse_in_env:
+    #     m = reparse(m)
 
-        # get_dir here might be just work, or it might be one level deeper,
-        #    dependening on the source.
-        src_dir = m.config.work_dir
-        if isdir(src_dir):
-            if m.config.verbose:
-                print("source tree in:", src_dir)
+    # Write out metadata for `conda debug`, making it obvious that this is what it is, must be done
+    # after try_download()
+    # output_yaml(m, os.path.join(m.config.work_dir, 'metadata_conda_debug.yaml'))
+
+    # get_dir here might be just work, or it might be one level deeper,
+    #    dependening on the source.
+    src_dir = m.config.work_dir
+    if isdir(src_dir):
+        if m.config.verbose:
+            print("source tree in:", src_dir)
+    else:
+        if m.config.verbose:
+            print("no source - creating empty work folder")
+        os.makedirs(src_dir)
+
+    print("BLALBLALA")
+    utils.rm_rf(m.config.info_dir)
+    files1 = utils.prefix_files(prefix=m.config.host_prefix)
+    with open(join(m.config.build_folder, 'prefix_files.txt'), 'w') as f:
+        f.write(u'\n'.join(sorted(list(files1))))
+        f.write(u'\n')
+
+    # Use script from recipe?
+    script = utils.ensure_list(m.get_value('build/script', None))
+    if script:
+        script = u'\n'.join(script)
+
+    if isdir(src_dir):
+        build_stats = {}
+        if utils.on_win:
+            build_file = join(m.path, 'bld.bat')
+            if script:
+                build_file = join(src_dir, 'bld.bat')
+                import codecs
+                with codecs.getwriter('utf-8')(open(build_file, 'wb')) as bf:
+                    bf.write(script)
+            windows.build(m, build_file, stats=build_stats, provision_only=provision_only)
         else:
-            if m.config.verbose:
-                print("no source - creating empty work folder")
-            os.makedirs(src_dir)
+            build_file = join(m.path, 'build.sh')
+            if isfile(build_file) and script:
+                raise CondaBuildException("Found a build.sh script and a build/script section "
+                                            "inside meta.yaml. Either remove the build.sh script "
+                                            "or remove the build/script section in meta.yaml.")
+            # There is no sense in trying to run an empty build script.
+            if isfile(build_file) or script:
+                print("writing build file: ", build_file)
+                print("writing build file: ", script)
+                work_file, _ = write_build_scripts(m, script, build_file)
+                if not provision_only:
+                    cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-o', 'errexit', work_file]
 
-        print("BLALBLALA")
-        utils.rm_rf(m.config.info_dir)
-        files1 = utils.prefix_files(prefix=m.config.host_prefix)
-        with open(join(m.config.build_folder, 'prefix_files.txt'), 'w') as f:
-            f.write(u'\n'.join(sorted(list(files1))))
-            f.write(u'\n')
+                    # rewrite long paths in stdout back to their env variables
+                    if m.config.debug or m.config.no_rewrite_stdout_env:
+                        rewrite_env = None
+                    else:
+                        rewrite_vars = ['PREFIX', 'SRC_DIR']
+                        if not m.build_is_host:
+                            rewrite_vars.insert(1, 'BUILD_PREFIX')
+                        rewrite_env = {
+                            k: env[k]
+                            for k in rewrite_vars if k in env
+                        }
+                        for k, v in rewrite_env.items():
+                            print('{0} {1}={2}'
+                                    .format('set' if build_file.endswith('.bat') else 'export', k, v))
 
-        # Use script from recipe?
-        script = utils.ensure_list(m.get_value('build/script', None))
-        if script:
-            script = u'\n'.join(script)
+                    # clear this, so that the activate script will get run as necessary
+                    del env['CONDA_BUILD']
 
-        print("CEHCKINsSS")
-        if isdir(src_dir):
-            build_stats = {}
-            if utils.on_win:
-                build_file = join(m.path, 'bld.bat')
-                if script:
-                    build_file = join(src_dir, 'bld.bat')
-                    import codecs
-                    with codecs.getwriter('utf-8')(open(build_file, 'wb')) as bf:
-                        bf.write(script)
-                windows.build(m, build_file, stats=build_stats, provision_only=provision_only)
-            else:
-                build_file = join(m.path, 'build.sh')
-                if isfile(build_file) and script:
-                    raise CondaBuildException("Found a build.sh script and a build/script section "
-                                              "inside meta.yaml. Either remove the build.sh script "
-                                              "or remove the build/script section in meta.yaml.")
-                # There is no sense in trying to run an empty build script.
-                if isfile(build_file) or script:
-                    print("writing build file: ", build_file)
-                    print("writing build file: ", script)
-                    work_file, _ = write_build_scripts(m, script, build_file)
-                    if not provision_only:
-                        cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-o', 'errexit', work_file]
+                    # this should raise if any problems occur while building
+                    utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
+                                        cwd=src_dir, stats=build_stats)
+                    utils.remove_pycache_from_scripts(m.config.host_prefix)
 
-                        # rewrite long paths in stdout back to their env variables
-                        if m.config.debug or m.config.no_rewrite_stdout_env:
-                            rewrite_env = None
-                        else:
-                            rewrite_vars = ['PREFIX', 'SRC_DIR']
-                            if not m.build_is_host:
-                                rewrite_vars.insert(1, 'BUILD_PREFIX')
-                            rewrite_env = {
-                                k: env[k]
-                                for k in rewrite_vars if k in env
-                            }
-                            for k, v in rewrite_env.items():
-                                print('{0} {1}={2}'
-                                        .format('set' if build_file.endswith('.bat') else 'export', k, v))
-
-                        # clear this, so that the activate script will get run as necessary
-                        del env['CONDA_BUILD']
-
-                        # this should raise if any problems occur while building
-                        utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
-                                            cwd=src_dir, stats=build_stats)
-                        utils.remove_pycache_from_scripts(m.config.host_prefix)
-
-            if build_stats and not provision_only:
-                log_stats(build_stats, "building {}".format(m.name()))
-                if stats is not None:
-                    stats[stats_key(m, 'build')] = build_stats
+        if build_stats and not provision_only:
+            log_stats(build_stats, "building {}".format(m.name()))
+            if stats is not None:
+                stats[stats_key(m, 'build')] = build_stats
 
     prefix_file_list = join(m.config.build_folder, 'prefix_files.txt')
     initial_files = set()
@@ -1524,186 +1511,191 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             initial_files = set(f.read().splitlines())
     new_prefix_files = utils.prefix_files(prefix=m.config.host_prefix) - initial_files
 
-    new_pkgs = default_return
-    print("provision_only ", provision_only, "POST: ", post)
-    if not provision_only and post in [True, None]:
-        outputs = output_metas or m.get_output_metadata_set(permit_unsatisfiable_variants=False)
-        print(outputs)
-        # import IPython; IPython.embed()
-        top_level_meta = m
+    output = {}
+    output['files'] = new_prefix_files
+    newly_built_packages = bundle_conda(output, m, env, stats)
 
-        # this is the old, default behavior: conda package, with difference between start
-        #    set of files and end set of files
-        prefix_file_list = join(m.config.build_folder, 'prefix_files.txt')
-        if os.path.isfile(prefix_file_list):
-            with open(prefix_file_list) as f:
-                initial_files = set(f.read().splitlines())
-        else:
-            initial_files = set()
 
-        # subdir needs to always be some real platform - so ignore noarch.
-        subdir = (m.config.host_subdir if m.config.host_subdir != 'noarch' else
-                    m.config.subdir)
+    # new_pkgs = default_return
+    # print("provision_only ", provision_only, "POST: ", post)
+    # if not provision_only and post in [True, None]:
+    #     outputs = output_metas or m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+    #     print(outputs)
+    #     # import IPython; IPython.embed()
+    #     top_level_meta = m
 
-        with TemporaryDirectory() as prefix_files_backup:
-            # back up new prefix files, because we wipe the prefix before each output build
-            for f in new_prefix_files:
-                utils.copy_into(os.path.join(m.config.host_prefix, f),
-                                os.path.join(prefix_files_backup, f),
-                                symlinks=True)
+    #     # this is the old, default behavior: conda package, with difference between start
+    #     #    set of files and end set of files
+    #     prefix_file_list = join(m.config.build_folder, 'prefix_files.txt')
+    #     if os.path.isfile(prefix_file_list):
+    #         with open(prefix_file_list) as f:
+    #             initial_files = set(f.read().splitlines())
+    #     else:
+    #         initial_files = set()
 
-            # this is the inner loop, where we loop over any vars used only by
-            # outputs (not those used by the top-level recipe). The metadata
-            # objects here are created by the m.get_output_metadata_set, which
-            # is distributing the matrix of used variables.
+    #     # subdir needs to always be some real platform - so ignore noarch.
+    #     subdir = (m.config.host_subdir if m.config.host_subdir != 'noarch' else
+    #                 m.config.subdir)
 
-            for (output_d, m) in outputs:
-                if m.skip():
-                    print(utils.get_skip_message(m))
-                    continue
+    #     with TemporaryDirectory() as prefix_files_backup:
+    #         # back up new prefix files, because we wipe the prefix before each output build
+    #         for f in new_prefix_files:
+    #             utils.copy_into(os.path.join(m.config.host_prefix, f),
+    #                             os.path.join(prefix_files_backup, f),
+    #                             symlinks=True)
 
-                # TODO: should we check both host and build envs?  These are the same, except when
-                #    cross compiling
-                if m.config.skip_existing and is_package_built(m, 'host'):
-                    print(utils.get_skip_message(m))
-                    new_pkgs[bldpkg_path(m)] = output_d, m
-                    continue
+    #         # this is the inner loop, where we loop over any vars used only by
+    #         # outputs (not those used by the top-level recipe). The metadata
+    #         # objects here are created by the m.get_output_metadata_set, which
+    #         # is distributing the matrix of used variables.
 
-                if (top_level_meta.name() == output_d.get('name') and not (output_d.get('files') or
-                                                                           output_d.get('script'))):
-                    output_d['files'] = (utils.prefix_files(prefix=m.config.host_prefix) -
-                                         initial_files)
+    #         for (output_d, m) in outputs:
+    #             if m.skip():
+    #                 print(utils.get_skip_message(m))
+    #                 continue
 
-                # ensure that packaging scripts are copied over into the workdir
-                if 'script' in output_d:
-                    utils.copy_into(os.path.join(m.path, output_d['script']), m.config.work_dir)
+    #             # TODO: should we check both host and build envs?  These are the same, except when
+    #             #    cross compiling
+    #             if m.config.skip_existing and is_package_built(m, 'host'):
+    #                 print(utils.get_skip_message(m))
+    #                 new_pkgs[bldpkg_path(m)] = output_d, m
+    #                 continue
 
-                # same thing, for test scripts
-                test_script = output_d.get('test', {}).get('script')
-                if test_script:
-                    if not os.path.isfile(os.path.join(m.path, test_script)):
-                        raise ValueError("test script specified as {} does not exist.  Please "
-                                         "check for typos or create the file and try again."
-                                         .format(test_script))
-                    utils.copy_into(os.path.join(m.path, test_script),
-                                    os.path.join(m.config.work_dir, test_script))
+    #             if (top_level_meta.name() == output_d.get('name') and not (output_d.get('files') or
+    #                                                                        output_d.get('script'))):
+    #                 output_d['files'] = (utils.prefix_files(prefix=m.config.host_prefix) -
+    #                                      initial_files)
 
-                assert output_d.get('type') != 'conda' or m.final, (
-                    "output metadata for {} is not finalized".format(m.dist()))
-                pkg_path = bldpkg_path(m)
-                if pkg_path not in built_packages and pkg_path not in new_pkgs:
-                    log.info("Packaging {}".format(m.name()))
-                    # for more than one output, we clear and rebuild the environment before each
-                    #    package.  We also do this for single outputs that present their own
-                    #    build reqs.
-                    if not (m.is_output or
-                            (os.path.isdir(m.config.host_prefix) and
-                             len(os.listdir(m.config.host_prefix)) <= 1)):
-                        # This log message contradicts both the not (m.is_output or ..) check above
-                        # and also the comment "For more than one output, ..."
-                        log.debug('Not creating new env for output - already exists from top-level')
-                    else:
-                        m.config._merge_build_host = m.build_is_host
+    #             # ensure that packaging scripts are copied over into the workdir
+    #             if 'script' in output_d:
+    #                 utils.copy_into(os.path.join(m.path, output_d['script']), m.config.work_dir)
 
-                        utils.rm_rf(m.config.host_prefix)
-                        utils.rm_rf(m.config.build_prefix)
-                        utils.rm_rf(m.config.test_prefix)
+    #             # same thing, for test scripts
+    #             test_script = output_d.get('test', {}).get('script')
+    #             if test_script:
+    #                 if not os.path.isfile(os.path.join(m.path, test_script)):
+    #                     raise ValueError("test script specified as {} does not exist.  Please "
+    #                                      "check for typos or create the file and try again."
+    #                                      .format(test_script))
+    #                 utils.copy_into(os.path.join(m.path, test_script),
+    #                                 os.path.join(m.config.work_dir, test_script))
 
-                        host_ms_deps = m.ms_depends('host')
-                        sub_build_ms_deps = m.ms_depends('build')
-                        if m.is_cross and not m.build_is_host:
-                            host_actions = environ.get_install_actions(m.config.host_prefix,
-                                                    tuple(host_ms_deps), 'host',
-                                                    subdir=m.config.host_subdir,
-                                                    debug=m.config.debug,
-                                                    verbose=m.config.verbose,
-                                                    locking=m.config.locking,
-                                                    bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
-                                                    timeout=m.config.timeout,
-                                                    disable_pip=m.config.disable_pip,
-                                                    max_env_retry=m.config.max_env_retry,
-                                                    output_folder=m.config.output_folder,
-                                                    channel_urls=tuple(m.config.channel_urls))
-                            environ.create_env(m.config.host_prefix, host_actions, env='host',
-                                               config=m.config, subdir=subdir, is_cross=m.is_cross,
-                                               is_conda=m.name() == 'conda')
-                        else:
-                            # When not cross-compiling, the build deps aggregate 'build' and 'host'.
-                            sub_build_ms_deps.extend(host_ms_deps)
-                        build_actions = environ.get_install_actions(m.config.build_prefix,
-                                                    tuple(sub_build_ms_deps), 'build',
-                                                    subdir=m.config.build_subdir,
-                                                    debug=m.config.debug,
-                                                    verbose=m.config.verbose,
-                                                    locking=m.config.locking,
-                                                    bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
-                                                    timeout=m.config.timeout,
-                                                    disable_pip=m.config.disable_pip,
-                                                    max_env_retry=m.config.max_env_retry,
-                                                    output_folder=m.config.output_folder,
-                                                    channel_urls=tuple(m.config.channel_urls))
-                        environ.create_env(m.config.build_prefix, build_actions, env='build',
-                                           config=m.config, subdir=m.config.build_subdir,
-                                           is_cross=m.is_cross,
-                                           is_conda=m.name() == 'conda')
+    #             assert output_d.get('type') != 'conda' or m.final, (
+    #                 "output metadata for {} is not finalized".format(m.dist()))
+    #             pkg_path = bldpkg_path(m)
+    #             if pkg_path not in built_packages and pkg_path not in new_pkgs:
+    #                 log.info("Packaging {}".format(m.name()))
+    #                 # for more than one output, we clear and rebuild the environment before each
+    #                 #    package.  We also do this for single outputs that present their own
+    #                 #    build reqs.
+    #                 if not (m.is_output or
+    #                         (os.path.isdir(m.config.host_prefix) and
+    #                          len(os.listdir(m.config.host_prefix)) <= 1)):
+    #                     # This log message contradicts both the not (m.is_output or ..) check above
+    #                     # and also the comment "For more than one output, ..."
+    #                     log.debug('Not creating new env for output - already exists from top-level')
+    #                 else:
+    #                     m.config._merge_build_host = m.build_is_host
 
-                    to_remove = set()
-                    for f in output_d.get('files', []):
-                        if f.startswith('conda-meta'):
-                            to_remove.add(f)
+    #                     utils.rm_rf(m.config.host_prefix)
+    #                     utils.rm_rf(m.config.build_prefix)
+    #                     utils.rm_rf(m.config.test_prefix)
 
-                    # This is wrong, files has not been expanded at this time and could contain
-                    # wildcards.  Also well, I just do not understand this, because when this
-                    # does contain wildcards, the files in to_remove will slip back in.
-                    if 'files' in output_d:
-                        output_d['files'] = set(output_d['files']) - to_remove
+    #                     host_ms_deps = m.ms_depends('host')
+    #                     sub_build_ms_deps = m.ms_depends('build')
+    #                     if m.is_cross and not m.build_is_host:
+    #                         host_actions = environ.get_install_actions(m.config.host_prefix,
+    #                                                 tuple(host_ms_deps), 'host',
+    #                                                 subdir=m.config.host_subdir,
+    #                                                 debug=m.config.debug,
+    #                                                 verbose=m.config.verbose,
+    #                                                 locking=m.config.locking,
+    #                                                 bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+    #                                                 timeout=m.config.timeout,
+    #                                                 disable_pip=m.config.disable_pip,
+    #                                                 max_env_retry=m.config.max_env_retry,
+    #                                                 output_folder=m.config.output_folder,
+    #                                                 channel_urls=tuple(m.config.channel_urls))
+    #                         environ.create_env(m.config.host_prefix, host_actions, env='host',
+    #                                            config=m.config, subdir=subdir, is_cross=m.is_cross,
+    #                                            is_conda=m.name() == 'conda')
+    #                     else:
+    #                         # When not cross-compiling, the build deps aggregate 'build' and 'host'.
+    #                         sub_build_ms_deps.extend(host_ms_deps)
+    #                     build_actions = environ.get_install_actions(m.config.build_prefix,
+    #                                                 tuple(sub_build_ms_deps), 'build',
+    #                                                 subdir=m.config.build_subdir,
+    #                                                 debug=m.config.debug,
+    #                                                 verbose=m.config.verbose,
+    #                                                 locking=m.config.locking,
+    #                                                 bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+    #                                                 timeout=m.config.timeout,
+    #                                                 disable_pip=m.config.disable_pip,
+    #                                                 max_env_retry=m.config.max_env_retry,
+    #                                                 output_folder=m.config.output_folder,
+    #                                                 channel_urls=tuple(m.config.channel_urls))
+    #                     environ.create_env(m.config.build_prefix, build_actions, env='build',
+    #                                        config=m.config, subdir=m.config.build_subdir,
+    #                                        is_cross=m.is_cross,
+    #                                        is_conda=m.name() == 'conda')
 
-                    # copies the backed-up new prefix files into the newly created host env
-                    for f in new_prefix_files:
-                        utils.copy_into(os.path.join(prefix_files_backup, f),
-                                        os.path.join(m.config.host_prefix, f),
-                                        symlinks=True)
+    #                 to_remove = set()
+    #                 for f in output_d.get('files', []):
+    #                     if f.startswith('conda-meta'):
+    #                         to_remove.add(f)
 
-                    # we must refresh the environment variables because our env for each package
-                    #    can be different from the env for the top level build.
-                    with utils.path_prepended(m.config.build_prefix):
-                        env = environ.get_dict(m=m)
-                    pkg_type = 'conda' if not hasattr(m, 'type') else m.type
-                    newly_built_packages = bundlers[pkg_type](output_d, m, env, stats)
-                    # warn about overlapping files.
-                    if 'checksums' in output_d:
-                        for file, csum in output_d['checksums'].items():
-                            for _, prev_om in new_pkgs.items():
-                                prev_output_d, _ = prev_om
-                                if file in prev_output_d.get('checksums', {}):
-                                    prev_csum = prev_output_d['checksums'][file]
-                                    nature = 'Exact' if csum == prev_csum else 'Inexact'
-                                    log.warn("{} overlap between {} in packages {} and {}"
-                                             .format(nature, file, output_d['name'],
-                                                     prev_output_d['name']))
-                    for built_package in newly_built_packages:
-                        new_pkgs[built_package] = (output_d, m)
+    #                 # This is wrong, files has not been expanded at this time and could contain
+    #                 # wildcards.  Also well, I just do not understand this, because when this
+    #                 # does contain wildcards, the files in to_remove will slip back in.
+    #                 if 'files' in output_d:
+    #                     output_d['files'] = set(output_d['files']) - to_remove
 
-                    # must rebuild index because conda has no way to incrementally add our last
-                    #    package to the index.
+    #                 # copies the backed-up new prefix files into the newly created host env
+    #                 for f in new_prefix_files:
+    #                     utils.copy_into(os.path.join(prefix_files_backup, f),
+    #                                     os.path.join(m.config.host_prefix, f),
+    #                                     symlinks=True)
 
-                    subdir = ('noarch' if (m.noarch or m.noarch_python)
-                              else m.config.host_subdir)
-                    if m.is_cross:
-                        get_build_index(subdir=subdir, bldpkgs_dir=m.config.bldpkgs_dir,
-                                        output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
-                                        debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
-                                        timeout=m.config.timeout, clear_cache=True)
-                    get_build_index(subdir=subdir, bldpkgs_dir=m.config.bldpkgs_dir,
-                                    output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
-                                    debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
-                                    timeout=m.config.timeout, clear_cache=True)
-    else:
-        if not provision_only:
-            print("STOPPING BUILD BEFORE POST:", m.dist())
+    #                 # we must refresh the environment variables because our env for each package
+    #                 #    can be different from the env for the top level build.
+    #                 with utils.path_prepended(m.config.build_prefix):
+    #                     env = environ.get_dict(m=m)
+    #                 pkg_type = 'conda' if not hasattr(m, 'type') else m.type
+    #                 newly_built_packages = bundlers[pkg_type](output_d, m, env, stats)
+    #                 # warn about overlapping files.
+    #                 if 'checksums' in output_d:
+    #                     for file, csum in output_d['checksums'].items():
+    #                         for _, prev_om in new_pkgs.items():
+    #                             prev_output_d, _ = prev_om
+    #                             if file in prev_output_d.get('checksums', {}):
+    #                                 prev_csum = prev_output_d['checksums'][file]
+    #                                 nature = 'Exact' if csum == prev_csum else 'Inexact'
+    #                                 log.warn("{} overlap between {} in packages {} and {}"
+    #                                          .format(nature, file, output_d['name'],
+    #                                                  prev_output_d['name']))
+    #                 for built_package in newly_built_packages:
+    #                     new_pkgs[built_package] = (output_d, m)
 
-    # return list of all package files emitted by this build
-    return new_pkgs
+    #                 # must rebuild index because conda has no way to incrementally add our last
+    #                 #    package to the index.
+
+    #                 subdir = ('noarch' if (m.noarch or m.noarch_python)
+    #                           else m.config.host_subdir)
+    #                 if m.is_cross:
+    #                     get_build_index(subdir=subdir, bldpkgs_dir=m.config.bldpkgs_dir,
+    #                                     output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
+    #                                     debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
+    #                                     timeout=m.config.timeout, clear_cache=True)
+    #                 get_build_index(subdir=subdir, bldpkgs_dir=m.config.bldpkgs_dir,
+    #                                 output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
+    #                                 debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
+    #                                 timeout=m.config.timeout, clear_cache=True)
+    # else:
+    #     if not provision_only:
+    #         print("STOPPING BUILD BEFORE POST:", m.dist())
+
+    # # return list of all package files emitted by this build
+    # return new_pkgs
 
 def warn_on_use_of_SRC_DIR(metadata):
     test_files = glob(os.path.join(metadata.path, 'run_test*'))

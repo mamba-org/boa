@@ -18,6 +18,14 @@ import copy
 from conda_build.metadata import eval_selector, ns_cfg
 from conda.core.package_cache_data import PackageCacheData
 
+from boa.cli.new_build import build
+from boa.cli.metadata import MetaData
+
+from mamba.utils import to_txn
+from mamba.mamba_api import PrefixData
+from conda.gateways.disk.create import mkdir_p
+
+
 from pprint import pprint
 
 from colorama import Fore, Style
@@ -337,16 +345,30 @@ def flatten_selectors(ydoc, namespace):
 
 
 class Output:
-    def __init__(self, d, config, parent=None):
+    def __init__(self, d, config, parent={}):
         self.data = d
         self.config = config
 
         self.name = d["package"]["name"]
         self.version = d["package"]["version"]
         self.build_string = d["package"].get("build_string")
-        self.build_number = d["package"].get("build_number") or 0
+        self.build_number = d["package"].get("build_number", 0)
+
+        self.sections = {}
+
+        self.sections['build'] = d.get('build', parent.get('build', {}))
+        self.sections['source'] = d.get('source', parent.get('source', {}))
+        if hasattr(self.sections['source'], 'keys'):
+            self.sections['source'] = [self.sections['source']]
+        self.sections['package'] = d.get('package')
+        self.sections['package'].update(parent.get('package', {}))
+
+        self.sections['app'] = d.get('app', {})
+        self.sections['extra'] = d.get('extra', {})
 
         self.requirements = copy.copy(d.get("requirements"))
+        self.transactions = {}
+
         self.parent = parent
 
         for section in ("build", "host", "run"):
@@ -364,10 +386,6 @@ class Output:
 
     def apply_variant(self, variant):
         copied = copy.deepcopy(self)
-        # # insert compiler_cxx, compiler_c and compiler_fortran
-        # variant['COMPILER_C'] = conda_build.jinja_context.compiler('c', self.config)
-        # variant['COMPILER_CXX'] = conda_build.jinja_context.compiler('cxx', self.config)
-        # variant['COMPILER_FORTRAN'] = conda_build.jinja_context.compiler('fortran', self.config)
 
         copied.variant = variant
         for idx, r in enumerate(self.requirements["build"]):
@@ -391,6 +409,7 @@ class Output:
                 )
                 copied.requirements["run"][idx].from_pinnings = True
 
+        # insert compiler_cxx, compiler_c and compiler_fortran
         for idx, r in enumerate(self.requirements["build"]):
             if r.name.startswith("COMPILER_"):
                 lang = r.splitted[1].lower()
@@ -402,6 +421,8 @@ class Output:
         for idx, r in enumerate(self.requirements["host"]):
             if r.name.startswith("COMPILER_"):
                 raise RuntimeError("Compiler should be in build section")
+
+        copied.config = get_or_merge_config(self.config, variant=variant)
 
         return copied
 
@@ -529,6 +550,8 @@ class Output:
                     cbs.final_version = (p['version'], p['build_string'])
                     self.requirements[env].append(cbs)
 
+            self.transactions[env] = t
+
             downloaded = t.fetch_extract_packages(
                 PackageCacheData.first_writable().pkgs_dir, solver.repos
             )
@@ -539,12 +562,21 @@ class Output:
                 self.propagate_run_exports(env)
 
     def finalize_solve(self, all_outputs, solver):
-        print("\n")
+
         self._solve_env("build", all_outputs, solver)
-        # TODO run_exports
         self._solve_env("host", all_outputs, solver)
         self._solve_env("run", all_outputs, solver)
 
+        # TODO figure out if we can avoid this?!
+        if self.config.variant.get('python') is None:
+            for r in self.requirements['build'] + self.requirements['host']:
+                if r.name == 'python':
+                    self.config.variant['python'] = r.final_version[0]
+
+        if self.config.variant.get('python') is None:
+            self.config.variant['python'] = '.'.join([str(v) for v in sys.version_info[:3]])
+
+        self.variant = self.config.variant
 
 def to_build_tree(ydoc, variants, config):
     print("\nVARIANTS:")
@@ -555,7 +587,7 @@ def to_build_tree(ydoc, variants, config):
 
     # first we need to perform a topological sort taking into account all the outputs
     if ydoc.get("outputs"):
-        outputs = [Output(o, config, parent=None) for o in ydoc["outputs"]]
+        outputs = [Output(o, config, parent=ydoc) for o in ydoc["outputs"]]
         outputs = {o.name: o for o in outputs}
     else:
         outputs = [Output(ydoc, config, parent=None)]
@@ -667,17 +699,44 @@ def main(config=None):
     # the final metadata
     sorted_outputs = to_build_tree(ydoc, variants, config)
 
-    solver = MambaSolver(["conda-forge"], "linux-64")
-    for o in sorted_outputs:
-        o.finalize_solve(sorted_outputs, solver)
-
     # then we need to solve and build from the bottom up
     # we can't first solve all packages without finalizing everything
 
     # - solve the package
     #   - solv build, add weak run exports to
     # - add run exports from deps!
-    # -
+
+    solver = MambaSolver(["conda-forge"], "linux-64")
+    for o in sorted_outputs:
+        o.finalize_solve(sorted_outputs, solver)
+        print(o)
+
+    for o in sorted_outputs:
+        o.config.compute_build_id(o.name)
+
+        print(o.config.host_prefix)
+
+        if 'build' in o.transactions:
+            mkdir_p(o.config.build_prefix)
+            print(o.transactions)
+            o.transactions['build'].execute(PrefixData(o.config.build_prefix), PackageCacheData.first_writable().pkgs_dir)
+        if 'host' in o.transactions:
+            mkdir_p(o.config.host_prefix)
+            print(o.transactions)
+            o.transactions['host'].execute(PrefixData(o.config.host_prefix), PackageCacheData.first_writable().pkgs_dir)
+        print(o.sections)
+        stats = {}
+
+        print("Final variant config")
+        print(config.variant)
+        print(o.variant)
+        build(MetaData(recipe_path, o), None)
+
+
+
+    # sorted_outputs
+    # print(sorted_outputs[0].config.host_prefix)
+    exit()
 
     for o in sorted_outputs:
         print("\n")
