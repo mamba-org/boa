@@ -21,7 +21,7 @@ outputs:
       # script: build_base.sh
       # script: "${PYTHON} -m pip install . --no-deps -vv"
       script: "python -m pip install . --no-deps -vv"
-      # noarch: python
+      noarch: python
       entry_points:
         - grayskull = grayskull.__main__:main
         - greyskull = grayskull.__main__:main
@@ -31,7 +31,6 @@ outputs:
         - python >=3.7
         - setuptools >=30.3.0
         - setuptools_scm
-        - boost-cpp
       run:
         - colorama
         - rapidfuzz >=0.7.6

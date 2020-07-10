@@ -15,16 +15,23 @@ build:
   number: 3
   skip: 
     - win and vc<14
+    - py37
   run_exports:
     - "{{ pin_subpackage(name, max_pin='x.x') }}"
 
 outputs:
   - package:
+      name: libsolv-onlybuild
+    build:
+      intermediate: true
+    
+  - package:
       name: libsolv
-    # build:
+    build:
       # need to find a way to express this!
-      # script: install.sh  # [unix]
-      # script: build.sh
+      script:
+        sel(unix): install.sh
+        sel(win): build.bat
     requirements:
       build:
         - "{{ compiler('c') }}"

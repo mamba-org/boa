@@ -1,4 +1,6 @@
 import os, sys
+from os.path import isdir, isfile, islink, join, dirname
+
 from ruamel.yaml import YAML
 import jinja2, json
 import collections
@@ -19,13 +21,19 @@ import copy
 from conda_build.metadata import eval_selector, ns_cfg
 from conda.core.package_cache_data import PackageCacheData
 
-from boa.cli.new_build import build
+from boa.cli.new_build import build, download_source
 from boa.cli.metadata import MetaData
 
 from mamba.utils import to_txn
 from mamba.mamba_api import PrefixData
 from conda.gateways.disk.create import mkdir_p
 from conda_build.index import update_index
+import conda_build
+from conda_build.variants import find_config_files, parse_config_file
+from conda_build.conda_interface import MatchSpec
+from conda_build import utils
+
+from typing import Tuple
 
 from pprint import pprint
 
@@ -41,6 +49,7 @@ banner = r"""
           | |_) | (_) | (_| |
           |_.__/ \___/ \__,_|
 """
+
 
 def render_recursive(dict_or_array, context_dict, jenv):
     # check if it's a dict?
@@ -99,13 +108,6 @@ def jinja_functions(config, context_dict):
         "compiler": compiler,
         "environ": os.environ,
     }
-
-
-import conda_build
-from conda_build.variants import find_config_files, parse_config_file
-from conda_build.conda_interface import MatchSpec
-
-from typing import Tuple
 
 
 @dataclass
@@ -263,7 +265,7 @@ def get_dependency_variants(requirements, conda_build_config, config):
                 variants[config_key] = conda_build_config[config_key]
                 variants[config_version_key] = conda_build_config[config_version_key]
 
-            variant_key = n.replace('_', '-')
+            variant_key = n.replace("_", "-")
             print(f"Variant Key: {variant_key}")
             if variant_key in conda_build_config:
                 vlist = conda_build_config[variant_key]
@@ -357,15 +359,19 @@ class Output:
 
         self.sections = {}
 
-        self.sections['build'] = d.get('build', parent.get('build', {}))
-        self.sections['source'] = d.get('source', parent.get('source', {}))
-        if hasattr(self.sections['source'], 'keys'):
-            self.sections['source'] = [self.sections['source']]
-        self.sections['package'] = d.get('package')
-        self.sections['package'].update(parent.get('package', {}))
+        def set_section(sname):
+            self.sections[sname] = {}
+            self.sections[sname].update(parent.get(sname, {}))
+            self.sections[sname].update(d.get(sname, {}))
 
-        self.sections['app'] = d.get('app', {})
-        self.sections['extra'] = d.get('extra', {})
+        set_section('build')
+        set_section('package')
+        set_section('app')
+        set_section('extra')
+
+        self.sections["source"] = d.get("source", parent.get("source", {}))
+        if hasattr(self.sections["source"], "keys"):
+            self.sections["source"] = [self.sections["source"]]
 
         self.requirements = copy.copy(d.get("requirements"))
         self.transactions = {}
@@ -376,6 +382,13 @@ class Output:
             self.requirements[section] = [
                 CondaBuildSpec(r) for r in (self.requirements.get(section) or [])
             ]
+
+    def skip(self):
+        skips = self.sections["build"].get("skip")
+
+        if skips:
+            return any([eval_selector(x, ns_cfg(self.config), []) for x in skips])
+        return False
 
     def all_requirements(self):
         requirements = (
@@ -548,13 +561,14 @@ class Output:
                 else:
                     cbs = CondaBuildSpec(f"{p['name']}")
                     cbs.is_transitive_dependency = True
-                    cbs.final_version = (p['version'], p['build_string'])
+                    cbs.final_version = (p["version"], p["build_string"])
                     self.requirements[env].append(cbs)
 
             self.transactions[env] = t
 
             downloaded = t.fetch_extract_packages(
-                PackageCacheData.first_writable().pkgs_dir, solver.repos + list(solver.local_repos.values())
+                PackageCacheData.first_writable().pkgs_dir,
+                solver.repos + list(solver.local_repos.values()),
             )
             if not downloaded:
                 raise RuntimeError("Did not succeed in downloading packages.")
@@ -569,15 +583,18 @@ class Output:
         self._solve_env("run", all_outputs, solver)
 
         # TODO figure out if we can avoid this?!
-        if self.config.variant.get('python') is None:
-            for r in self.requirements['build'] + self.requirements['host']:
-                if r.name == 'python':
-                    self.config.variant['python'] = r.final_version[0]
+        if self.config.variant.get("python") is None:
+            for r in self.requirements["build"] + self.requirements["host"]:
+                if r.name == "python":
+                    self.config.variant["python"] = r.final_version[0]
 
-        if self.config.variant.get('python') is None:
-            self.config.variant['python'] = '.'.join([str(v) for v in sys.version_info[:3]])
+        if self.config.variant.get("python") is None:
+            self.config.variant["python"] = ".".join(
+                [str(v) for v in sys.version_info[:3]]
+            )
 
         self.variant = self.config.variant
+
 
 def to_build_tree(ydoc, variants, config):
     print("\nVARIANTS:")
@@ -602,6 +619,8 @@ def to_build_tree(ydoc, variants, config):
         }
         tsorted = toposort.toposort(sort_dict)
         tsorted = [o for o in tsorted if o in sort_dict.keys()]
+    else:
+        tsorted = [o for o in outputs.keys()]
 
     for name in tsorted:
         output = outputs[name]
@@ -622,21 +641,7 @@ def to_build_tree(ydoc, variants, config):
     return final_outputs
 
 
-def main(config=None):
-    print(banner)
-
-    parser = argparse.ArgumentParser(description='Boa, the fast build tool for conda packages.')
-    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
-    parent_parser = argparse.ArgumentParser(add_help=False)
-    parent_parser.add_argument('recipe_dir', type=str)
-
-    render_parser = subparsers.add_parser('render', parents=[parent_parser], help='render a recipe')
-    build_parser = subparsers.add_parser('build', parents=[parent_parser], help='build a recipe')
-    args = parser.parse_args()
-
-    command = args.command
-
-    folder = args.recipe_dir
+def get_config(folder):
     config = get_or_merge_config(None, {})
     config_files = find_config_files(folder)
     parsed_cfg = collections.OrderedDict()
@@ -654,6 +659,31 @@ def main(config=None):
         cbc = parsed_cfg[config_files[-1]]
     else:
         cbc = {}
+
+    return cbc, config
+
+
+def main(config=None):
+    print(banner)
+
+    parser = argparse.ArgumentParser(
+        description="Boa, the fast build tool for conda packages."
+    )
+    subparsers = parser.add_subparsers(help="sub-command help", dest="command")
+    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument("recipe_dir", type=str)
+
+    render_parser = subparsers.add_parser(
+        "render", parents=[parent_parser], help="render a recipe"
+    )
+    build_parser = subparsers.add_parser(
+        "build", parents=[parent_parser], help="build a recipe"
+    )
+    args = parser.parse_args()
+
+    command = args.command
+    folder = args.recipe_dir
+    cbc, config = get_config(folder)
 
     update_index(os.path.dirname(config.output_folder), verbose=config.debug, threads=1)
 
@@ -722,46 +752,57 @@ def main(config=None):
     #   - solv build, add weak run exports to
     # - add run exports from deps!
 
-    if command == 'render':
+    if command == "render":
         for o in sorted_outputs:
             print(o)
         exit()
 
+
     solver = MambaSolver(["conda-forge"], "linux-64")
+
+    top_name = ydoc['package']['name']
+    o0 = sorted_outputs[0]
+    o0.config.compute_build_id(top_name)
+    download_source(MetaData(recipe_path, o0))
+    cached_source = o0.sections['source']
+
     for o in sorted_outputs:
         solver.replace_channels()
         o.finalize_solve(sorted_outputs, solver)
+
         print(o)
+        # print(o.config.host_prefix)
+        o.config._build_id = o0.config.build_id
 
-        o.config.compute_build_id(o.name)
-
-        print(o.config.host_prefix)
-
-        if 'build' in o.transactions:
+        if "build" in o.transactions:
+            if isdir(o.config.build_prefix):
+                utils.rm_rf(o.config.build_prefix)
             mkdir_p(o.config.build_prefix)
-            print(o.transactions)
             o.transactions['build'].execute(PrefixData(o.config.build_prefix), PackageCacheData.first_writable().pkgs_dir)
-        if 'host' in o.transactions:
-            mkdir_p(o.config.host_prefix)
-            print(o.transactions)
-            o.transactions['host'].execute(PrefixData(o.config.host_prefix), PackageCacheData.first_writable().pkgs_dir)
-        print(o.sections)
-        stats = {}
 
-        print("Final variant config")
-        print(config.variant)
-        print(o.variant)
+        if "host" in o.transactions:
+            mkdir_p(o.config.host_prefix)
+            o.transactions['host'].execute(PrefixData(o.config.host_prefix), PackageCacheData.first_writable().pkgs_dir)
+
+        meta = MetaData(recipe_path, o)
+
+        # o.config.compute_build_id(top_name)
+
+        if cached_source != o.sections['source']:
+            download_source(meta)
+
         build(MetaData(recipe_path, o), None)
 
     # sorted_outputs
     # print(sorted_outputs[0].config.host_prefix)
-    exit()
+    # exit()
 
     for o in sorted_outputs:
         print("\n")
         print(o)
 
     # loader.dump(ydoc, sys.stdout)
+
 
 if __name__ == "__main__":
     main()
