@@ -88,14 +88,18 @@ def get_index(
     index = []
     for idx, url in enumerate(real_urls):
         channel = Channel(url)
-
         full_url = channel.url(with_credentials=True) + "/" + repodata_fn
         full_path_cache = os.path.join(
             create_cache_dir(), cache_fn_url(full_url, repodata_fn)
         )
 
+        # Channels might not have a name.
+        if channel.name is None:
+            name_and_subdir = channel.subdir
+        else:
+            name_and_subdir = channel.name + "/" + channel.subdir
         sd = mamba_api.SubdirData(
-            channel.name + "/" + channel.subdir, full_url, full_path_cache
+            name_and_subdir, full_url, full_path_cache
         )
 
         sd.load()
