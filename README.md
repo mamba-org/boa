@@ -33,8 +33,9 @@ The shortterm-goal for boa is to parse the new version spec, and produce a `cond
 We have two small tools included with boa:
 
 ```
-boa my_recipe_folder  # this is equivalent to running conda build my_recipe_folder
-boar my_recipe.yaml  # this is running a "render" of the recipe
+conda mambabuild my_recipe_folder # this is equivalent to running conda build my_recipe_folder, but using mamba as a solver
+boa render my_recipe_folder  # "render" a recipe (note you have to use the non-final v2 syntax, check the recipes folder for examples
+boa build my_recipe_folder  # this is running a "build" of the v2 recipe
 ```
 
 ### Dev Installation
