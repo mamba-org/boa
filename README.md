@@ -42,7 +42,7 @@ boar my_recipe.yaml  # this is running a "render" of the recipe
 You will have to install the dependencies of boa, and then execute pip to install:
 
 ```
-mamba install conda-build colorama pip ruamel ruamel.yaml -c conda-forge
+mamba install "conda-build>=3.18.12" colorama pip ruamel ruamel.yaml -c conda-forge
 # now install boa into your prefix with pip
 pip install -e .
 ```
