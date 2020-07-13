@@ -88,6 +88,7 @@ def get_index(
     index = []
     for idx, url in enumerate(real_urls):
         channel = Channel(url)
+
         full_url = channel.url(with_credentials=True) + "/" + repodata_fn
         full_path_cache = os.path.join(
             create_cache_dir(), cache_fn_url(full_url, repodata_fn)
