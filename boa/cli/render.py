@@ -652,9 +652,9 @@ def to_build_tree(ydoc, variants, config):
         else:
             final_outputs.append(o)
 
+    # Note: maybe this should happen _before_ apply variant?!
     if has_intermediate:
         # inherit dependencies
-
         def merge_requirements(a, b):
             b_names = [x.name for x in b]
             for r in a:
@@ -666,6 +666,11 @@ def to_build_tree(ydoc, variants, config):
         intermediate = final_outputs[0]
         for o in final_outputs[1:]:
             merge_requirements(intermediate.requirements['host'], o.requirements['host'])
+            merge_requirements(intermediate.requirements['build'], o.requirements['build'])
+            merged_variant = {}
+            merged_variant.update(intermediate.config.variant)
+            merged_variant.update(o.config.variant)
+            o.config.variant = merged_variant
 
     return final_outputs
 

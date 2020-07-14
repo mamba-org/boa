@@ -30,8 +30,8 @@ outputs:
       build:
         - "{{ compiler('c') }}"
         - "{{ compiler('cxx') }}"
-        - make  # [not win]
-        - ninja  # [win]
+        - sel(not win): make
+        - sel(win): ninja
         - cmake
       host:
         - zlib
@@ -44,7 +44,7 @@ outputs:
         sel(unix): install.sh
     test:
       commands:
-        - sel(unix): test -f ${PREFIX}/lib/libsolv${SHLIB_EXT}  # [unix]
+        - sel(unix): test -f ${PREFIX}/lib/libsolv${SHLIB_EXT}
         - sel(unix): dumpsolv -h
   - package:
       name: libsolv-static
