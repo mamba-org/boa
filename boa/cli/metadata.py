@@ -20,6 +20,7 @@ import time
 import sys
 import re
 import json
+import copy
 
 
 def get_package_version_pin(specs, name):
@@ -105,6 +106,9 @@ class MetaData:
             self.path = os.path.abspath(path)
         else:
             self.path = os.path.dirname(os.path.abspath(path))
+
+        self._meta_name = 'recipe.yaml'
+        self._meta_path = os.path.join(self.path, self._meta_name)
 
         self.noarch = self.output.sections["build"].get("noarch", None)
 
@@ -209,6 +213,19 @@ class MetaData:
 
     def build_number(self):
         return self.output.build_number
+
+    def include_recipe(self):
+        return self.get_value('build/include_recipe', True)
+
+    # TODO? What are the implications of this?!
+    is_output: bool = False
+
+    @property
+    def meta_path(self):
+        meta_path = self._meta_path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path', '')
+        if meta_path and os.path.basename(meta_path) != self._meta_name:
+            meta_path = os.path.join(meta_path, self._meta_name)
+        return meta_path
 
     def hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in
@@ -392,3 +409,9 @@ class MetaData:
     def has_prefix_files(self):
         return self.get_value("build/has_prefix_files", [])
 
+    def copy(self):
+        new = copy.copy(self)
+        # new.variant = copy.deepcopy(self.variant)
+        # if hasattr(self, 'variants'):
+        #     new.variants = copy.deepcopy(self.variants)
+        return new

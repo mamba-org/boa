@@ -21,38 +21,46 @@ build:
 
 outputs:
   - package:
-      name: libsolv-onlybuild
+      name: libsolv-intermediate
     build:
       intermediate: true
-    
+      script:
+        sel(unix): build.sh
+    requirements:
+      build:
+        - "{{ compiler('c') }}"
+        - "{{ compiler('cxx') }}"
+        - make  # [not win]
+        - ninja  # [win]
+        - cmake
+      host:
+        - zlib
+
   - package:
       name: libsolv
     build:
       # need to find a way to express this!
       script:
         sel(unix): install.sh
-        sel(win): build.bat
-    requirements:
-      build:
-        - "{{ compiler('c') }}"
-        - "{{ compiler('cxx') }}"
-        - sel(not win): make
-        - sel(win): ninja
-        - cmake
-      host:
-        - zlib
     test:
       commands:
-        # - test -f ${PREFIX}/lib/libsolv${SHLIB_EXT}  # [unix]
-        # - test -f ${PREFIX}/lib/libsolvext${SHLIB_EXT}  # [unix]
-        # - test -f ${PREFIX}/lib/libsolv.so.1  # [linux]
-        # - test -f ${PREFIX}/include/solv/repo.h  # [unix]
-        # - if exist %LIBRARY_INC%\solv\repo.h (exit 0) else (exit 1)  # [win]
-        # - if exist %LIBRARY_LIB%\solv.lib (exit 0) else (exit 1)  # [win]
-        # - if exist %LIBRARY_LIB%\solvext.lib (exit 0) else (exit 1)  # [win]
-        # - if exist %LIBRARY_BIN%\solv.dll (exit 0) else (exit 1)  # [win]
-        # - dumpsolv.exe -h  # [win]
+        - sel(unix): test -f ${PREFIX}/lib/libsolv${SHLIB_EXT}  # [unix]
         - sel(unix): dumpsolv -h
+  - package:
+      name: libsolv-static
+    build:
+      ignore_run_exports:
+        - libstdc++
+        - libsolv
+        - zlib
+      script:
+        sel(unix): install.sh
+    requirements:
+      host:
+        - libsolv
+    test:
+      commands:
+        - sel(unix): test -f ${PREFIX}/lib/libsolv.a  # [unix]
 
 about:
   home: https://github.com/openSUSE/libsolv

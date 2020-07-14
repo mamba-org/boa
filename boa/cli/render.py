@@ -266,7 +266,7 @@ def get_dependency_variants(requirements, conda_build_config, config):
                 variants[config_version_key] = conda_build_config[config_version_key]
 
             variant_key = n.replace("_", "-")
-            print(f"Variant Key: {variant_key}")
+            # print(f"Variant Key: {variant_key}")
             if variant_key in conda_build_config:
                 vlist = conda_build_config[variant_key]
                 # we need to check if v matches the spec
@@ -373,7 +373,7 @@ class Output:
         if hasattr(self.sections["source"], "keys"):
             self.sections["source"] = [self.sections["source"]]
 
-        self.requirements = copy.copy(d.get("requirements"))
+        self.requirements = copy.copy(d.get("requirements", {}))
         self.transactions = {}
 
         self.parent = parent
@@ -484,6 +484,8 @@ class Output:
         collected_run_exports = []
         for s in self.requirements[env]:
             if s.is_transitive_dependency:
+                continue
+            if s.name in self.sections['build'].get('ignore_run_exports', []):
                 continue
             if hasattr(s, "final_version"):
                 final_triple = (
@@ -608,7 +610,7 @@ def to_build_tree(ydoc, variants, config):
         outputs = [Output(o, config, parent=ydoc) for o in ydoc["outputs"]]
         outputs = {o.name: o for o in outputs}
     else:
-        outputs = [Output(ydoc, config, parent=None)]
+        outputs = [Output(ydoc, config)]
         outputs = {o.name: o for o in outputs}
 
     final_outputs = []
@@ -637,6 +639,33 @@ def to_build_tree(ydoc, variants, config):
 
         else:
             final_outputs.append(output)
+
+    temp = final_outputs
+    final_outputs = []
+    has_intermediate = False
+    for o in temp:
+        if o.sections['build'].get('intermediate') == True:
+            if has_intermediate:
+                raise RuntimeError("Already found an intermediate build. There can be only one!")
+            final_outputs.insert(0, o)
+            has_intermediate = True
+        else:
+            final_outputs.append(o)
+
+    if has_intermediate:
+        # inherit dependencies
+
+        def merge_requirements(a, b):
+            b_names = [x.name for x in b]
+            for r in a:
+                if r.name in b_names:
+                    continue
+                else:
+                    b.append(r)
+
+        intermediate = final_outputs[0]
+        for o in final_outputs[1:]:
+            merge_requirements(intermediate.requirements['host'], o.requirements['host'])
 
     return final_outputs
 
@@ -711,9 +740,8 @@ def main(config=None):
         render_recursive(ydoc[key], context_dict, jenv)
 
     flatten_selectors(ydoc, ns_cfg(config))
-
+    pprint(ydoc)
     # We need to assemble the variants for each output
-
     variants = {}
     # if we have a outputs section, use that order the outputs
     if ydoc.get("outputs"):
@@ -733,12 +761,12 @@ def main(config=None):
             build_meta.update(o.get("build") or {})
             o["build"] = build_meta
             variants[o["package"]["name"]] = get_dependency_variants(
-                o["requirements"], cbc, config
+                o.get("requirements", {}), cbc, config
             )
     else:
         # we only have one output
         variants[ydoc["package"]["name"]] = get_dependency_variants(
-            ydoc["requirements"], cbc, config
+            ydoc.get("requirements", {}), cbc, config
         )
 
     # this takes in all variants and outputs, builds a dependency tree and returns
@@ -756,7 +784,6 @@ def main(config=None):
         for o in sorted_outputs:
             print(o)
         exit()
-
 
     solver = MambaSolver(["conda-forge"], "linux-64")
 
