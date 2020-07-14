@@ -1,0 +1,14 @@
+diff --git a/src/diagnostic_common_diagnostics/sensors_monitor.py b/src/diagnostic_common_diagnostics/sensors_monitor.py
+index 2b4884b..8a09345 100755
+--- a/src/diagnostic_common_diagnostics/sensors_monitor.py
++++ b/src/diagnostic_common_diagnostics/sensors_monitor.py
+@@ -217,7 +217,7 @@ if __name__ == '__main__':
+     try:
+         rospy.init_node('sensors_monitor_%s'%hostname_clean)
+     except rospy.ROSInitException:
+-        print(file=sys.stderr, 'Unable to initialize node. Master may not be running')
++        print('Unable to initialize node. Master may not be running', file=sys.stderr)
+         sys.exit(0)
+ 
+     monitor = SensorsMonitor(hostname)
+
