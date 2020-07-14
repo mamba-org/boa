@@ -1,36 +1,38 @@
-{% set version = "0.13.5" %}
+context:
+  version: "0.13.5"
 
 package:
   name: tifffile
-  version: {{ version }}
+  version: "{{ version }}"
 
 source:
   git_url: https://github.com/blink1073/tifffile
-  git_tag: v{{ version }}
+  git_tag: "v{{ version }}"
 
 build:
   number: 3
   # conda 4.4+
-  skip: True  # [blas_impl != "mkl" and win]
+  skip: 
+    - blas_impl != "mkl" and win
   requires_features:
-    blas: {{ blas_impl }}
+    blas: "{{ blas_impl }}"
   # conda 4.3-
   features:
-    - nomkl  # [x86 and blas_impl != "mkl"]
+    - sel(x86 and blas_impl != "mkl"): nomkl
 
   script: python setup.py install
 
 requirements:
   build:
-    - nomkl  # [blas_impl != "mkl"]
-    - python {{ python }}
-    - numpy {{ numpy }}
+    - sel(blas_impl != "mkl"): nomkl
+    - python
+    - numpy
     - setuptools
 
   run:
-    - nomkl  # [blas_impl != "mkl"]
-    - python {{ python }}
-    - {{ pin_compatible("numpy", min_pin="x.x", max_pin="x.x") }}
+    - sel(blas_impl != "mkl"): nomkl
+    - python
+    - '{{ pin_compatible("numpy", min_pin="x.x", max_pin="x.x") }}'
 
 test:
   imports:
