@@ -38,8 +38,9 @@ from pprint import pprint
 
 from colorama import Fore, Style
 import colorama
-
 colorama.init()
+
+import tabulate
 
 banner = r"""
            _
@@ -261,7 +262,6 @@ def get_dependency_variants(requirements, conda_build_config, config):
                 variants[config_version_key] = conda_build_config[config_version_key]
 
             variant_key = n.replace("_", "-")
-            # print(f"Variant Key: {variant_key}")
             if variant_key in conda_build_config:
                 vlist = conda_build_config[variant_key]
                 # we need to check if v matches the spec
@@ -306,7 +306,6 @@ def get_dependency_variants(requirements, conda_build_config, config):
         return variants
 
     v = get_variants(host + build)
-    # v = get_variants(build)
     return v
 
 
@@ -393,7 +392,7 @@ class Output:
         )
         return requirements
 
-    def apply_variant(self, variant):
+    def apply_variant(self, variant, differentiating_keys=[]):
         copied = copy.deepcopy(self)
 
         copied.variant = variant
@@ -433,10 +432,17 @@ class Output:
 
         copied.config = get_or_merge_config(self.config, variant=variant)
 
+        copied.differentiating_variant = []
+        for k in differentiating_keys:
+            copied.differentiating_variant.append(variant[k])
+
         return copied
 
     def __repr__(self):
         s = f"Output: {self.name}\n"
+        if hasattr(self, 'differentiating_variant'):
+            short_v = ' '.join([val for val in self.differentiating_variant])
+            s += f"Variant: {short_v}\n"
         s += "Build:\n"
 
         def format(x):
@@ -594,11 +600,16 @@ class Output:
 
 
 def to_build_tree(ydoc, variants, config):
+
     print("\nVARIANTS:")
     for k in variants:
-        print(f"Output: {k}\n----------------------------\n")
-        pprint(variants[k])
-        print("\n")
+        headerline = "-" * (len(k) + 8)
+        print(f"\nOutput: {Style.BRIGHT}{k}{Style.RESET_ALL}\n{headerline}\n")
+        table = []
+        for pkg, var in variants[k].items():
+            table.append([pkg, '\n'.join(var)])
+
+        print(tabulate.tabulate(table, ["Package", "Variant versions"], tablefmt="rst"))
 
     # first we need to perform a topological sort taking into account all the outputs
     if ydoc.get("outputs"):
@@ -607,8 +618,6 @@ def to_build_tree(ydoc, variants, config):
     else:
         outputs = [Output(ydoc, config)]
         outputs = {o.name: o for o in outputs}
-
-    final_outputs = []
 
     if len(outputs) > 1:
         sort_dict = {
@@ -619,19 +628,25 @@ def to_build_tree(ydoc, variants, config):
     else:
         tsorted = [o for o in outputs.keys()]
 
+    final_outputs = []
+
     for name in tsorted:
         output = outputs[name]
         if variants.get(output.name):
             v = variants[output.name]
             combos = []
+
+            differentiating_keys = []
             for k in v:
+                if len(v[k]) > 1:
+                    differentiating_keys.append(k)
                 combos.append([(k, x) for x in v[k]])
+
             all_combinations = tuple(itertools.product(*combos))
             all_combinations = [dict(x) for x in all_combinations]
-
             for c in all_combinations:
-                final_outputs.append(output.apply_variant(c))
-
+                x = output.apply_variant(c, differentiating_keys)
+                final_outputs.append(x)
         else:
             final_outputs.append(output)
 
@@ -778,6 +793,7 @@ def main(config=None):
     #   - solv build, add weak run exports to
     # - add run exports from deps!
 
+    print('\n')
     if command == "render":
         for o in sorted_outputs:
             print(o)
