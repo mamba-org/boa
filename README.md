@@ -19,7 +19,7 @@
 
 **boa** is very much a work-in-progress right now.
 
-[![asciicast](https://asciinema.org/a/GfAKYAS6j3KnKuc8CNjnHolI4.svg)](https://asciinema.org/a/GfAKYAS6j3KnKuc8CNjnHolI4)
+[![asciicast](https://asciinema.org/a/HBduIi9TgdFgS3zV7mB3h0KpN.svg)](https://asciinema.org/a/HBduIi9TgdFgS3zV7mB3h0KpN)
 
 **boa** is a package builder for conda packages. It is re-using a lot of the `conda-build` infrastructure, but replaces some parts. Specifically the solving stage is done using `mamba`, the fast `conda`-alternative (implemented in C++ and based on `libsolv`).
 
