@@ -32,7 +32,6 @@ import conda_build
 from conda_build.variants import find_config_files, parse_config_file
 from conda_build.conda_interface import MatchSpec
 from conda_build import utils
-
 from typing import Tuple
 
 from pprint import pprint
@@ -73,10 +72,6 @@ def render_recursive(dict_or_array, context_dict, jenv):
                 render_recursive(value, context_dict, jenv)
             elif isinstance(value, collections.Iterable):
                 render_recursive(value, context_dict, jenv)
-
-
-deferred_parse = []
-
 
 def pin_subpackage(name, max_pin="x.x.x.x.x", exact=False):
     return f"{name} PIN_SUBPACKAGE[{max_pin},{exact}]"
@@ -296,7 +291,7 @@ def get_dependency_variants(requirements, conda_build_config, config):
                                 "build_number": 0,
                             }
                         else:
-                            raise InvalidRecipeError("Check your conda_build_config")
+                            raise RuntimeError("Check your conda_build_config")
 
                         if ms.match(p):
                             filtered.append(var)
@@ -745,16 +740,12 @@ def main(config=None):
         render_recursive(ydoc[key], context_dict, jenv)
 
     flatten_selectors(ydoc, ns_cfg(config))
-    pprint(ydoc)
+
     # We need to assemble the variants for each output
     variants = {}
     # if we have a outputs section, use that order the outputs
     if ydoc.get("outputs"):
-
-        # if ydoc.get("build"):
-        #     raise InvalidRecipeError("You can either declare outputs, or build?")
         for o in ydoc["outputs"]:
-
             # inherit from global package
             pkg_meta = {}
             pkg_meta.update(ydoc["package"])
@@ -780,7 +771,9 @@ def main(config=None):
 
     # then we need to solve and build from the bottom up
     # we can't first solve all packages without finalizing everything
-
+    #
+    # FLOW:
+    # =====
     # - solve the package
     #   - solv build, add weak run exports to
     # - add run exports from deps!
@@ -791,6 +784,7 @@ def main(config=None):
         exit()
 
     solver = MambaSolver(["conda-forge"], "linux-64")
+    print("\n")
 
     top_name = ydoc['package']['name']
     o0 = sorted_outputs[0]
@@ -803,7 +797,7 @@ def main(config=None):
         o.finalize_solve(sorted_outputs, solver)
 
         print(o)
-        # print(o.config.host_prefix)
+
         o.config._build_id = o0.config.build_id
 
         if "build" in o.transactions:
@@ -818,23 +812,14 @@ def main(config=None):
 
         meta = MetaData(recipe_path, o)
 
-        # o.config.compute_build_id(top_name)
-
         if cached_source != o.sections['source']:
             download_source(meta)
 
         build(MetaData(recipe_path, o), None)
 
-    # sorted_outputs
-    # print(sorted_outputs[0].config.host_prefix)
-    # exit()
-
     for o in sorted_outputs:
         print("\n")
         print(o)
-
-    # loader.dump(ydoc, sys.stdout)
-
 
 if __name__ == "__main__":
     main()
