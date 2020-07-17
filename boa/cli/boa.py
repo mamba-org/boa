@@ -11,7 +11,7 @@ from conda_build.config import get_or_merge_config
 from dataclasses import dataclass
 
 from conda.models.match_spec import MatchSpec
-from .build import MambaSolver
+from .mambabuild import MambaSolver
 import itertools
 from conda.common import toposort
 
@@ -21,8 +21,8 @@ import copy
 from conda_build.metadata import eval_selector, ns_cfg
 from conda.core.package_cache_data import PackageCacheData
 
-from boa.cli.new_build import build, download_source
-from boa.cli.metadata import MetaData
+from boa.build import build, download_source
+from boa.metadata import MetaData
 
 from mamba.utils import to_txn
 from mamba.mamba_api import PrefixData

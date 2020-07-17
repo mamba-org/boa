@@ -21,8 +21,8 @@ setup(
     packages=['boa', 'boa.cli'],
     entry_points={
         'console_scripts': [
-            'conda-mambabuild = boa.cli.build:main',
-            'boa = boa.cli.render:main'
+            'conda-mambabuild = boa.cli.mambabuild:main',
+            'boa = boa.cli.boa:main'
         ]
     },
     install_requires=deps,
