@@ -1,6 +1,14 @@
 #!/usr/bin/env python
-import sys
+import sys, os
 from setuptools import setup
+
+here = os.path.dirname(os.path.abspath(__file__))
+
+version_ns = {}
+with open(os.path.join(here, 'boa', '_version.py')) as f:
+    exec(f.read(), {}, version_ns)
+
+__version__ = version_ns['__version__']
 
 # deps = ['conda', 'requests', 'filelock', 'pyyaml', 'jinja2', 'pkginfo',
 #         'beautifulsoup4', 'chardet', 'pytz', 'tqdm', 'psutil', 'six',
@@ -9,14 +17,13 @@ deps = ['pyyaml', 'jinja2', 'setuptools', 'colorama']
 
 setup(
     name="boa",
-    version="0.0.1",
-    # cmdclass=versioneer.get_cmdclass(),
-    author="QuantStack",
-    author_email="info@quantstack",
-    url="https://github.com/quantstack/boa",
+    version=__version__,
+    author="Wolf Vollprecht",
+    author_email="wolf.vollprecht@quantstack",
+    url="https://github.com/thesnakepit/boa",
     license="BSD 3-clause",
     classifiers=[],
-    description="tools for building conda packages",
+    description="The mamba-powered conda package builder",
     long_description=open('README.md').read(),
     packages=['boa', 'boa.cli'],
     entry_points={
