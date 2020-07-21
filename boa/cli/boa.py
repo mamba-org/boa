@@ -20,6 +20,7 @@ from conda_build.utils import apply_pin_expressions
 import copy
 from conda_build.metadata import eval_selector, ns_cfg
 from conda.core.package_cache_data import PackageCacheData
+from conda.base.context import context
 
 from boa.build import build, download_source
 from boa.metadata import MetaData
@@ -799,7 +800,7 @@ def main(config=None):
             print(o)
         exit()
 
-    solver = MambaSolver(["conda-forge"], "linux-64")
+    solver = MambaSolver(["conda-forge"], context.subdir)
     print("\n")
 
     top_name = ydoc['package']['name']
