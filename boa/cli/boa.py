@@ -171,6 +171,7 @@ class CondaBuildSpec:
         pkg_name = self.name
         max_pin, exact = self.splitted[1][len("PIN_SUBPACKAGE") + 1 : -1].split(",")
         exact = exact == "True"
+        output = None
 
         for o in all_outputs:
             if o.name == pkg_name:
@@ -180,7 +181,7 @@ class CondaBuildSpec:
         if not output:
             raise RuntimeError(f"Could not find output with name {pkg_name}")
         version = output.version
-        build_string = output.build_string
+        build_string = output.final_build_id
 
         if exact:
             self.final = f"{pkg_name} {version} {build_string}"
@@ -255,7 +256,6 @@ def get_dependency_variants(requirements, conda_build_config, config):
                 _, lang = cb_spec.raw.split()
                 compiler = conda_build.jinja_context.compiler(lang, config)
                 cb_spec.final = compiler
-                # print("COMPILER: ", compiler)
                 config_key = f"{lang}_compiler"
                 config_version_key = f"{lang}_compiler_version"
 
@@ -309,7 +309,6 @@ def get_dependency_variants(requirements, conda_build_config, config):
     v = get_variants(host + build)
     return v
 
-
 def flatten_selectors(ydoc, namespace):
     if isinstance(ydoc, str):
         return ydoc
@@ -339,6 +338,16 @@ def flatten_selectors(ydoc, namespace):
         if len(to_delete):
             ydoc = [ydoc[idx] for idx in range(len(ydoc)) if idx not in to_delete]
 
+        # flatten lists if necessary
+        if any([isinstance(x, list) for x in ydoc]):
+            final_list = []
+            for x in ydoc:
+                if isinstance(x, list):
+                    final_list += x
+                else:
+                    final_list.append(x)
+            ydoc = final_list
+
     return ydoc
 
 
@@ -351,7 +360,7 @@ class Output:
         self.version = d["package"]["version"]
         self.build_string = d["package"].get("build_string")
         self.build_number = d["package"].get("build_number", 0)
-
+        self.is_first = False
         self.sections = {}
 
         def set_section(sname):
@@ -364,6 +373,7 @@ class Output:
         set_section('app')
         set_section('extra')
 
+        self.sections["files"] = d.get('files')
         self.sections["source"] = d.get("source", parent.get("source", {}))
         if hasattr(self.sections["source"], "keys"):
             self.sections["source"] = [self.sections["source"]]
@@ -708,6 +718,10 @@ def get_config(folder):
     return cbc, config
 
 
+def normalize_recipe(ydoc):
+    pass
+
+
 def main(config=None):
     print(banner)
 
@@ -730,7 +744,10 @@ def main(config=None):
     folder = args.recipe_dir
     cbc, config = get_config(folder)
 
-    update_index(os.path.dirname(config.output_folder), verbose=config.debug, threads=1)
+    if not os.path.exists(config.output_folder):
+        mkdir_p(config.output_folder)
+    print(f"Updating build index: {(config.output_folder)}\n")
+    update_index(config.output_folder, verbose=config.debug, threads=1)
 
     recipe_path = os.path.join(folder, "recipe.yaml")
 
@@ -756,7 +773,9 @@ def main(config=None):
         render_recursive(ydoc[key], context_dict, jenv)
 
     flatten_selectors(ydoc, ns_cfg(config))
+    normalize_recipe(ydoc)
 
+    # pprint(ydoc)
     # We need to assemble the variants for each output
     variants = {}
     # if we have a outputs section, use that order the outputs
@@ -800,20 +819,23 @@ def main(config=None):
             print(o)
         exit()
 
+
+    # TODO this should be done cleaner
+    top_name = ydoc['package']['name']
+    o0 = sorted_outputs[0]
+    o0.is_first = True
+    o0.config.compute_build_id(top_name)
+
     solver = MambaSolver(["conda-forge"], context.subdir)
     print("\n")
 
-    top_name = ydoc['package']['name']
-    o0 = sorted_outputs[0]
-    o0.config.compute_build_id(top_name)
     download_source(MetaData(recipe_path, o0))
     cached_source = o0.sections['source']
 
     for o in sorted_outputs:
         solver.replace_channels()
         o.finalize_solve(sorted_outputs, solver)
-
-        print(o)
+        # print(o)
 
         o.config._build_id = o0.config.build_id
 
@@ -828,11 +850,12 @@ def main(config=None):
             o.transactions['host'].execute(PrefixData(o.config.host_prefix), PackageCacheData.first_writable().pkgs_dir)
 
         meta = MetaData(recipe_path, o)
+        o.final_build_id = meta.build_id()
 
         if cached_source != o.sections['source']:
             download_source(meta)
 
-        build(MetaData(recipe_path, o), None)
+        build(meta, None)
 
     for o in sorted_outputs:
         print("\n")

@@ -290,12 +290,35 @@ can lead to packages that include their dependencies."""
     return new_files
 
 
-def bundle_conda(metadata, initial_files, env):
+def select_files(files, include_files, exclude_files):
+    to_include, to_exclude = set(), set()
+    if include_files:
+        for f in include_files:
+            to_include |= set(fnmatch.filter(files, f))
+    else:
+        to_include = set(files)
+    if exclude_files:
+        for f in exclude_files:
+            to_exclude |= set(fnmatch.filter(to_include, f))
+
+    final_files = to_include - to_exclude
+    return final_files
+
+
+def bundle_conda(metadata, initial_files, env, files_selector=None):
 
     files = post_process_files(metadata, initial_files)
 
     # first filter is so that info_files does not pick up ignored files
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
+    if files_selector:
+        files = select_files(files, files_selector.get('include'), files_selector.get('exclude'))
+
+    print(f"\nAdding files for {metadata.name()}\n{'=' * (len(metadata.name()) + 20)}\n")
+    for f in sorted(files):
+        print(f"- {f}")
+    print("\n")
+
     # this is also copying things like run_test.sh into info/recipe
     utils.rm_rf(os.path.join(metadata.config.info_dir, "test"))
 
@@ -309,6 +332,11 @@ def bundle_conda(metadata, initial_files, env):
     # here we add the info files into the prefix, so we want to re-collect the files list
     prefix_files = set(utils.prefix_files(metadata.config.host_prefix))
     files = utils.filter_files(prefix_files - initial_files, prefix=metadata.config.host_prefix)
+    if files_selector:
+        include_files = files_selector.get('include')
+        if include_files:
+            include_files += ['info/*']
+        files = select_files(files, include_files, files_selector.get('exclude'))
 
     basename = metadata.dist()
     tmp_archives = []
@@ -455,9 +483,14 @@ def write_build_scripts(m, script, build_file):
 
 def execute_build_script(m, src_dir, env, provision_only=False):
 
+
     script = utils.ensure_list(m.get_value("build/script", None))
     if script:
         script = "\n".join(script)
+
+    if not m.output.is_first and not script:
+        print("No build script found and not top-level build")
+        return
 
     if isdir(src_dir):
         build_stats = {}
@@ -533,7 +566,7 @@ def execute_build_script(m, src_dir, env, provision_only=False):
 def download_source(m):
     # Download all the stuff that's necessary
     with utils.path_prepended(m.config.build_prefix):
-        try_download(m, no_download_source=False)
+        try_download(m, no_download_source=False, raise_error=False)
 
 def build(m, stats={}):
 
@@ -579,4 +612,4 @@ def build(m, stats={}):
         utils.rm_rf(m.config.host_prefix)
         return
 
-    bundle_conda(m, files_before_script, env)
+    bundle_conda(m, files_before_script, env, m.output.sections['files'])

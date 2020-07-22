@@ -136,6 +136,11 @@ class MetaData:
     path: str
 
     source_provided: bool = False
+    # @property
+    # def source_provided(self):
+    #     return (not bool(self.meta.get('source')) or
+                # (os.path.isdir(self.config.work_dir) and len(os.listdir(self.config.work_dir)) > 0))
+
     uses_vcs_in_meta: bool = False
     uses_vcs_in_build: bool = False
     build_is_host: bool = False
@@ -143,6 +148,7 @@ class MetaData:
     final: bool = True
     activate_build_script: bool = True
 
+    numpy_xx: bool = False
     noarch: Optional[str] = None
     noarch_python: bool = False
 
@@ -359,7 +365,7 @@ class MetaData:
             else None,
             arch=ARCH_MAP.get(arch, arch),
             subdir=self.config.target_subdir,
-            depends=sorted(" ".join(ms.splitted) for ms in self.ms_depends()),
+            depends=sorted(" ".join(ms.final.split(' ')[:2]) for ms in self.ms_depends()),
             timestamp=int(time.time() * 1000),
         )
         for key in ("license", "license_family"):

@@ -1,4 +1,7 @@
-import sys, os
+import sys
+import os
+import re
+import json
 
 from collections import deque, OrderedDict
 import shutil
@@ -27,8 +30,6 @@ from conda_build.config import get_or_merge_config, get_channel_urls
 
 from conda_build.conda_interface import get_rc_urls
 from conda.base.context import context
-
-import re
 
 only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
 
@@ -146,31 +147,23 @@ class MambaSolver:
         for k, v in self.local_repos.items():
             v.clear(True)
 
+        import IPython; IPython.embed()
+
         start_prio = len(self.channels) + len(self.index)
         for subdir, channel in self.local_index:
-            cp = subdir.cache_path()
+            if not subdir.loaded():
+                continue
 
+            cp = subdir.cache_path()
             if cp.endswith(".solv"):
                 os.remove(subdir.cache_path())
                 cp = cp.replace(".solv", ".json")
-
-            import json
-
-            with open(cp, "r") as fi:
-                xxx = json.load(fi)
-                for p in xxx["packages"]:
-                    if p.startswith("test"):
-                        print(p)
 
             self.local_repos[str(channel)] = mamba_api.Repo(
                 self.pool, str(channel), cp, channel.url(with_credentials=True)
             )
             self.local_repos[str(channel)].set_priority(start_prio, 0)
             start_prio -= 1
-
-        # print(self.local_index)
-
-        # self.local_ = api.Repo()
 
     def solve(self, specs, prefix):
         """Solve given a set of specs.
@@ -205,7 +198,6 @@ class MambaSolver:
 
             raise RuntimeError(error_string)
 
-        # print(pkgs_dirs)
         package_cache = mamba_api.MultiPackageCache(pkgs_dirs)
 
         t = mamba_api.Transaction(api_solver, package_cache)
