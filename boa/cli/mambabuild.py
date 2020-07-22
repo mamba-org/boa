@@ -280,7 +280,7 @@ def main():
     context.local_repodata_ttl = 100000
 
     global solver
-    solver = MambaSolver(config.channel_urls, "linux-64")
+    solver = MambaSolver(config.channel_urls, context.subdir)
     solver.replace_channels()
     cbc, _ = conda_build.variants.get_package_combined_spec(recipe_dir, config=config)
 
