@@ -147,8 +147,6 @@ class MambaSolver:
         for k, v in self.local_repos.items():
             v.clear(True)
 
-        import IPython; IPython.embed()
-
         start_prio = len(self.channels) + len(self.index)
         for subdir, channel in self.local_index:
             if not subdir.loaded():
