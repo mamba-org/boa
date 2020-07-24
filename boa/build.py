@@ -100,6 +100,8 @@ if "bsd" in sys.platform:
     shell_path = "/bin/sh"
 elif utils.on_win:
     shell_path = "bash"
+elif "darwin" in sys.platform:
+    shell_path = "/bin/zsh"
 else:
     shell_path = "/bin/bash"
 
@@ -468,6 +470,7 @@ def write_build_scripts(m, script, build_file):
 
     with open(work_file, 'w') as bf:
         # bf.write('set -ex\n')
+        bf.write('#!/usr/bin/env bash\n\n')
         bf.write('if [ -z ${CONDA_BUILD+x} ]; then\n')
         bf.write("    source {}\n".format(env_file))
         bf.write("fi\n")
