@@ -118,6 +118,10 @@ def get_index(
 
 class MambaSolver:
     def __init__(self, channels, platform):
+
+        api_ctx = mamba_api.Context()
+        api_ctx.conda_prefix = context.conda_prefix
+
         self.channels = channels
         self.platform = platform
         self.index = get_index(channels, platform=platform)

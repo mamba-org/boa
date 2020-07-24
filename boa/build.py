@@ -496,12 +496,9 @@ def execute_build_script(m, src_dir, env, provision_only=False):
         build_stats = {}
         if utils.on_win:
             build_file = join(m.path, "bld.bat")
-            if script:
-                build_file = join(src_dir, "bld.bat")
-                import codecs
-
-                with codecs.getwriter("utf-8")(open(build_file, "wb")) as bf:
-                    bf.write(script)
+            if isfile(build_file) or script:
+                if (isinstance(script, str) and script.endswith('.bat')):
+                    build_file = os.path.join(m.path, script)
             windows.build(
                 m, build_file, stats=build_stats, provision_only=provision_only
             )

@@ -140,7 +140,7 @@ class MetaData:
     # def source_provided(self):
     #     return (not bool(self.meta.get('source')) or
                 # (os.path.isdir(self.config.work_dir) and len(os.listdir(self.config.work_dir)) > 0))
-
+    uses_new_style_compiler_activation: bool = False
     uses_vcs_in_meta: bool = False
     uses_vcs_in_build: bool = False
     build_is_host: bool = False

@@ -260,7 +260,8 @@ def get_dependency_variants(requirements, conda_build_config, config):
                 config_version_key = f"{lang}_compiler_version"
 
                 variants[config_key] = conda_build_config[config_key]
-                variants[config_version_key] = conda_build_config[config_version_key]
+                if conda_build_config.get(config_version_key):
+                    variants[config_version_key] = conda_build_config[config_version_key]
 
             variant_key = n.replace("_", "-")
             if variant_key in conda_build_config:
@@ -432,9 +433,12 @@ class Output:
         for idx, r in enumerate(self.requirements["build"]):
             if r.name.startswith("COMPILER_"):
                 lang = r.splitted[1].lower()
-                version = variant[lang + "_compiler_version"]
                 compiler = conda_build.jinja_context.compiler(lang, self.config)
-                copied.requirements["build"][idx].final = f"{compiler} {version}*"
+                if variant.get(lang + "_compiler_version"):
+                    version = variant[lang + "_compiler_version"]
+                    copied.requirements["build"][idx].final = f"{compiler} {version}*"
+                else:
+                    copied.requirements["build"][idx].final = f"{compiler}"
                 copied.requirements["build"][idx].from_pinnings = True
 
         for idx, r in enumerate(self.requirements["host"]):
@@ -726,7 +730,7 @@ def main(config=None):
     print(banner)
 
     parser = argparse.ArgumentParser(
-        description="Boa, the fast build tool for conda packages."
+        description="Boa, the fast, mamba powered-build tool for conda packages."
     )
     subparsers = parser.add_subparsers(help="sub-command help", dest="command")
     parent_parser = argparse.ArgumentParser(add_help=False)
