@@ -360,7 +360,7 @@ class Output:
         self.name = d["package"]["name"]
         self.version = d["package"]["version"]
         self.build_string = d["package"].get("build_string")
-        self.build_number = d["package"].get("build_number", 0)
+        self.build_number = d["build"].get("number", 0)
         self.is_first = False
         self.sections = {}
 
@@ -454,7 +454,7 @@ class Output:
         return copied
 
     def __repr__(self):
-        s = f"Output: {self.name}\n"
+        s = f"Output: {self.name} {self.version} BN: {self.build_number}\n"
         if hasattr(self, 'differentiating_variant'):
             short_v = ' '.join([val for val in self.differentiating_variant])
             s += f"Variant: {short_v}\n"
@@ -739,12 +739,21 @@ def main(config=None):
     render_parser = subparsers.add_parser(
         "render", parents=[parent_parser], help="render a recipe"
     )
+    convert_parser = subparsers.add_parser(
+        "convert", parents=[parent_parser], help="convert recipe.yaml to old-style meta.yaml"
+    )
     build_parser = subparsers.add_parser(
         "build", parents=[parent_parser], help="build a recipe"
     )
     args = parser.parse_args()
 
     command = args.command
+
+    if command == 'convert':
+        from boa.cli import convert
+        convert.main(args.recipe_dir)
+        exit()
+
     folder = args.recipe_dir
     cbc, config = get_config(folder)
 
