@@ -47,3 +47,9 @@ mamba install "conda-build>=3.18.12" colorama pip ruamel ruamel.yaml -c conda-fo
 # now install boa into your prefix with pip
 pip install -e .
 ```
+
+### License
+
+We use a shared copyright model that enables all contributors to maintain the copyright on their contributions.
+
+This software is licensed under the BSD-3-Clause license. See the LICENSE file for details.
