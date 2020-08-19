@@ -1,5 +1,7 @@
 ![boa header image](docs/assets/boa_header.png)
 
+## The Fast Conda and Mamba Package Builder
+
 <table>
 <thead align="center" cellspacing="10">
   <tr>
