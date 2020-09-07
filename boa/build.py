@@ -168,6 +168,7 @@ def create_info_files(m, files, prefix):
 
     if m.config.filename_hashing:
         write_hash_input(m)
+
     write_info_json(m)  # actually index.json
     write_about_json(m)
     write_link_json(m)
@@ -186,7 +187,7 @@ def create_info_files(m, files, prefix):
 
     write_info_files_file(m, files)
 
-    files_with_prefix = get_files_with_prefix(m, files, prefix)
+    files_with_prefix = get_files_with_prefix(m, [], files, prefix)
     record_prefix_files(m, files_with_prefix)
     checksums = create_info_files_json_v1(
         m, m.config.info_dir, prefix, files, files_with_prefix
