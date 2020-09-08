@@ -20,7 +20,7 @@ setup(
     version=__version__,
     author="Wolf Vollprecht",
     author_email="wolf.vollprecht@quantstack",
-    url="https://github.com/thesnakepit/boa",
+    url="https://github.com/mamba-org/boa",
     license="BSD 3-clause",
     classifiers=[],
     description="The mamba-powered conda package builder",
