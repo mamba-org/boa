@@ -121,7 +121,7 @@ class MambaSolver:
 
         api_ctx = mamba_api.Context()
         api_ctx.conda_prefix = context.conda_prefix
-
+        api_ctx.offline = True
         self.channels = channels
         self.platform = platform
         self.index = get_index(channels, platform=platform)

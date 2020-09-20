@@ -234,7 +234,7 @@ class Recipe:
     def __init__(self, ydoc):
         self.ydoc = ydoc
 
-def get_dependency_variants(requirements, conda_build_config, config):
+def get_dependency_variants(requirements, conda_build_config, config, features=[]):
     host = requirements.get("host") or []
     build = requirements.get("build") or []
     run = requirements.get("run") or []
@@ -353,7 +353,7 @@ def flatten_selectors(ydoc, namespace):
 
 
 class Output:
-    def __init__(self, d, config, parent={}):
+    def __init__(self, d, config, parent={}, selected_features={}):
         self.data = d
         self.config = config
 
@@ -379,7 +379,35 @@ class Output:
         if hasattr(self.sections["source"], "keys"):
             self.sections["source"] = [self.sections["source"]]
 
+        self.sections['features'] = parent.get('features', [])
+        if d.get('features'):
+            self.sections['features'].extend(d.get('features', []))
+
+        print(self.sections.get('features'))
+        self.feature_map = {f['name']: f for f in self.sections.get('features', [])}
+        print(self.feature_map)
+        for fname, feat in self.feature_map.items():
+            activated = feat.get('default', False)
+            if fname in selected_features:
+                activated = selected_features[fname]
+
+            feat['activated'] = activated
+
+        print(self.feature_map)
+
+
         self.requirements = copy.copy(d.get("requirements", {}))
+        for f in self.feature_map.values():
+            if f['activated']:
+                if not f.get('requirements'):
+                    continue
+                for i in ['build', 'host', 'run', 'run_constrained']:
+                    base_req = self.requirements.get(i, [])
+                    feat_req = f['requirements'].get(i, [])
+                    base_req += feat_req
+                    if len(base_req):
+                        self.requirements[i] = base_req
+
         self.transactions = {}
 
         self.parent = parent
@@ -614,7 +642,7 @@ class Output:
         self.variant = self.config.variant
 
 
-def to_build_tree(ydoc, variants, config):
+def to_build_tree(ydoc, variants, config, selected_features):
 
     print("\nVARIANTS:")
     for k in variants:
@@ -628,10 +656,10 @@ def to_build_tree(ydoc, variants, config):
 
     # first we need to perform a topological sort taking into account all the outputs
     if ydoc.get("outputs"):
-        outputs = [Output(o, config, parent=ydoc) for o in ydoc["outputs"]]
+        outputs = [Output(o, config, parent=ydoc, selected_features=selected_features) for o in ydoc["outputs"]]
         outputs = {o.name: o for o in outputs}
     else:
-        outputs = [Output(ydoc, config)]
+        outputs = [Output(ydoc, config, selected_features=selected_features)]
         outputs = {o.name: o for o in outputs}
 
     if len(outputs) > 1:
@@ -732,9 +760,11 @@ def main(config=None):
     parser = argparse.ArgumentParser(
         description="Boa, the fast, mamba powered-build tool for conda packages."
     )
+
     subparsers = parser.add_subparsers(help="sub-command help", dest="command")
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument("recipe_dir", type=str)
+    parent_parser.add_argument("--features", type=str)
 
     render_parser = subparsers.add_parser(
         "render", parents=[parent_parser], help="render a recipe"
@@ -745,6 +775,7 @@ def main(config=None):
     build_parser = subparsers.add_parser(
         "build", parents=[parent_parser], help="build a recipe"
     )
+
     transmute_parser = subparsers.add_parser(
         "transmute", parents=[],
         help="transmute one or many tar.bz2 packages into a conda packages (or vice versa!)"
@@ -803,7 +834,21 @@ def main(config=None):
     flatten_selectors(ydoc, ns_cfg(config))
     normalize_recipe(ydoc)
 
-    # pprint(ydoc)
+    if args.features:
+        assert(args.features.startswith('[') and args.features.endswith(']'))
+        features = [f.strip() for f in args.features[1:-1].split(',')]
+    else:
+        features = []
+
+    selected_features = {}
+    for f in features:
+        if f.startswith('~'):
+            selected_features[f[1:]] = False
+        else:
+            selected_features[f] = True
+
+    print(selected_features)
+
     # We need to assemble the variants for each output
     variants = {}
     # if we have a outputs section, use that order the outputs
@@ -819,18 +864,21 @@ def main(config=None):
             build_meta.update(ydoc.get("build"))
             build_meta.update(o.get("build") or {})
             o["build"] = build_meta
+
+            o["features"] = selected_features
+
             variants[o["package"]["name"]] = get_dependency_variants(
-                o.get("requirements", {}), cbc, config
+                o.get("requirements", {}), cbc, config, features
             )
     else:
         # we only have one output
         variants[ydoc["package"]["name"]] = get_dependency_variants(
-            ydoc.get("requirements", {}), cbc, config
+            ydoc.get("requirements", {}), cbc, config, features
         )
 
     # this takes in all variants and outputs, builds a dependency tree and returns
     # the final metadata
-    sorted_outputs = to_build_tree(ydoc, variants, config)
+    sorted_outputs = to_build_tree(ydoc, variants, config, selected_features)
 
     # then we need to solve and build from the bottom up
     # we can't first solve all packages without finalizing everything
