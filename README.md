@@ -45,7 +45,7 @@ boa build my_recipe_folder  # this is running a "build" of the v2 recipe
 You will have to install the dependencies of boa, and then execute pip to install:
 
 ```
-mamba install "conda-build>=3.18.12" colorama pip ruamel ruamel.yaml -c conda-forge
+mamba install "conda-build>=3.20" colorama pip ruamel ruamel.yaml -c conda-forge
 # now install boa into your prefix with pip
 pip install -e .
 ```
