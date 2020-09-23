@@ -79,9 +79,27 @@ def main(docname):
         quoted_lines.append(line)
     rest_lines = quoted_lines
 
+    skips, wo_skip_lines = [], []
+    for idx, line in enumerate(rest_lines):
+        if line.strip().startswith('skip'):
+            parts = line.split(':')
+            rhs = parts[1].strip()
+            if rhs.startswith('true'):
+                selector_start = line.rfind('[')
+                selector_end = line.rfind(']')
+                selector_content = line[selector_start + 1:selector_end]
+                skips.append(selector_content)
+            else:
+                print("ATTENTION skip: false not handled!")
+        else:
+            wo_skip_lines.append(line)
+
+    rest_lines = wo_skip_lines
     result_yaml.update(ruamel.yaml.load(''.join(rest_lines), ruamel.yaml.RoundTripLoader))
 
-    data = ruamel.yaml.load(''.join(rest_lines), ruamel.yaml.RoundTripLoader)
+    if len(skips) != 0:
+        result_yaml['build']['skip'] = skips
+
     from io import StringIO
     output = StringIO()
     yaml.dump(result_yaml, output)

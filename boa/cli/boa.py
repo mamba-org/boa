@@ -234,7 +234,6 @@ class Recipe:
     def __init__(self, ydoc):
         self.ydoc = ydoc
 
-
 def get_dependency_variants(requirements, conda_build_config, config):
     host = requirements.get("host") or []
     build = requirements.get("build") or []
@@ -259,7 +258,8 @@ def get_dependency_variants(requirements, conda_build_config, config):
                 config_key = f"{lang}_compiler"
                 config_version_key = f"{lang}_compiler_version"
 
-                variants[config_key] = conda_build_config[config_key]
+                if conda_build_config.get(config_key):
+                    variants[config_key] = conda_build_config[config_key]
                 if conda_build_config.get(config_version_key):
                     variants[config_version_key] = conda_build_config[config_version_key]
 
@@ -663,7 +663,8 @@ def to_build_tree(ydoc, variants, config):
                 x = output.apply_variant(c, differentiating_keys)
                 final_outputs.append(x)
         else:
-            final_outputs.append(output)
+            x = output.apply_variant({})
+            final_outputs.append(x)
 
     temp = final_outputs
     final_outputs = []
