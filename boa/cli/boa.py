@@ -727,7 +727,7 @@ def normalize_recipe(ydoc):
 
 
 def main(config=None):
-    print(banner)
+    # print(banner)
 
     parser = argparse.ArgumentParser(
         description="Boa, the fast, mamba powered-build tool for conda packages."
