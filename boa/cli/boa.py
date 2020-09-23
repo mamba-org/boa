@@ -727,7 +727,6 @@ def normalize_recipe(ydoc):
 
 
 def main(config=None):
-    # print(banner)
 
     parser = argparse.ArgumentParser(
         description="Boa, the fast, mamba powered-build tool for conda packages."
@@ -753,6 +752,8 @@ def main(config=None):
         from boa.cli import convert
         convert.main(args.recipe_dir)
         exit()
+
+    print(banner)
 
     folder = args.recipe_dir
     cbc, config = get_config(folder)
