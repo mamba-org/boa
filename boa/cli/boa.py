@@ -858,7 +858,11 @@ def main(config=None):
             if isdir(o.config.build_prefix):
                 utils.rm_rf(o.config.build_prefix)
             mkdir_p(o.config.build_prefix)
-            o.transactions['build'].execute(PrefixData(o.config.build_prefix), PackageCacheData.first_writable().pkgs_dir)
+            try:
+                o.transactions['build'].execute(PrefixData(o.config.build_prefix), PackageCacheData.first_writable().pkgs_dir)
+            except:
+                # This currently enables windows-multi-build...
+                print("Could not instantiate build environment")
 
         if "host" in o.transactions:
             mkdir_p(o.config.host_prefix)

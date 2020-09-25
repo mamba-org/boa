@@ -197,8 +197,8 @@ class MambaSolver:
             pstring = api_solver.problems_to_str()
             pstring = "\n".join(["   " + l for l in pstring.split("\n")])
             error_string += f"\nThe reported errors are:\n⇟{pstring}"
-
-            raise RuntimeError(error_string)
+            print(error_string)
+            exit(1)
 
         package_cache = mamba_api.MultiPackageCache(pkgs_dirs)
 
