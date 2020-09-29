@@ -14,6 +14,7 @@ class MyRepresenter(RoundTripRepresenter):
     pass
 ruamel.yaml.add_representer(OrderedDict, MyRepresenter.represent_dict, representer=MyRepresenter)
 
+
 def main(docname):
 
     with open(docname, 'r') as fi:
@@ -33,6 +34,7 @@ def main(docname):
     yaml = YAML(typ='rt')
     yaml.preserve_quotes = True
     yaml.default_flow_style = False
+    yaml.indent(sequence=4, offset=2)
     yaml.width = 1000
     yaml.Representer = MyRepresenter
     yaml.Loader = ruamel.yaml.RoundTripLoader
@@ -40,32 +42,8 @@ def main(docname):
     result_yaml = CommentedMap()
     result_yaml['context'] = context
 
-    quoted_lines = []
-
-    def check_if_quoted(s):
-        s = s.strip()
-        return (s.startswith('"') or s.startswith("'"))
-
-    for line in rest_lines:
-        if '{{' in line:
-            # make sure that jinja stuff is quoted
-            if line.strip().startswith('-'):
-                idx = line.find('-')
-            else:
-                idx = line.find(':')
-            rest = line[idx + 1:]
-
-            if not check_if_quoted(rest):
-                if '\'' in rest:
-                    rest = rest.replace('\'', '\"')
-
-                line = line[:idx + 1] + f" \'{rest.strip()}\'\n"
-        quoted_lines.append(line)
-
     def has_selector(s):
         return s.strip().endswith(']')
-
-    rest_lines = quoted_lines
 
     quoted_lines = []
     for line in rest_lines:
@@ -76,6 +54,29 @@ def main(docname):
 
             if line.strip().startswith('-'):
                 line = line[:line.find('-') + 1] + f' sel({selector_content}): ' + line[line.find('-') + 1:min(line.rfind('#'), line.rfind('['))].strip() + '\n'
+        quoted_lines.append(line)
+    rest_lines = quoted_lines
+
+
+    def check_if_quoted(s):
+        s = s.strip()
+        return (s.startswith('"') or s.startswith("'"))
+
+    quoted_lines = []
+    for line in rest_lines:
+        if '{{' in line:
+            # make sure that jinja stuff is quoted
+            if line.find(':') != -1:
+                idx = line.find(':')
+            elif line.strip().startswith('-'):
+                idx = line.find('-')
+            rest = line[idx + 1:]
+
+            if not check_if_quoted(rest):
+                if '\'' in rest:
+                    rest = rest.replace('\'', '\"')
+
+                line = line[:idx + 1] + f" \'{rest.strip()}\'\n"
         quoted_lines.append(line)
     rest_lines = quoted_lines
 
@@ -99,6 +100,26 @@ def main(docname):
 
     if len(skips) != 0:
         result_yaml['build']['skip'] = skips
+
+    new_outputs = {}
+    if result_yaml.get('outputs'):
+        for o in result_yaml['outputs']:
+            name = o['name']
+            package = {
+                'name': name
+            }
+            del o['name']
+            if o.get('version'):
+                package['version'] = o['version']
+                del o['version']
+
+            build = {}
+            if o.get('script'):
+                build['script'] = o['script']
+                del o['script']
+
+            o['package'] = package
+            o['build'] = build
 
     from io import StringIO
     output = StringIO()
