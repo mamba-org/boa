@@ -145,13 +145,18 @@ from conda_build.build import (
     get_entry_point_script_names,
     write_run_exports,
     get_short_path,
-    has_prefix, is_no_link, get_inode, get_inode_paths,
-    create_info_files_json_v1
+    has_prefix,
+    is_no_link,
+    get_inode,
+    get_inode_paths,
+    create_info_files_json_v1,
 )
+
 
 def create_post_scripts(m):
     # TODO (Wolf)
     return
+
 
 def create_info_files(m, files, prefix):
     """
@@ -216,6 +221,7 @@ def create_info_files(m, files, prefix):
             locking=m.config.locking,
         )
     return checksums
+
 
 def post_process_files(m, initial_prefix_files):
     get_build_metadata(m)
@@ -313,9 +319,13 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
     # first filter is so that info_files does not pick up ignored files
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
     if files_selector:
-        files = select_files(files, files_selector.get('include'), files_selector.get('exclude'))
+        files = select_files(
+            files, files_selector.get("include"), files_selector.get("exclude")
+        )
 
-    print(f"\nAdding files for {metadata.name()}\n{'=' * (len(metadata.name()) + 20)}\n")
+    print(
+        f"\nAdding files for {metadata.name()}\n{'=' * (len(metadata.name()) + 20)}\n"
+    )
     for f in sorted(files):
         print(f"- {f}")
     print("\n")
@@ -332,18 +342,20 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
 
     # here we add the info files into the prefix, so we want to re-collect the files list
     prefix_files = set(utils.prefix_files(metadata.config.host_prefix))
-    files = utils.filter_files(prefix_files - initial_files, prefix=metadata.config.host_prefix)
+    files = utils.filter_files(
+        prefix_files - initial_files, prefix=metadata.config.host_prefix
+    )
     if files_selector:
-        include_files = files_selector.get('include')
+        include_files = files_selector.get("include")
         if include_files:
-            include_files += ['info/*']
-        files = select_files(files, include_files, files_selector.get('exclude'))
+            include_files += ["info/*"]
+        files = select_files(files, include_files, files_selector.get("exclude"))
 
     basename = metadata.dist()
     tmp_archives = []
     final_outputs = []
     ext = ".tar.bz2"
-    if output.get('type') == "conda_v2" or metadata.config.conda_pkg_format == "2":
+    if output.get("type") == "conda_v2" or metadata.config.conda_pkg_format == "2":
         ext = ".conda"
 
     with TemporaryDirectory() as tmp:
@@ -423,11 +435,12 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
 
     return final_outputs
 
+
 def write_build_scripts(m, script, build_file):
 
     with utils.path_prepended(m.config.host_prefix):
         with utils.path_prepended(m.config.build_prefix):
-            env = environ.get_dict(m=m, variant={'no': 'variant'})
+            env = environ.get_dict(m=m, variant={"no": "variant"})
 
     print(env)
     env.update(m.build_features())
@@ -444,7 +457,7 @@ def write_build_scripts(m, script, build_file):
     # Note that pip env "NO" variables are inverted logic.
     #      PIP_NO_BUILD_ISOLATION=False means don't use build isolation.
     #
-    env["PIP_NO_BUILD_ISOLATION"] = 'False'
+    env["PIP_NO_BUILD_ISOLATION"] = "False"
     # some other env vars to have pip ignore dependencies.
     # we supply them ourselves instead.
     env["PIP_NO_DEPENDENCIES"] = True
@@ -454,7 +467,7 @@ def write_build_scripts(m, script, build_file):
     # .dist-info directories being created, see gh-3094
 
     # set PIP_CACHE_DIR to a path in the work dir that does not exist.
-    env['PIP_CACHE_DIR'] = m.config.pip_cache_dir
+    env["PIP_CACHE_DIR"] = m.config.pip_cache_dir
 
     # tell pip to not get anything from PyPI, please.  We have everything we need
     # locally, and if we don't, it's a problem.
@@ -463,12 +476,12 @@ def write_build_scripts(m, script, build_file):
     if m.noarch == "python":
         env["PYTHONDONTWRITEBYTECODE"] = True
 
-    work_file = join(m.config.work_dir, 'conda_build.sh')
-    env_file = join(m.config.work_dir, 'build_env_setup.sh')
+    work_file = join(m.config.work_dir, "conda_build.sh")
+    env_file = join(m.config.work_dir, "build_env_setup.sh")
 
-    with open(env_file, 'w') as bf:
+    with open(env_file, "w") as bf:
         for k, v in env.items():
-            if v != '' and v is not None:
+            if v != "" and v is not None:
                 bf.write('export {0}="{1}"\n'.format(k, v))
                 print('export {0}="{1}"\n'.format(k, v))
 
@@ -476,7 +489,8 @@ def write_build_scripts(m, script, build_file):
             _write_sh_activation_text(bf, m)
 
         # add the feature function
-        bf.write("""
+        bf.write(
+            """
 function feature()
 {
     if [[ $1 != "0" ]]
@@ -486,11 +500,12 @@ function feature()
         echo $3
     fi
 }
-""")
+"""
+        )
 
-    with open(work_file, 'w') as bf:
+    with open(work_file, "w") as bf:
         # bf.write('set -ex\n')
-        bf.write('if [ -z ${CONDA_BUILD+x} ]; then\n')
+        bf.write("if [ -z ${CONDA_BUILD+x} ]; then\n")
         bf.write("    source {}\n".format(env_file))
         bf.write("fi\n")
 
@@ -505,7 +520,6 @@ function feature()
 
 def execute_build_script(m, src_dir, env, provision_only=False):
 
-
     script = utils.ensure_list(m.get_value("build/script", None))
     if script:
         script = "\n".join(script)
@@ -519,7 +533,7 @@ def execute_build_script(m, src_dir, env, provision_only=False):
         if utils.on_win:
             build_file = join(m.path, "bld.bat")
             if isfile(build_file) or script:
-                if (isinstance(script, str) and script.endswith('.bat')):
+                if isinstance(script, str) and script.endswith(".bat"):
                     build_file = os.path.join(m.path, script)
             windows.build(
                 m, build_file, stats=build_stats, provision_only=provision_only
@@ -534,7 +548,7 @@ def execute_build_script(m, src_dir, env, provision_only=False):
             #     )
             # There is no sense in trying to run an empty build script.
             if isfile(build_file) or script:
-                if (isinstance(script, str) and script.endswith('.sh')):
+                if isinstance(script, str) and script.endswith(".sh"):
                     build_file = os.path.join(m.path, script)
 
                 work_file, _ = write_build_scripts(m, script, build_file)
@@ -566,7 +580,7 @@ def execute_build_script(m, src_dir, env, provision_only=False):
 
                     # clear this, so that the activate script will get run as necessary
                     del env["CONDA_BUILD"]
-                    env["PKG_NAME"] = m.get_value('package/name')
+                    env["PKG_NAME"] = m.get_value("package/name")
 
                     utils.check_call_env(
                         cmd,
@@ -582,10 +596,12 @@ def execute_build_script(m, src_dir, env, provision_only=False):
         #     log_stats(build_stats, "building {}".format(m.name()))
         #     if stats is not None:
 
+
 def download_source(m):
     # Download all the stuff that's necessary
     with utils.path_prepended(m.config.build_prefix):
         try_download(m, no_download_source=False, raise_error=False)
+
 
 def build(m, stats={}):
 
@@ -603,7 +619,7 @@ def build(m, stats={}):
         env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     m.output.sections["package"]["name"] = m.output.name
-    env["PKG_NAME"] = m.get_value('package/name')
+    env["PKG_NAME"] = m.get_value("package/name")
 
     src_dir = m.config.work_dir
     if isdir(src_dir):
@@ -627,8 +643,8 @@ def build(m, stats={}):
 
     files_difference = files_after_script - files_before_script
 
-    if m.output.sections['build'].get('intermediate') == True:
+    if m.output.sections["build"].get("intermediate") == True:
         utils.rm_rf(m.config.host_prefix)
         return
 
-    bundle_conda(m, files_before_script, env, m.output.sections['files'])
+    bundle_conda(m, files_before_script, env, m.output.sections["files"])

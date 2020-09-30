@@ -107,7 +107,7 @@ class MetaData:
         else:
             self.path = os.path.dirname(os.path.abspath(path))
 
-        self._meta_name = 'recipe.yaml'
+        self._meta_name = "recipe.yaml"
         self._meta_path = os.path.join(self.path, self._meta_name)
 
         self.noarch = self.output.sections["build"].get("noarch", None)
@@ -139,7 +139,7 @@ class MetaData:
     # @property
     # def source_provided(self):
     #     return (not bool(self.meta.get('source')) or
-                # (os.path.isdir(self.config.work_dir) and len(os.listdir(self.config.work_dir)) > 0))
+    # (os.path.isdir(self.config.work_dir) and len(os.listdir(self.config.work_dir)) > 0))
     uses_new_style_compiler_activation: bool = False
     uses_vcs_in_meta: bool = False
     uses_vcs_in_build: bool = False
@@ -221,7 +221,7 @@ class MetaData:
         return self.output.build_number
 
     def include_recipe(self):
-        return self.get_value('build/include_recipe', True)
+        return self.get_value("build/include_recipe", True)
 
     def use_feature_map(self):
         return self.output.feature_map
@@ -231,20 +231,20 @@ class MetaData:
 
         def truefalse(x):
             if x:
-                return '1'
+                return "1"
             else:
-                return '0'
+                return "0"
 
-        return {
-            'FEATURE_' + k.upper(): truefalse(v['activated']) for k, v in m.items()
-        }
+        return {"FEATURE_" + k.upper(): truefalse(v["activated"]) for k, v in m.items()}
 
     # TODO? What are the implications of this?!
     is_output: bool = False
 
     @property
     def meta_path(self):
-        meta_path = self._meta_path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path', '')
+        meta_path = self._meta_path or self.meta.get("extra", {}).get(
+            "parent_recipe", {}
+        ).get("path", "")
         if meta_path and os.path.basename(meta_path) != self._meta_name:
             meta_path = os.path.join(meta_path, self._meta_name)
         return meta_path
@@ -339,7 +339,8 @@ class MetaData:
 
         # trim_build_only_deps(self, dependencies)
         dependencies = (
-            self.get_dependencies('build') + self.get_dependencies('host')
+            self.get_dependencies("build")
+            + self.get_dependencies("host")
             # self.output.requirements["build"] + self.output.requirements["host"]
         )
         dependencies = {x.name for x in dependencies}
@@ -393,7 +394,9 @@ class MetaData:
             else None,
             arch=ARCH_MAP.get(arch, arch),
             subdir=self.config.target_subdir,
-            depends=sorted(" ".join(ms.final.split(' ')[:2]) for ms in self.ms_depends()),
+            depends=sorted(
+                " ".join(ms.final.split(" ")[:2]) for ms in self.ms_depends()
+            ),
             timestamp=int(time.time() * 1000),
         )
         for key in ("license", "license_family"):

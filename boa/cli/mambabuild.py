@@ -100,9 +100,7 @@ def get_index(
             name_and_subdir = channel.subdir
         else:
             name_and_subdir = channel.name + "/" + channel.subdir
-        sd = mamba_api.SubdirData(
-            name_and_subdir, full_url, full_path_cache
-        )
+        sd = mamba_api.SubdirData(name_and_subdir, full_url, full_path_cache)
 
         sd.load()
         index.append((sd, channel))

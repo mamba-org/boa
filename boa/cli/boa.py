@@ -39,6 +39,7 @@ from pprint import pprint
 
 from colorama import Fore, Style
 import colorama
+
 colorama.init()
 
 import tabulate
@@ -74,6 +75,7 @@ def render_recursive(dict_or_array, context_dict, jenv):
                 render_recursive(value, context_dict, jenv)
             elif isinstance(value, collections.Iterable):
                 render_recursive(value, context_dict, jenv)
+
 
 def pin_subpackage(name, max_pin="x.x.x.x.x", exact=False):
     return f"{name} PIN_SUBPACKAGE[{max_pin},{exact}]"
@@ -235,6 +237,7 @@ class Recipe:
     def __init__(self, ydoc):
         self.ydoc = ydoc
 
+
 def get_dependency_variants(requirements, conda_build_config, config, features=[]):
     host = requirements.get("host") or []
     build = requirements.get("build") or []
@@ -262,7 +265,9 @@ def get_dependency_variants(requirements, conda_build_config, config, features=[
                 if conda_build_config.get(config_key):
                     variants[config_key] = conda_build_config[config_key]
                 if conda_build_config.get(config_version_key):
-                    variants[config_version_key] = conda_build_config[config_version_key]
+                    variants[config_version_key] = conda_build_config[
+                        config_version_key
+                    ]
 
             variant_key = n.replace("_", "-")
             if variant_key in conda_build_config:
@@ -310,6 +315,7 @@ def get_dependency_variants(requirements, conda_build_config, config, features=[
 
     v = get_variants(host + build)
     return v
+
 
 def flatten_selectors(ydoc, namespace):
     if isinstance(ydoc, str):
@@ -370,44 +376,48 @@ class Output:
             self.sections[sname].update(parent.get(sname, {}))
             self.sections[sname].update(d.get(sname, {}))
 
-        set_section('build')
-        set_section('package')
-        set_section('app')
-        set_section('extra')
+        set_section("build")
+        set_section("package")
+        set_section("app")
+        set_section("extra")
 
-        self.sections["files"] = d.get('files')
+        self.sections["files"] = d.get("files")
         self.sections["source"] = d.get("source", parent.get("source", {}))
         if hasattr(self.sections["source"], "keys"):
             self.sections["source"] = [self.sections["source"]]
 
-        self.sections['features'] = parent.get('features', [])
-        if d.get('features'):
-            self.sections['features'].extend(d.get('features', []))
+        self.sections["features"] = parent.get("features", [])
+        if d.get("features"):
+            self.sections["features"].extend(d.get("features", []))
 
-        self.feature_map = {f['name']: f for f in self.sections.get('features', [])}
+        self.feature_map = {f["name"]: f for f in self.sections.get("features", [])}
         for fname, feat in self.feature_map.items():
-            activated = feat.get('default', False)
+            activated = feat.get("default", False)
             if fname in selected_features:
                 activated = selected_features[fname]
 
-            feat['activated'] = activated
+            feat["activated"] = activated
 
         if len(self.feature_map):
             print("\nFeatures:\n----------")
             for feature in self.feature_map:
-                if self.feature_map[feature]['activated']:
-                    print(f"{Style.BRIGHT}{feature:<20}{Style.RESET_ALL}: {Fore.GREEN}ON{Style.RESET_ALL}")
+                if self.feature_map[feature]["activated"]:
+                    print(
+                        f"{Style.BRIGHT}{feature:<20}{Style.RESET_ALL}: {Fore.GREEN}ON{Style.RESET_ALL}"
+                    )
                 else:
-                    print(f"{Style.BRIGHT}{feature:<20}{Style.RESET_ALL}: {Fore.RED}OFF{Style.RESET_ALL}")
+                    print(
+                        f"{Style.BRIGHT}{feature:<20}{Style.RESET_ALL}: {Fore.RED}OFF{Style.RESET_ALL}"
+                    )
 
         self.requirements = copy.copy(d.get("requirements", {}))
         for f in self.feature_map.values():
-            if f['activated']:
-                if not f.get('requirements'):
+            if f["activated"]:
+                if not f.get("requirements"):
                     continue
-                for i in ['build', 'host', 'run', 'run_constrained']:
+                for i in ["build", "host", "run", "run_constrained"]:
                     base_req = self.requirements.get(i, [])
-                    feat_req = f['requirements'].get(i, [])
+                    feat_req = f["requirements"].get(i, [])
                     base_req += feat_req
                     if len(base_req):
                         self.requirements[i] = base_req
@@ -487,8 +497,8 @@ class Output:
 
     def __repr__(self):
         s = f"Output: {self.name} {self.version} BN: {self.build_number}\n"
-        if hasattr(self, 'differentiating_variant'):
-            short_v = ' '.join([val for val in self.differentiating_variant])
+        if hasattr(self, "differentiating_variant"):
+            short_v = " ".join([val for val in self.differentiating_variant])
             s += f"Variant: {short_v}\n"
         s += "Build:\n"
 
@@ -535,7 +545,7 @@ class Output:
         for s in self.requirements[env]:
             if s.is_transitive_dependency:
                 continue
-            if s.name in self.sections['build'].get('ignore_run_exports', []):
+            if s.name in self.sections["build"].get("ignore_run_exports", []):
                 continue
             if hasattr(s, "final_version"):
                 final_triple = (
@@ -658,13 +668,16 @@ def to_build_tree(ydoc, variants, config, selected_features):
         print(f"\nOutput: {Style.BRIGHT}{k}{Style.RESET_ALL}\n{headerline}\n")
         table = []
         for pkg, var in variants[k].items():
-            table.append([pkg, '\n'.join(var)])
+            table.append([pkg, "\n".join(var)])
 
         print(tabulate.tabulate(table, ["Package", "Variant versions"], tablefmt="rst"))
 
     # first we need to perform a topological sort taking into account all the outputs
     if ydoc.get("outputs"):
-        outputs = [Output(o, config, parent=ydoc, selected_features=selected_features) for o in ydoc["outputs"]]
+        outputs = [
+            Output(o, config, parent=ydoc, selected_features=selected_features)
+            for o in ydoc["outputs"]
+        ]
         outputs = {o.name: o for o in outputs}
     else:
         outputs = [Output(ydoc, config, selected_features=selected_features)]
@@ -706,9 +719,11 @@ def to_build_tree(ydoc, variants, config, selected_features):
     final_outputs = []
     has_intermediate = False
     for o in temp:
-        if o.sections['build'].get('intermediate') == True:
+        if o.sections["build"].get("intermediate") == True:
             if has_intermediate:
-                raise RuntimeError("Already found an intermediate build. There can be only one!")
+                raise RuntimeError(
+                    "Already found an intermediate build. There can be only one!"
+                )
             final_outputs.insert(0, o)
             has_intermediate = True
         else:
@@ -727,8 +742,12 @@ def to_build_tree(ydoc, variants, config, selected_features):
 
         intermediate = final_outputs[0]
         for o in final_outputs[1:]:
-            merge_requirements(intermediate.requirements['host'], o.requirements['host'])
-            merge_requirements(intermediate.requirements['build'], o.requirements['build'])
+            merge_requirements(
+                intermediate.requirements["host"], o.requirements["host"]
+            )
+            merge_requirements(
+                intermediate.requirements["build"], o.requirements["build"]
+            )
             merged_variant = {}
             merged_variant.update(intermediate.config.variant)
             merged_variant.update(o.config.variant)
@@ -778,31 +797,36 @@ def main(config=None):
         "render", parents=[parent_parser], help="render a recipe"
     )
     convert_parser = subparsers.add_parser(
-        "convert", parents=[parent_parser], help="convert recipe.yaml to old-style meta.yaml"
+        "convert",
+        parents=[parent_parser],
+        help="convert recipe.yaml to old-style meta.yaml",
     )
     build_parser = subparsers.add_parser(
         "build", parents=[parent_parser], help="build a recipe"
     )
 
     transmute_parser = subparsers.add_parser(
-        "transmute", parents=[],
-        help="transmute one or many tar.bz2 packages into a conda packages (or vice versa!)"
+        "transmute",
+        parents=[],
+        help="transmute one or many tar.bz2 packages into a conda packages (or vice versa!)",
     )
-    transmute_parser.add_argument('files', type=str, nargs='+')
-    transmute_parser.add_argument('-o', '--output-directory', type=str, default=".")
-    transmute_parser.add_argument('-c', '--compression-level', type=int, default=22)
+    transmute_parser.add_argument("files", type=str, nargs="+")
+    transmute_parser.add_argument("-o", "--output-directory", type=str, default=".")
+    transmute_parser.add_argument("-c", "--compression-level", type=int, default=22)
 
     args = parser.parse_args()
 
     command = args.command
 
-    if command == 'convert':
+    if command == "convert":
         from boa.cli import convert
+
         convert.main(args.recipe_dir)
         exit()
 
-    if command == 'transmute':
+    if command == "transmute":
         from boa.cli import transmute
+
         transmute.main(args)
         exit()
 
@@ -843,14 +867,14 @@ def main(config=None):
     normalize_recipe(ydoc)
 
     if args.features:
-        assert(args.features.startswith('[') and args.features.endswith(']'))
-        features = [f.strip() for f in args.features[1:-1].split(',')]
+        assert args.features.startswith("[") and args.features.endswith("]")
+        features = [f.strip() for f in args.features[1:-1].split(",")]
     else:
         features = []
 
     selected_features = {}
     for f in features:
-        if f.startswith('~'):
+        if f.startswith("~"):
             selected_features[f[1:]] = False
         else:
             selected_features[f] = True
@@ -895,15 +919,14 @@ def main(config=None):
     #   - solv build, add weak run exports to
     # - add run exports from deps!
 
-    print('\n')
+    print("\n")
     if command == "render":
         for o in sorted_outputs:
             print(o)
         exit()
 
-
     # TODO this should be done cleaner
-    top_name = ydoc['package']['name']
+    top_name = ydoc["package"]["name"]
     o0 = sorted_outputs[0]
     o0.is_first = True
     o0.config.compute_build_id(top_name)
@@ -912,7 +935,7 @@ def main(config=None):
     print("\n")
 
     download_source(MetaData(recipe_path, o0))
-    cached_source = o0.sections['source']
+    cached_source = o0.sections["source"]
 
     for o in sorted_outputs:
         solver.replace_channels()
@@ -926,19 +949,25 @@ def main(config=None):
                 utils.rm_rf(o.config.build_prefix)
             mkdir_p(o.config.build_prefix)
             try:
-                o.transactions['build'].execute(PrefixData(o.config.build_prefix), PackageCacheData.first_writable().pkgs_dir)
+                o.transactions["build"].execute(
+                    PrefixData(o.config.build_prefix),
+                    PackageCacheData.first_writable().pkgs_dir,
+                )
             except:
                 # This currently enables windows-multi-build...
                 print("Could not instantiate build environment")
 
         if "host" in o.transactions:
             mkdir_p(o.config.host_prefix)
-            o.transactions['host'].execute(PrefixData(o.config.host_prefix), PackageCacheData.first_writable().pkgs_dir)
+            o.transactions["host"].execute(
+                PrefixData(o.config.host_prefix),
+                PackageCacheData.first_writable().pkgs_dir,
+            )
 
         meta = MetaData(recipe_path, o)
         o.final_build_id = meta.build_id()
 
-        if cached_source != o.sections['source']:
+        if cached_source != o.sections["source"]:
             download_source(meta)
 
         build(meta, None)
@@ -946,6 +975,7 @@ def main(config=None):
     for o in sorted_outputs:
         print("\n")
         print(o)
+
 
 if __name__ == "__main__":
     main()
