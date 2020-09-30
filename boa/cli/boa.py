@@ -384,9 +384,7 @@ class Output:
         if d.get('features'):
             self.sections['features'].extend(d.get('features', []))
 
-        print(self.sections.get('features'))
         self.feature_map = {f['name']: f for f in self.sections.get('features', [])}
-        print(self.feature_map)
         for fname, feat in self.feature_map.items():
             activated = feat.get('default', False)
             if fname in selected_features:
@@ -394,8 +392,13 @@ class Output:
 
             feat['activated'] = activated
 
-        print(self.feature_map)
-
+        if len(self.feature_map):
+            print("\nFeatures:\n----------")
+            for feature in self.feature_map:
+                if self.feature_map[feature]['activated']:
+                    print(f"{Style.BRIGHT}{feature:<20}{Style.RESET_ALL}: {Fore.GREEN}ON{Style.RESET_ALL}")
+                else:
+                    print(f"{Style.BRIGHT}{feature:<20}{Style.RESET_ALL}: {Fore.RED}OFF{Style.RESET_ALL}")
 
         self.requirements = copy.copy(d.get("requirements", {}))
         for f in self.feature_map.values():
@@ -851,8 +854,6 @@ def main(config=None):
             selected_features[f[1:]] = False
         else:
             selected_features[f] = True
-
-    print(selected_features)
 
     # We need to assemble the variants for each output
     variants = {}
