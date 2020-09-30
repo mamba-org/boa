@@ -169,7 +169,7 @@ class MetaData:
             )
         specs = []
         # for spec in ensure_list(self.get_value('requirements/' + typ, [])):
-        for spec in self.output.requirements[typ]:
+        for spec in self.get_dependencies(typ):
             if not spec:
                 continue
             if spec.is_transitive_dependency and not spec.from_run_export:
@@ -222,6 +222,22 @@ class MetaData:
 
     def include_recipe(self):
         return self.get_value('build/include_recipe', True)
+
+    def use_feature_map(self):
+        return self.output.feature_map
+
+    def build_features(self):
+        m = self.use_feature_map()
+
+        def truefalse(x):
+            if x:
+                return '1'
+            else:
+                return '0'
+
+        return {
+            'FEATURE_' + k.upper(): truefalse(v['activated']) for k, v in m.items()
+        }
 
     # TODO? What are the implications of this?!
     is_output: bool = False
@@ -286,6 +302,17 @@ class MetaData:
     def binary_relocation(self):
         return True
 
+    def get_dependencies(self, which):
+        deps = self.output.requirements[which]
+        # print(deps)
+        # for feat, used in self.use_feature_map().items():
+        #     if used:
+        #         fdeps = used.get('requirements')
+        #         if fdeps:
+        #             fdeps = fdeps.get(which, [])
+        #         deps.extend(fdeps)
+        return deps
+
     def get_hash_contents(self):
         """
         # A hash will be added if all of these are true for any dependency:
@@ -312,7 +339,8 @@ class MetaData:
 
         # trim_build_only_deps(self, dependencies)
         dependencies = (
-            self.output.requirements["build"] + self.output.requirements["host"]
+            self.get_dependencies('build') + self.get_dependencies('host')
+            # self.output.requirements["build"] + self.output.requirements["host"]
         )
         dependencies = {x.name for x in dependencies}
         # filter out ignored versions

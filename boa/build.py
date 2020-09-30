@@ -429,6 +429,13 @@ def write_build_scripts(m, script, build_file):
         with utils.path_prepended(m.config.build_prefix):
             env = environ.get_dict(m=m, variant={'no': 'variant'})
 
+    print(env)
+    env.update(m.build_features())
+
+    print(env)
+    print("\n\n\n\n\nn\n\n")
+    print(m.build_features())
+
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     # hard-code this because we never want pip's build isolation
@@ -463,9 +470,23 @@ def write_build_scripts(m, script, build_file):
         for k, v in env.items():
             if v != '' and v is not None:
                 bf.write('export {0}="{1}"\n'.format(k, v))
+                print('export {0}="{1}"\n'.format(k, v))
 
         if m.activate_build_script:
             _write_sh_activation_text(bf, m)
+
+        # add the feature function
+        bf.write("""
+function feature()
+{
+    if [[ $1 != "0" ]]
+    then
+        echo $2
+    else
+        echo $3
+    fi
+}
+""")
 
     with open(work_file, 'w') as bf:
         # bf.write('set -ex\n')
