@@ -745,6 +745,14 @@ def main(config=None):
     build_parser = subparsers.add_parser(
         "build", parents=[parent_parser], help="build a recipe"
     )
+    transmute_parser = subparsers.add_parser(
+        "transmute", parents=[],
+        help="transmute one or many tar.bz2 packages into a conda packages (or vice versa!)"
+    )
+    transmute_parser.add_argument('files', type=str, nargs='+')
+    transmute_parser.add_argument('-o', '--output-directory', type=str, default=".")
+    transmute_parser.add_argument('-c', '--compression-level', type=int, default=22)
+
     args = parser.parse_args()
 
     command = args.command
@@ -752,6 +760,11 @@ def main(config=None):
     if command == 'convert':
         from boa.cli import convert
         convert.main(args.recipe_dir)
+        exit()
+
+    if command == 'transmute':
+        from boa.cli import transmute
+        transmute.main(args)
         exit()
 
     print(banner)

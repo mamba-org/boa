@@ -13,7 +13,7 @@ __version__ = version_ns['__version__']
 # deps = ['conda', 'requests', 'filelock', 'pyyaml', 'jinja2', 'pkginfo',
 #         'beautifulsoup4', 'chardet', 'pytz', 'tqdm', 'psutil', 'six',
 #         'libarchive-c', 'setuptools']
-deps = ['pyyaml', 'jinja2', 'setuptools', 'colorama']
+deps = ['pyyaml', 'jinja2', 'setuptools', 'colorama', 'rich']
 
 setup(
     name="boa",

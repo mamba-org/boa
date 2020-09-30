@@ -52,7 +52,7 @@ from conda_build.conda_interface import UnsatisfiableError
 from conda_build.conda_interface import NoPackagesFoundError
 from conda_build.conda_interface import CondaError
 from conda_build.conda_interface import pkgs_dirs
-from conda_build.utils import env_var, glob, tmp_chdir, CONDA_TARBALL_EXTENSIONS
+from conda_build.utils import env_var, glob, tmp_chdir
 
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
