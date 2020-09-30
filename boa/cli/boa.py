@@ -14,7 +14,7 @@ from conda.models.match_spec import MatchSpec
 from .mambabuild import MambaSolver
 import itertools
 from conda.common import toposort
-
+from conda.models.channel import Channel as CondaChannel
 from conda_build.utils import apply_pin_expressions
 
 import copy
@@ -116,6 +116,7 @@ class CondaBuildSpec:
     is_pin_compatible: bool = False
     is_compiler: bool = False
     is_transitive_dependency: bool = False
+    channel: str = ""
     # final: String
 
     from_run_export: bool = False
@@ -508,10 +509,12 @@ class Output:
                     version = "PS " + version
                 color = Fore.CYAN
 
+            channel = CondaChannel.from_url(x.channel).name
+
             if len(fv) >= 2:
-                return f" - {Style.BRIGHT}{r.final_name:<30}{Style.RESET_ALL} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<10} {fv[1]:<10}\n"
+                return f" - {Style.BRIGHT}{r.final_name:<30}{Style.RESET_ALL} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<10} {fv[1]:<20} {channel}\n"
             else:
-                return f" - {Style.BRIGHT}{r.final_name:<30}{Style.RESET_ALL} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<10}\n"
+                return f" - {Style.BRIGHT}{r.final_name:<30}{Style.RESET_ALL} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<20} {channel}\n"
 
         for r in self.requirements["build"]:
             s += format(r)
@@ -604,10 +607,12 @@ class Output:
                         p["version"],
                         p["build_string"],
                     )
+                    spec_map[p["name"]].channel = p["channel"]
                 else:
                     cbs = CondaBuildSpec(f"{p['name']}")
                     cbs.is_transitive_dependency = True
                     cbs.final_version = (p["version"], p["build_string"])
+                    cbs.channel = p["channel"]
                     self.requirements[env].append(cbs)
 
             self.transactions[env] = t
