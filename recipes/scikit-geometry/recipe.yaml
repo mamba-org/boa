@@ -15,7 +15,8 @@ source:
 build:
   number: 3
   skip:
-    - py<35
+    - py <35
+    - win and vc <14
 
 requirements:
   build:
