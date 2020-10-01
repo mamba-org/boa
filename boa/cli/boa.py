@@ -947,7 +947,7 @@ def main(config=None):
             if isdir(o.config.build_prefix):
                 utils.rm_rf(o.config.build_prefix)
             mkdir_p(o.config.build_prefix)
-            ctx.target_prefix = o.config.build_prefix
+            # ctx.target_prefix = o.config.build_prefix
             try:
                 o.transactions["build"].execute(
                     PrefixData(o.config.build_prefix),
@@ -959,7 +959,7 @@ def main(config=None):
 
         if "host" in o.transactions:
             mkdir_p(o.config.host_prefix)
-            ctx.target_prefix = o.config.host_prefix
+            # ctx.target_prefix = o.config.host_prefix
             o.transactions["host"].execute(
                 PrefixData(o.config.host_prefix),
                 PackageCacheData.first_writable().pkgs_dir,
