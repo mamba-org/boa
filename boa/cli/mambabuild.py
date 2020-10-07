@@ -1,14 +1,8 @@
 import sys
 import os
 import re
-import json
 
-from collections import deque, OrderedDict
-import shutil
 from conda.models.match_spec import MatchSpec
-from conda.models.channel import Channel
-from conda.core.index import calculate_channel_urls, check_whitelist
-from conda.core.subdir_data import cache_fn_url, create_cache_dir
 import conda_build.api
 from conda_build.conda_interface import pkgs_dirs
 import conda_build.environ
@@ -16,7 +10,7 @@ from conda.core.prefix_data import PrefixData
 from conda._vendor.boltons.setutils import IndexedSet
 
 from mamba import mamba_api
-from mamba.utils import to_package_record_from_subjson
+from mamba.utils import get_index, to_package_record_from_subjson
 from conda.core.solve import diff_for_unlink_link_precs
 from conda.models.prefix_graph import PrefixGraph
 from conda.plan import get_blank_actions
@@ -24,7 +18,6 @@ from conda.models.dist import Dist
 
 import conda_build
 from conda_build import api
-from conda_build.build import build
 
 from conda_build.config import get_or_merge_config, get_channel_urls
 
@@ -69,49 +62,6 @@ def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
     actions["UNLINK"].extend(Dist(prec) for prec in unlink_precs)
     actions["LINK"].extend(Dist(prec) for prec in link_precs)
     return actions
-
-
-def get_index(
-    channel_urls=(),
-    prepend=True,
-    platform=None,
-    use_local=False,
-    use_cache=False,
-    unknown=None,
-    prefix=None,
-    repodata_fn="repodata.json",
-):
-    real_urls = calculate_channel_urls(channel_urls, prepend, platform, use_local)
-    check_whitelist(real_urls)
-
-    dlist = mamba_api.DownloadTargetList()
-
-    index = []
-    for idx, url in enumerate(real_urls):
-        channel = Channel(url)
-
-        full_url = channel.url(with_credentials=True) + "/" + repodata_fn
-        full_path_cache = os.path.join(
-            create_cache_dir(), cache_fn_url(full_url, repodata_fn)
-        )
-
-        # Channels might not have a name.
-        if channel.name is None:
-            name_and_subdir = channel.subdir
-        else:
-            name_and_subdir = channel.name + "/" + channel.subdir
-        sd = mamba_api.SubdirData(name_and_subdir, full_url, full_path_cache)
-
-        sd.load()
-        index.append((sd, channel))
-        dlist.add(sd)
-
-    is_downloaded = dlist.download(True)
-
-    if not is_downloaded:
-        raise RuntimeError("Error downloading repodata.")
-
-    return index
 
 
 class MambaSolver:
