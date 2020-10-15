@@ -106,7 +106,6 @@ else:
 
 from conda_build.build import (
     stats_key,
-    seconds_to_text,
     log_stats,
     guess_interpreter,
     have_regex_files,
