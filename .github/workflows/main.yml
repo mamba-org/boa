@@ -1,0 +1,40 @@
+name: Tests
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  run:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: [3.6, 3.7, 3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup conda
+      uses: goanpeca/setup-miniconda@v1
+      with:
+        mamba-version: "*"
+        channels: conda-forge
+
+    - name: Mamba install dependencies
+      shell: bash -l {0}
+      run: mamba install python=${{ matrix.python-version }} "conda-build>=3.20" colorama pip ruamel ruamel.yaml rich
+
+    - name: Install boa
+      shell: bash -l {0}
+      run: pip install .
+
+    - name: Check installation
+      shell: bash -l {0}
+      run: command -v boa

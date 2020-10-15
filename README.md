@@ -25,7 +25,7 @@
 
 **boa** is a package builder for conda packages. It is re-using a lot of the `conda-build` infrastructure, but replaces some parts. Specifically the solving stage is done using `mamba`, the fast `conda`-alternative (implemented in C++ and based on `libsolv`).
 
-We are also working towards a new "meta.yaml" format in the `boa/cli/render.py` source file. 
+We are also working towards a new "meta.yaml" format in the `boa/cli/render.py` source file.
 This is totally a work-in-progress, and you should not expect it to work or to be stable.
 
 You can find (and participate!) in discussions regarding the new `meta.yaml` format in this hackmd: https://hackmd.io/axI1tQdwQB2pTJKt5XdY5w
@@ -45,7 +45,7 @@ boa build my_recipe_folder  # this is running a "build" of the v2 recipe
 You will have to install the dependencies of boa, and then execute pip to install:
 
 ```
-mamba install "conda-build>=3.20" colorama pip ruamel ruamel.yaml -c conda-forge
+mamba install "conda-build>=3.20" colorama pip ruamel ruamel.yaml rich -c conda-forge
 # now install boa into your prefix with pip
 pip install -e .
 ```
