@@ -1,0 +1,45 @@
+name: Linters (Python)
+
+on:
+  push:
+   branches:
+     - master
+  pull_request:
+    branches:
+     - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+    - name: Install micromamba
+      shell: bash -l {0}
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          wget -qO- https://micromamba.snakepit.net/api/micromamba/linux-64/latest | tar -xvj bin/micromamba --strip-components=1
+        else
+          wget -qO- https://micromamba.snakepit.net/api/micromamba/osx-64/latest | tar -xvj bin/micromamba
+          mv bin/micromamba ./micromamba
+        fi
+        ./micromamba shell init -s bash -p ~/micromamba
+        mkdir -p ~/micromamba/pkgs/
+    - name: Install dependencies
+      shell: pwsh
+      run: |
+        export MAMBA_ROOT_PREFIX=~/micromamba
+        export MAMBA_EXE=$(pwd)/micromamba
+        . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
+        micromamba create -n lint pre-commit pip -y -c conda-forge
+    - name: Run all linters
+      shell: pwsh
+      run: |
+        export MAMBA_ROOT_PREFIX=~/micromamba
+        export MAMBA_EXE=$(pwd)/micromamba
+        . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
+        micromamba activate lint
+        pre-commit run --all-files --verbose
