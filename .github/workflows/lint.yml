@@ -29,14 +29,14 @@ jobs:
         ./micromamba shell init -s bash -p ~/micromamba
         mkdir -p ~/micromamba/pkgs/
     - name: Install dependencies
-      shell: pwsh
+      shell: bash -l {0}
       run: |
         export MAMBA_ROOT_PREFIX=~/micromamba
         export MAMBA_EXE=$(pwd)/micromamba
         . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
         micromamba create -n lint pre-commit pip -y -c conda-forge
     - name: Run all linters
-      shell: pwsh
+      shell: bash -l {0}
       run: |
         export MAMBA_ROOT_PREFIX=~/micromamba
         export MAMBA_EXE=$(pwd)/micromamba
