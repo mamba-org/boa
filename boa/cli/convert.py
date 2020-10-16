@@ -51,16 +51,16 @@ def main(docname):
         if has_selector(line):
             selector_start = line.rfind("[")
             selector_end = line.rfind("]")
-            selector_content = line[selector_start + 1: selector_end]
+            selector_content = line[selector_start + 1 : selector_end]
 
             if line.strip().startswith("-"):
                 line = (
-                    line[: line.find("-") + 1] +
-                    f" sel({selector_content}): " +
-                    line[
-                        line.find("-") + 1: min(line.rfind("#"), line.rfind("["))
-                    ].strip() +
-                    "\n"
+                    line[: line.find("-") + 1]
+                    + f" sel({selector_content}): "
+                    + line[
+                        line.find("-") + 1 : min(line.rfind("#"), line.rfind("["))
+                    ].strip()
+                    + "\n"
                 )
         quoted_lines.append(line)
     rest_lines = quoted_lines
@@ -77,7 +77,7 @@ def main(docname):
                 idx = line.find(":")
             elif line.strip().startswith("-"):
                 idx = line.find("-")
-            rest = line[idx + 1:]
+            rest = line[idx + 1 :]
 
             if not check_if_quoted(rest):
                 if "'" in rest:
@@ -95,7 +95,7 @@ def main(docname):
             if rhs.startswith("true"):
                 selector_start = line.rfind("[")
                 selector_end = line.rfind("]")
-                selector_content = line[selector_start + 1: selector_end]
+                selector_content = line[selector_start + 1 : selector_end]
                 skips.append(selector_content)
             else:
                 print("ATTENTION skip: false not handled!")

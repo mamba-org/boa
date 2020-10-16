@@ -222,7 +222,7 @@ def main():
     # setting the repodata timeout to very high for conda
     context.local_repodata_ttl = 100000
 
-    recipe = args['recipe'][0]
+    recipe = args["recipe"][0]
 
     global solver
     solver = MambaSolver(channel_urls, context.subdir)

@@ -462,9 +462,9 @@ def execute_build_script(m, src_dir, env, provision_only=False):
 
                 if not provision_only:
                     cmd = (
-                        [shell_path] +
-                        (["-x"] if m.config.debug else []) +
-                        ["-o", "errexit", work_file]
+                        [shell_path]
+                        + (["-x"] if m.config.debug else [])
+                        + ["-o", "errexit", work_file]
                     )
 
                     # rewrite long paths in stdout back to their env variables

@@ -135,7 +135,7 @@ class CondaBuildSpec:
         self.final = self.raw
 
         if self.is_pin_compatible:
-            self.final[len("PIN_COMPATIBLE") + 1: -1]
+            self.final[len("PIN_COMPATIBLE") + 1 : -1]
 
     @property
     def final_name(self):
@@ -170,7 +170,7 @@ class CondaBuildSpec:
         if not self.splitted[1].startswith("PIN_SUBPACKAGE"):
             return
         pkg_name = self.name
-        max_pin, exact = self.splitted[1][len("PIN_SUBPACKAGE") + 1: -1].split(",")
+        max_pin, exact = self.splitted[1][len("PIN_SUBPACKAGE") + 1 : -1].split(",")
         exact = exact == "True"
         output = None
 
@@ -196,7 +196,7 @@ class CondaBuildSpec:
     def eval_pin_compatible(self, build, host):
 
         lower_bound, upper_bound, min_pin, max_pin, exact = self.splitted[1][
-            len("PIN_COMPATIBLE") + 1: -1
+            len("PIN_COMPATIBLE") + 1 : -1
         ].split(",")
         if lower_bound == "None":
             lower_bound = None
@@ -436,9 +436,9 @@ class Output:
 
     def all_requirements(self):
         requirements = (
-            self.requirements.get("build") +
-            self.requirements.get("host") +
-            self.requirements.get("run")
+            self.requirements.get("build")
+            + self.requirements.get("host")
+            + self.requirements.get("run")
         )
         return requirements
 
@@ -789,17 +789,13 @@ def main(config=None):
     parent_parser.add_argument("recipe_dir", type=str)
     parent_parser.add_argument("--features", type=str)
 
-    subparsers.add_parser(
-        "render", parents=[parent_parser], help="render a recipe"
-    )
+    subparsers.add_parser("render", parents=[parent_parser], help="render a recipe")
     subparsers.add_parser(
         "convert",
         parents=[parent_parser],
         help="convert recipe.yaml to old-style meta.yaml",
     )
-    subparsers.add_parser(
-        "build", parents=[parent_parser], help="build a recipe"
-    )
+    subparsers.add_parser("build", parents=[parent_parser], help="build a recipe")
 
     transmute_parser = subparsers.add_parser(
         "transmute",

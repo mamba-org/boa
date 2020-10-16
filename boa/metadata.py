@@ -1,9 +1,6 @@
 from typing import Union, Dict, Iterable, Any, Optional
 
-from conda_build.metadata import (
-    default_structs,
-    ARCH_MAP
-)
+from conda_build.metadata import default_structs, ARCH_MAP
 
 from conda_build.utils import ensure_list
 
@@ -52,8 +49,8 @@ def build_string_from_metadata(metadata):
                         if name == "numpy" and not metadata.numpy_xx:
                             continue
                         if metadata.noarch == name or (
-                            metadata.get_value("build/noarch_python") and
-                            name == "python"
+                            metadata.get_value("build/noarch_python")
+                            and name == "python"
                         ):
                             res.append(s)
                         else:
@@ -332,8 +329,8 @@ class MetaData:
 
         # trim_build_only_deps(self, dependencies)
         dependencies = (
-            self.get_dependencies("build") +
-            self.get_dependencies("host")
+            self.get_dependencies("build")
+            + self.get_dependencies("host")
             # self.output.requirements["build"] + self.output.requirements["host"]
         )
         dependencies = {x.name for x in dependencies}
