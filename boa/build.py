@@ -510,7 +510,9 @@ def download_source(m):
         try_download(m, no_download_source=False, raise_error=False)
 
 
-def build(m, stats={}):
+def build(m, stats=None):
+    if not stats:
+        stats = {}
 
     if m.skip():
         print(utils.get_skip_message(m))

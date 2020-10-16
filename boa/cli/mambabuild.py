@@ -29,7 +29,7 @@ only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
 
 
 def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
-    to_link_records, to_unlink_records = [], []
+    to_link_records = []
 
     prefix_data = PrefixData(prefix)
     final_precs = IndexedSet(prefix_data.iter_records())
@@ -38,14 +38,7 @@ def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
     for _, c in index:
         lookup_dict[str(c)] = c
 
-    for c, pkg in to_unlink:
-        for i_rec in installed_pkg_recs:
-            if i_rec.fn == pkg:
-                final_precs.remove(i_rec)
-                to_unlink_records.append(i_rec)
-                break
-        else:
-            print("No package record found!")
+    assert len(to_unlink) == 0
 
     for c, pkg, jsn_s in to_link:
         sdir = lookup_dict[c]
@@ -96,7 +89,7 @@ class MambaSolver:
     def replace_channels(self):
         self.local_index = get_index(("local",), platform=self.platform, prepend=False)
 
-        for k, v in self.local_repos.items():
+        for _, v in self.local_repos.items():
             v.clear(True)
 
         start_prio = len(self.channels) + len(self.index)

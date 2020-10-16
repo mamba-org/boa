@@ -236,7 +236,7 @@ class Recipe:
         self.ydoc = ydoc
 
 
-def get_dependency_variants(requirements, conda_build_config, config, features=[]):
+def get_dependency_variants(requirements, conda_build_config, config, features=()):
     host = requirements.get("host") or []
     build = requirements.get("build") or []
     # run = requirements.get("run") or []
@@ -356,7 +356,11 @@ def flatten_selectors(ydoc, namespace):
 
 
 class Output:
-    def __init__(self, d, config, parent={}, selected_features={}):
+    def __init__(self, d, config, parent=None, selected_features=None):
+        if parent is None:
+            parent = {}
+        if selected_features is None:
+            selected_features = {}
         self.data = d
         self.config = config
 
@@ -442,7 +446,7 @@ class Output:
         )
         return requirements
 
-    def apply_variant(self, variant, differentiating_keys=[]):
+    def apply_variant(self, variant, differentiating_keys=()):
         copied = copy.deepcopy(self)
 
         copied.variant = variant
@@ -479,7 +483,7 @@ class Output:
                     copied.requirements["build"][idx].final = f"{compiler}"
                 copied.requirements["build"][idx].from_pinnings = True
 
-        for idx, r in enumerate(self.requirements["host"]):
+        for r in self.requirements["host"]:
             if r.name.startswith("COMPILER_"):
                 raise RuntimeError("Compiler should be in build section")
 
@@ -498,7 +502,7 @@ class Output:
             s += f"Variant: {short_v}\n"
         s += "Build:\n"
 
-        def format(x):
+        def spec_format(x):
             version, fv = " ", " "
             if len(x.final.split(" ")) > 1:
                 version = " ".join(r.final.split(" ")[1:])
@@ -526,13 +530,13 @@ class Output:
                 return f" - {Style.BRIGHT}{r.final_name:<30}{Style.RESET_ALL} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<20} {channel}\n"
 
         for r in self.requirements["build"]:
-            s += format(r)
+            s += spec_format(r)
         s += "Host:\n"
         for r in self.requirements["host"]:
-            s += format(r)
+            s += spec_format(r)
         s += "Run:\n"
         for r in self.requirements["run"]:
-            s += format(r)
+            s += spec_format(r)
         return s
 
     def propagate_run_exports(self, env):
@@ -596,7 +600,7 @@ class Output:
         if self.requirements.get(env):
             print(f"Finalizing {Fore.YELLOW}{env}{Style.RESET_ALL} for {self.name}")
             specs = self.requirements[env]
-            for idx, s in enumerate(specs):
+            for s in specs:
                 if s.is_pin:
                     s.eval_pin_subpackage(all_outputs)
                 if env == "run" and s.is_pin_compatible:
@@ -799,7 +803,7 @@ def main(config=None):
 
     transmute_parser = subparsers.add_parser(
         "transmute",
-        parents=[],
+        parents=(),
         help="transmute one or many tar.bz2 packages into a conda packages (or vice versa!)",
     )
     transmute_parser.add_argument("files", type=str, nargs="+")
@@ -945,7 +949,7 @@ def main(config=None):
                     PrefixData(o.config.build_prefix),
                     PackageCacheData.first_writable().pkgs_dir,
                 )
-            except:
+            except Exception:
                 # This currently enables windows-multi-build...
                 print("Could not instantiate build environment")
 

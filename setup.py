@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os
+import os
 from setuptools import setup
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -10,9 +10,6 @@ with open(os.path.join(here, "boa", "_version.py")) as f:
 
 __version__ = version_ns["__version__"]
 
-# deps = ['conda', 'requests', 'filelock', 'pyyaml', 'jinja2', 'pkginfo',
-#         'beautifulsoup4', 'chardet', 'pytz', 'tqdm', 'psutil', 'six',
-#         'libarchive-c', 'setuptools']
 deps = [
     "pyyaml",
     "jinja2",

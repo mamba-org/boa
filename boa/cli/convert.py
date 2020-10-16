@@ -88,7 +88,7 @@ def main(docname):
     rest_lines = quoted_lines
 
     skips, wo_skip_lines = [], []
-    for idx, line in enumerate(rest_lines):
+    for line in rest_lines:
         if line.strip().startswith("skip"):
             parts = line.split(":")
             rhs = parts[1].strip()

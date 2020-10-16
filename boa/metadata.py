@@ -350,7 +350,7 @@ class MetaData:
         # always exclude older stuff that's always in the build string (py, np, pl, r, lua)
         if build_string_excludes:
             exclude_pattern = re.compile(
-                "|".join("{}[\s$]?.*".format(exc) for exc in build_string_excludes)
+                "|".join("{}[\\s$]?.*".format(exc) for exc in build_string_excludes)
             )
             filtered_deps = []
             for req in dependencies:

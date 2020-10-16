@@ -2,4 +2,3 @@
 max-line-length=88
 extend-ignore=E203,D104,D100,I004,E501
 exclude=tests/data/*
-
