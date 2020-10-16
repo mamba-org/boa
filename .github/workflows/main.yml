@@ -29,12 +29,12 @@ jobs:
 
     - name: Mamba install dependencies
       shell: bash -l {0}
-      run: mamba install python=${{ matrix.python-version }} "conda-build>=3.20" colorama pip ruamel ruamel.yaml rich
+      run: mamba install mamba python=${{ matrix.python-version }} "conda-build>=3.20" colorama pip ruamel ruamel.yaml rich pytest
 
     - name: Install boa
       shell: bash -l {0}
       run: pip install .
 
-    - name: Check installation
+    - name: Run tests
       shell: bash -l {0}
-      run: command -v boa
+      run: pytest tests
