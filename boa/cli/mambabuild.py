@@ -19,7 +19,8 @@ from conda.models.dist import Dist
 import conda_build
 from conda_build import api
 
-from conda_build.config import get_or_merge_config, get_channel_urls
+from conda_build.config import Config, get_channel_urls
+from conda_build.cli.main_build import parse_args
 
 from conda_build.conda_interface import get_rc_urls
 from conda.base.context import context
@@ -212,17 +213,20 @@ conda_build.environ.get_install_actions = mamba_get_install_actions
 
 
 def main():
-    recipe_dir = sys.argv[1]
-    config = get_or_merge_config(None, {})
-    config.channel_urls = get_rc_urls() + get_channel_urls({})
-    config = conda_build.config.get_or_merge_config(None)
+    _, args = parse_args(sys.argv[1:])
+    args = args.__dict__
+
+    config = Config(**args)
+    channel_urls = get_rc_urls() + get_channel_urls({})
 
     # setting the repodata timeout to very high for conda
     context.local_repodata_ttl = 100000
 
-    global solver
-    solver = MambaSolver(config.channel_urls, context.subdir)
-    solver.replace_channels()
-    cbc, _ = conda_build.variants.get_package_combined_spec(recipe_dir, config=config)
+    recipe = args['recipe'][0]
 
-    api.build(recipe_dir)
+    global solver
+    solver = MambaSolver(channel_urls, context.subdir)
+    solver.replace_channels()
+    cbc, _ = conda_build.variants.get_package_combined_spec(recipe, config=config)
+
+    api.build(recipe)
