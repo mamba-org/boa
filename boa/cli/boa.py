@@ -1,8 +1,10 @@
-import os, sys
-from os.path import isdir, isfile, islink, join, dirname
+import os
+from os.path import isdir
+import sys
 
 from ruamel.yaml import YAML
-import jinja2, json
+import jinja2
+import json
 import collections
 import re
 import argparse
@@ -25,24 +27,20 @@ from conda.base.context import context
 from boa.build import build, download_source
 from boa.metadata import MetaData
 
-from mamba.utils import to_txn
 from mamba.mamba_api import PrefixData
 from conda.gateways.disk.create import mkdir_p
 from conda_build.index import update_index
 import conda_build
 from conda_build.variants import find_config_files, parse_config_file
-from conda_build.conda_interface import MatchSpec
 from conda_build import utils
 from typing import Tuple
 
-from pprint import pprint
-
 from colorama import Fore, Style
 import colorama
+import tabulate
 
 colorama.init()
 
-import tabulate
 
 banner = r"""
            _
@@ -137,7 +135,7 @@ class CondaBuildSpec:
         self.final = self.raw
 
         if self.is_pin_compatible:
-            self.final[len("PIN_COMPATIBLE") + 1 : -1]
+            self.final[len("PIN_COMPATIBLE") + 1: -1]
 
     @property
     def final_name(self):
@@ -172,7 +170,7 @@ class CondaBuildSpec:
         if not self.splitted[1].startswith("PIN_SUBPACKAGE"):
             return
         pkg_name = self.name
-        max_pin, exact = self.splitted[1][len("PIN_SUBPACKAGE") + 1 : -1].split(",")
+        max_pin, exact = self.splitted[1][len("PIN_SUBPACKAGE") + 1: -1].split(",")
         exact = exact == "True"
         output = None
 
@@ -198,7 +196,7 @@ class CondaBuildSpec:
     def eval_pin_compatible(self, build, host):
 
         lower_bound, upper_bound, min_pin, max_pin, exact = self.splitted[1][
-            len("PIN_COMPATIBLE") + 1 : -1
+            len("PIN_COMPATIBLE") + 1: -1
         ].split(",")
         if lower_bound == "None":
             lower_bound = None
@@ -241,9 +239,7 @@ class Recipe:
 def get_dependency_variants(requirements, conda_build_config, config, features=[]):
     host = requirements.get("host") or []
     build = requirements.get("build") or []
-    run = requirements.get("run") or []
-
-    used_vars = {}
+    # run = requirements.get("run") or []
 
     def get_variants(env):
         specs = {}
@@ -338,7 +334,7 @@ def flatten_selectors(ydoc, namespace):
         to_delete = []
         for idx, el in enumerate(ydoc):
             res = flatten_selectors(el, namespace)
-            if res == None:
+            if res is None:
                 to_delete.append(idx)
             else:
                 ydoc[idx] = res
@@ -440,9 +436,9 @@ class Output:
 
     def all_requirements(self):
         requirements = (
-            self.requirements.get("build")
-            + self.requirements.get("host")
-            + self.requirements.get("run")
+            self.requirements.get("build") +
+            self.requirements.get("host") +
+            self.requirements.get("run")
         )
         return requirements
 
@@ -719,7 +715,7 @@ def to_build_tree(ydoc, variants, config, selected_features):
     final_outputs = []
     has_intermediate = False
     for o in temp:
-        if o.sections["build"].get("intermediate") == True:
+        if o.sections["build"].get("intermediate"):
             if has_intermediate:
                 raise RuntimeError(
                     "Already found an intermediate build. There can be only one!"
@@ -793,15 +789,15 @@ def main(config=None):
     parent_parser.add_argument("recipe_dir", type=str)
     parent_parser.add_argument("--features", type=str)
 
-    render_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "render", parents=[parent_parser], help="render a recipe"
     )
-    convert_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "convert",
         parents=[parent_parser],
         help="convert recipe.yaml to old-style meta.yaml",
     )
-    build_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "build", parents=[parent_parser], help="build a recipe"
     )
 
