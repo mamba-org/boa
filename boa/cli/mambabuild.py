@@ -78,7 +78,6 @@ class MambaSolver:
         self.repos = []
 
         start_prio = len(channels)
-        priority = start_prio
         subpriority = 0  # wrong! :)
         for subdir, channel in self.index:
             repo = mamba_api.Repo(
@@ -143,7 +142,7 @@ class MambaSolver:
             for c in self.channels:
                 error_string += f" - {c}\n"
             pstring = api_solver.problems_to_str()
-            pstring = "\n".join(["   " + l for l in pstring.split("\n")])
+            pstring = "\n".join(["   " + el for el in pstring.split("\n")])
             error_string += f"\nThe reported errors are:\n⇟{pstring}"
             print(error_string)
             exit(1)

@@ -3,22 +3,12 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 """
 from __future__ import absolute_import, division, print_function
 
-from collections import deque, OrderedDict
 import fnmatch
-import glob2
 import io
-import json
 import os
-import warnings
-from os.path import isdir, isfile, islink, join, dirname
-import random
-import re
+from os.path import isdir, isfile, join
 import shutil
-import stat
-import string
-import subprocess
 import sys
-import time
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
 #   eventually
@@ -26,49 +16,15 @@ import time
 #    http://stackoverflow.com/a/13057751/1170370
 import encodings.idna  # NOQA
 
-from bs4 import UnicodeDammit
-import yaml
-
 import conda_package_handling.api
 
 # used to get version
-from conda_build.conda_interface import env_path_backup_var_exists, conda_45, conda_46
-from conda_build.conda_interface import PY3
-from conda_build.conda_interface import prefix_placeholder
-from conda_build.conda_interface import TemporaryDirectory
-from conda_build.conda_interface import VersionOrder
-from conda_build.conda_interface import text_type
-from conda_build.conda_interface import CrossPlatformStLink
-from conda_build.conda_interface import PathType, FileMode
-from conda_build.conda_interface import EntityEncoder
-from conda_build.conda_interface import get_rc_urls
-from conda_build.conda_interface import url_path
-from conda_build.conda_interface import root_dir
-from conda_build.conda_interface import conda_private
-from conda_build.conda_interface import MatchSpec
-from conda_build.conda_interface import reset_context
-from conda_build.conda_interface import context
-from conda_build.conda_interface import UnsatisfiableError
-from conda_build.conda_interface import NoPackagesFoundError
-from conda_build.conda_interface import CondaError
-from conda_build.conda_interface import pkgs_dirs
-from conda_build.utils import env_var, glob, tmp_chdir
+from conda_build.conda_interface import env_path_backup_var_exists, TemporaryDirectory
+from conda_build.utils import tmp_chdir
 
-from conda_build import environ, source, tarcheck, utils
-from conda_build.index import get_build_index, update_index
-from conda_build.render import (
-    output_yaml,
-    bldpkg_path,
-    render_recipe,
-    reparse,
-    distribute_variants,
-    expand_outputs,
-    try_download,
-    execute_download_actions,
-    add_upstream_pins,
-)
-import conda_build.os_utils.external as external
-from conda_build.metadata import FIELDS, MetaData, default_structs
+from conda_build import environ, source, utils
+from conda_build.index import update_index
+from conda_build.render import try_download
 from conda_build.post import (
     post_process,
     post_build,
@@ -76,22 +32,9 @@ from conda_build.post import (
     get_build_metadata,
 )
 
-from conda_build.exceptions import (
-    indent,
-    DependencyNeedsBuildingError,
-    CondaBuildException,
-)
-from conda_build.variants import (
-    set_language_env_vars,
-    dict_of_lists_to_list_of_dicts,
-    get_package_variants,
-)
-from conda_build.create_test import create_all_test_files
+from conda_build.exceptions import indent
 
 import conda_build.noarch_python as noarch_python
-
-from conda import __version__ as conda_version
-from conda_build import __version__ as conda_build_version
 
 if sys.platform == "win32":
     import conda_build.windows as windows
@@ -105,34 +48,10 @@ else:
 
 
 from conda_build.build import (
-    stats_key,
-    log_stats,
-    guess_interpreter,
-    have_regex_files,
-    have_prefix_files,
-    get_bytes_or_text_as_bytes,
-    regex_files_rg,
-    mmap_or_read,
-    regex_files_py,
-    regex_matches_tighten_re,
-    sort_matches,
-    check_matches,
-    rewrite_file_with_new_prefix,
-    perform_replacements,
-    _copy_top_level_recipe,
-    sanitize_channel,
-    check_external,
-    prefix_replacement_excluded,
-    chunks,
     _write_sh_activation_text,
-    _write_activation_text,
-    _copy_output_recipe,
-    copy_recipe,
     copy_readme,
-    # jsonify_info_yamls,
     copy_license,
     copy_recipe_log,
-    copy_test_source_files,
     write_hash_input,
     get_files_with_prefix,
     record_prefix_files,
@@ -140,14 +59,8 @@ from conda_build.build import (
     write_link_json,
     write_about_json,
     write_info_json,
-    write_no_link,
     get_entry_point_script_names,
     write_run_exports,
-    get_short_path,
-    has_prefix,
-    is_no_link,
-    get_inode,
-    get_inode_paths,
     create_info_files_json_v1,
 )
 
@@ -549,9 +462,9 @@ def execute_build_script(m, src_dir, env, provision_only=False):
 
                 if not provision_only:
                     cmd = (
-                        [shell_path]
-                        + (["-x"] if m.config.debug else [])
-                        + ["-o", "errexit", work_file]
+                        [shell_path] +
+                        (["-x"] if m.config.debug else []) +
+                        ["-o", "errexit", work_file]
                     )
 
                     # rewrite long paths in stdout back to their env variables
@@ -603,8 +516,6 @@ def build(m, stats={}):
         print(utils.get_skip_message(m))
         return {}
 
-    log = utils.get_logger(__name__)
-
     with utils.path_prepended(m.config.build_prefix):
         env = environ.get_dict(m=m)
 
@@ -633,11 +544,7 @@ def build(m, stats={}):
 
     execute_build_script(m, src_dir, env)
 
-    files_after_script = utils.prefix_files(prefix=m.config.host_prefix)
-
-    files_difference = files_after_script - files_before_script
-
-    if m.output.sections["build"].get("intermediate") == True:
+    if m.output.sections["build"].get("intermediate"):
         utils.rm_rf(m.config.host_prefix)
         return
 
