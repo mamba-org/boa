@@ -3,7 +3,6 @@ import os
 import re
 
 from conda.models.match_spec import MatchSpec
-import conda_build.api
 from conda_build.conda_interface import pkgs_dirs
 import conda_build.environ
 from conda.core.prefix_data import PrefixData
