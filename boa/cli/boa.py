@@ -27,6 +27,7 @@ from conda_build import utils
 from boa.core.recipe_output import Output, CondaBuildSpec
 from boa.core.build import build, download_source
 from boa.core.metadata import MetaData
+from boa.core.jinja_support import jinja_functions
 
 from rich.console import Console
 from rich.table import Table
@@ -64,38 +65,6 @@ def render_recursive(dict_or_array, context_dict, jenv):
                 render_recursive(value, context_dict, jenv)
             elif isinstance(value, collections.Iterable):
                 render_recursive(value, context_dict, jenv)
-
-
-def pin_subpackage(name, max_pin="x.x.x.x.x", exact=False):
-    return f"{name} PIN_SUBPACKAGE[{max_pin},{exact}]"
-
-
-def pin_compatible(
-    name,
-    lower_bound=None,
-    upper_bound=None,
-    min_pin="x.x.x.x.x.x",
-    max_pin="x",
-    exact=False,
-):
-    return f"{name} PIN_COMPATIBLE[{lower_bound},{upper_bound},{min_pin},{max_pin},{exact}]"
-
-
-def compiler(language):
-    return f"COMPILER_{language.upper()} {language}"
-
-
-def jinja_functions(config, context_dict):
-    from functools import partial
-    from conda_build.jinja_context import cdt
-
-    return {
-        "pin_subpackage": pin_subpackage,
-        "pin_compatible": pin_compatible,
-        "cdt": partial(cdt, config=config, permit_undefined_jinja=False),
-        "compiler": compiler,
-        "environ": os.environ,
-    }
 
 
 class Recipe:
