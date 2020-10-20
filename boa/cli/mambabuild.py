@@ -9,6 +9,7 @@ from conda_build import api
 from conda_build.config import Config, get_channel_urls
 from conda_build.cli.main_build import parse_args
 from conda_build.conda_interface import get_rc_urls
+from conda_build.index import update_index
 
 from boa.core.solver import MambaSolver
 
@@ -59,6 +60,9 @@ def main():
 
     config = Config(**args)
     channel_urls = get_rc_urls() + get_channel_urls({})
+
+    print(f"Updating build index: {(config.output_folder)}\n")
+    update_index(config.output_folder, verbose=config.debug, threads=1)
 
     # setting the repodata timeout to very high for conda
     context.local_repodata_ttl = 100000
