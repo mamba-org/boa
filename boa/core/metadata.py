@@ -87,6 +87,25 @@ def build_string_from_metadata(metadata):
 
 
 class MetaData:
+
+    path: str
+    source_provided: bool = False
+    uses_new_style_compiler_activation: bool = False
+    uses_vcs_in_meta: bool = False
+    uses_vcs_in_build: bool = False
+    build_is_host: bool = False
+    is_cross: bool = True
+    final: bool = True
+    activate_build_script: bool = True
+
+    numpy_xx: bool = False
+    noarch: Optional[str] = None
+    noarch_python: bool = False
+
+    # TODO? What are the implications of this?!
+    is_output: bool = False
+    pin_depends: bool = False
+
     def __init__(self, path, output):
         self.config = output.config
         self.meta = output.data
@@ -123,24 +142,10 @@ class MetaData:
         else:
             return section.get(key, default)
 
-    path: str
-
-    source_provided: bool = False
     # @property
     # def source_provided(self):
     #     return (not bool(self.meta.get('source')) or
     # (os.path.isdir(self.config.work_dir) and len(os.listdir(self.config.work_dir)) > 0))
-    uses_new_style_compiler_activation: bool = False
-    uses_vcs_in_meta: bool = False
-    uses_vcs_in_build: bool = False
-    build_is_host: bool = False
-    is_cross: bool = True
-    final: bool = True
-    activate_build_script: bool = True
-
-    numpy_xx: bool = False
-    noarch: Optional[str] = None
-    noarch_python: bool = False
 
     def ms_depends(self, typ="run"):
         names = ("python", "numpy", "perl", "lua")
@@ -226,9 +231,6 @@ class MetaData:
                 return "0"
 
         return {"FEATURE_" + k.upper(): truefalse(v["activated"]) for k, v in m.items()}
-
-    # TODO? What are the implications of this?!
-    is_output: bool = False
 
     @property
     def meta_path(self):
@@ -367,8 +369,6 @@ class MetaData:
 
         # retrieve values - this dictionary is what makes up the hash.
         return {key: self.config.variant[key] for key in take_keys}
-
-    pin_depends: bool = False
 
     def info_index(self):
         arch = (

@@ -2,7 +2,10 @@ from glob import glob
 import os
 from pathlib import Path
 from math import log
+
 from rich.console import Console
+
+console = Console()
 
 unit_list = list(zip(["bytes", "kB", "MB", "GB", "TB", "PB"], [0, 0, 1, 2, 2, 2]))
 
@@ -19,9 +22,6 @@ def sizeof_fmt(num):
         return "0 bytes"
     if num == 1:
         return "1 byte"
-
-
-console = Console()
 
 
 def main(args):

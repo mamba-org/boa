@@ -1,31 +1,21 @@
 import os
 from os.path import isdir
-import sys
 
 from ruamel.yaml import YAML
 import jinja2
-import json
 import collections
-import re
 import argparse
 
 from conda_build.config import get_or_merge_config
-from dataclasses import dataclass
 
 from conda.models.match_spec import MatchSpec
 from .mambabuild import MambaSolver
 import itertools
 from conda.common import toposort
-from conda.models.channel import Channel as CondaChannel
-from conda_build.utils import apply_pin_expressions
 
-import copy
 from conda_build.metadata import eval_selector, ns_cfg
 from conda.core.package_cache_data import PackageCacheData
 from conda.base.context import context
-
-from boa.build import build, download_source
-from boa.metadata import MetaData
 
 from mamba.mamba_api import PrefixData
 from conda.gateways.disk.create import mkdir_p
@@ -33,14 +23,15 @@ from conda_build.index import update_index
 import conda_build
 from conda_build.variants import find_config_files, parse_config_file
 from conda_build import utils
-from typing import Tuple
 
-from colorama import Fore, Style
-import colorama
-import tabulate
+from boa.core.recipe_output import Output, CondaBuildSpec
+from boa.core.build import build, download_source
+from boa.core.metadata import MetaData
 
-colorama.init()
+from rich.console import Console
+from rich.table import Table
 
+console = Console()
 
 banner = r"""
            _
@@ -105,130 +96,6 @@ def jinja_functions(config, context_dict):
         "compiler": compiler,
         "environ": os.environ,
     }
-
-
-@dataclass
-class CondaBuildSpec:
-    name: str
-    raw: str
-    splitted: Tuple[str]
-    is_pin: bool = False
-    is_pin_compatible: bool = False
-    is_compiler: bool = False
-    is_transitive_dependency: bool = False
-    channel: str = ""
-    # final: String
-
-    from_run_export: bool = False
-    from_pinnings: bool = False
-
-    def __init__(self, ms):
-        self.raw = ms
-        self.splitted = ms.split()
-        self.name = self.splitted[0]
-        if len(self.splitted) > 1:
-            self.is_pin = self.splitted[1].startswith("PIN_")
-            self.is_pin_compatible = self.splitted[1].startswith("PIN_COMPATIBLE")
-            self.is_compiler = self.splitted[0].startswith("COMPILER_")
-
-        self.is_simple = len(self.splitted) == 1
-        self.final = self.raw
-
-        if self.is_pin_compatible:
-            self.final[len("PIN_COMPATIBLE") + 1 : -1]
-
-    @property
-    def final_name(self):
-        return self.final.split(" ")[0]
-
-    def loosen_spec(self):
-        if self.is_compiler or self.is_pin:
-            return
-
-        if len(self.splitted) == 1:
-            return
-
-        if re.search(r"[^0-9\.]+", self.splitted[1]) is not None:
-            return
-
-        dot_c = self.splitted[1].count(".")
-
-        app = "*" if dot_c >= 2 else ".*"
-
-        if len(self.splitted) == 3:
-            self.final = (
-                f"{self.splitted[0]} {self.splitted[1]}{app} {self.splitted[2]}"
-            )
-        else:
-            self.final = f"{self.splitted[0]} {self.splitted[1]}{app}"
-
-    def __repr__(self):
-        self.loosen_spec()
-        return self.final
-
-    def eval_pin_subpackage(self, all_outputs):
-        if not self.splitted[1].startswith("PIN_SUBPACKAGE"):
-            return
-        pkg_name = self.name
-        max_pin, exact = self.splitted[1][len("PIN_SUBPACKAGE") + 1 : -1].split(",")
-        exact = exact == "True"
-        output = None
-
-        for o in all_outputs:
-            if o.name == pkg_name:
-                output = o
-                break
-
-        if not output:
-            raise RuntimeError(f"Could not find output with name {pkg_name}")
-        version = output.version
-        build_string = output.final_build_id
-
-        if exact:
-            self.final = f"{pkg_name} {version} {build_string}"
-        else:
-            version_parts = version.split(".")
-            count_pin = max_pin.count(".")
-            version_pin = ".".join(version_parts[: count_pin + 1])
-            version_pin += ".*"
-            self.final = f"{pkg_name} {version_pin}"
-
-    def eval_pin_compatible(self, build, host):
-
-        lower_bound, upper_bound, min_pin, max_pin, exact = self.splitted[1][
-            len("PIN_COMPATIBLE") + 1 : -1
-        ].split(",")
-        if lower_bound == "None":
-            lower_bound = None
-        if upper_bound == "None":
-            upper_bound = None
-        exact = exact == "True"
-
-        versions = {b.name: b for b in build}
-        versions.update({h.name: h for h in host})
-
-        if versions:
-            if exact and versions.get(self.name):
-                compatibility = " ".join(versions[self.name].final_version)
-            else:
-                version = lower_bound or versions.get(self.name).final_version[0]
-                if version:
-                    if upper_bound:
-                        if min_pin or lower_bound:
-                            compatibility = ">=" + str(version) + ","
-                        compatibility += "<{upper_bound}".format(
-                            upper_bound=upper_bound
-                        )
-                    else:
-                        compatibility = apply_pin_expressions(version, min_pin, max_pin)
-
-        self.final = (
-            " ".join((self.name, compatibility))
-            if compatibility is not None
-            else self.name
-        )
-
-    # def eval_compiler(self, compiler):
 
 
 class Recipe:
@@ -300,7 +167,7 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
                         if ms.match(p):
                             filtered.append(var)
                         else:
-                            print(
+                            console.print(
                                 f"Configured variant ignored because of the recipe requirement:\n  {cb_spec.raw} : {var}"
                             )
 
@@ -355,322 +222,15 @@ def flatten_selectors(ydoc, namespace):
     return ydoc
 
 
-class Output:
-    def __init__(self, d, config, parent=None, selected_features=None):
-        if parent is None:
-            parent = {}
-        if selected_features is None:
-            selected_features = {}
-        self.data = d
-        self.config = config
-
-        self.name = d["package"]["name"]
-        self.version = d["package"]["version"]
-        self.build_string = d["package"].get("build_string")
-        self.build_number = d["build"].get("number", 0)
-        self.is_first = False
-        self.sections = {}
-
-        def set_section(sname):
-            self.sections[sname] = {}
-            self.sections[sname].update(parent.get(sname, {}))
-            self.sections[sname].update(d.get(sname, {}))
-
-        set_section("build")
-        set_section("package")
-        set_section("app")
-        set_section("extra")
-
-        self.sections["files"] = d.get("files")
-        self.sections["source"] = d.get("source", parent.get("source", {}))
-        if hasattr(self.sections["source"], "keys"):
-            self.sections["source"] = [self.sections["source"]]
-
-        self.sections["features"] = parent.get("features", [])
-        if d.get("features"):
-            self.sections["features"].extend(d.get("features", []))
-
-        self.feature_map = {f["name"]: f for f in self.sections.get("features", [])}
-        for fname, feat in self.feature_map.items():
-            activated = feat.get("default", False)
-            if fname in selected_features:
-                activated = selected_features[fname]
-
-            feat["activated"] = activated
-
-        if len(self.feature_map):
-            print("\nFeatures:\n----------")
-            for feature in self.feature_map:
-                if self.feature_map[feature]["activated"]:
-                    print(
-                        f"{Style.BRIGHT}{feature:<20}{Style.RESET_ALL}: {Fore.GREEN}ON{Style.RESET_ALL}"
-                    )
-                else:
-                    print(
-                        f"{Style.BRIGHT}{feature:<20}{Style.RESET_ALL}: {Fore.RED}OFF{Style.RESET_ALL}"
-                    )
-
-        self.requirements = copy.copy(d.get("requirements", {}))
-        for f in self.feature_map.values():
-            if f["activated"]:
-                if not f.get("requirements"):
-                    continue
-                for i in ["build", "host", "run", "run_constrained"]:
-                    base_req = self.requirements.get(i, [])
-                    feat_req = f["requirements"].get(i, [])
-                    base_req += feat_req
-                    if len(base_req):
-                        self.requirements[i] = base_req
-
-        self.transactions = {}
-
-        self.parent = parent
-
-        for section in ("build", "host", "run"):
-            self.requirements[section] = [
-                CondaBuildSpec(r) for r in (self.requirements.get(section) or [])
-            ]
-
-    def skip(self):
-        skips = self.sections["build"].get("skip")
-
-        if skips:
-            return any([eval_selector(x, ns_cfg(self.config), []) for x in skips])
-        return False
-
-    def all_requirements(self):
-        requirements = (
-            self.requirements.get("build")
-            + self.requirements.get("host")
-            + self.requirements.get("run")
-        )
-        return requirements
-
-    def apply_variant(self, variant, differentiating_keys=()):
-        copied = copy.deepcopy(self)
-
-        copied.variant = variant
-        for idx, r in enumerate(self.requirements["build"]):
-            if r.name in variant:
-                copied.requirements["build"][idx] = CondaBuildSpec(
-                    r.name + " " + variant[r.name]
-                )
-                copied.requirements["build"][idx].from_pinnings = True
-        for idx, r in enumerate(self.requirements["host"]):
-            if r.name in variant:
-                copied.requirements["host"][idx] = CondaBuildSpec(
-                    r.name + " " + variant[r.name]
-                )
-                copied.requirements["host"][idx].from_pinnings = True
-
-        # todo figure out if we should pin like that in the run reqs as well?
-        for idx, r in enumerate(self.requirements["run"]):
-            if r.name in variant:
-                copied.requirements["run"][idx] = CondaBuildSpec(
-                    r.name + " " + variant[r.name]
-                )
-                copied.requirements["run"][idx].from_pinnings = True
-
-        # insert compiler_cxx, compiler_c and compiler_fortran
-        for idx, r in enumerate(self.requirements["build"]):
-            if r.name.startswith("COMPILER_"):
-                lang = r.splitted[1].lower()
-                compiler = conda_build.jinja_context.compiler(lang, self.config)
-                if variant.get(lang + "_compiler_version"):
-                    version = variant[lang + "_compiler_version"]
-                    copied.requirements["build"][idx].final = f"{compiler} {version}*"
-                else:
-                    copied.requirements["build"][idx].final = f"{compiler}"
-                copied.requirements["build"][idx].from_pinnings = True
-
-        for r in self.requirements["host"]:
-            if r.name.startswith("COMPILER_"):
-                raise RuntimeError("Compiler should be in build section")
-
-        copied.config = get_or_merge_config(self.config, variant=variant)
-
-        copied.differentiating_variant = []
-        for k in differentiating_keys:
-            copied.differentiating_variant.append(variant[k])
-
-        return copied
-
-    def __repr__(self):
-        s = f"Output: {self.name} {self.version} BN: {self.build_number}\n"
-        if hasattr(self, "differentiating_variant"):
-            short_v = " ".join([val for val in self.differentiating_variant])
-            s += f"Variant: {short_v}\n"
-        s += "Build:\n"
-
-        def spec_format(x):
-            version, fv = " ", " "
-            if len(x.final.split(" ")) > 1:
-                version = " ".join(r.final.split(" ")[1:])
-            if hasattr(x, "final_version"):
-                fv = x.final_version
-            color = Fore.WHITE
-            if x.from_run_export:
-                color = Fore.BLUE
-            if x.from_pinnings:
-                color = Fore.GREEN
-            if x.is_transitive_dependency:
-                return f" - {r.final_name:<51} {fv[0]:<10} {fv[1]:<10}\n"
-            if x.is_pin:
-                if x.is_pin_compatible:
-                    version = "PC " + version
-                else:
-                    version = "PS " + version
-                color = Fore.CYAN
-
-            channel = CondaChannel.from_url(x.channel).name
-
-            if len(fv) >= 2:
-                return f" - {Style.BRIGHT}{r.final_name:<30}{Style.RESET_ALL} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<10} {fv[1]:<20} {channel}\n"
-            else:
-                return f" - {Style.BRIGHT}{r.final_name:<30}{Style.RESET_ALL} {color}{version:<20}{Style.RESET_ALL} {fv[0]:<20} {channel}\n"
-
-        for r in self.requirements["build"]:
-            s += spec_format(r)
-        s += "Host:\n"
-        for r in self.requirements["host"]:
-            s += spec_format(r)
-        s += "Run:\n"
-        for r in self.requirements["run"]:
-            s += spec_format(r)
-        return s
-
-    def propagate_run_exports(self, env):
-        # find all run exports
-        collected_run_exports = []
-        for s in self.requirements[env]:
-            if s.is_transitive_dependency:
-                continue
-            if s.name in self.sections["build"].get("ignore_run_exports", []):
-                continue
-            if hasattr(s, "final_version"):
-                final_triple = (
-                    f"{s.final_name}-{s.final_version[0]}-{s.final_version[1]}"
-                )
-            else:
-                print(f"{s} has no final version")
-                continue
-            path = os.path.join(
-                PackageCacheData.first_writable().pkgs_dir,
-                final_triple,
-                "info/run_exports.json",
-            )
-            if os.path.exists(path):
-                with open(path) as fi:
-                    run_exports_info = json.load(fi)
-                    s.run_exports_info = run_exports_info
-                    collected_run_exports.append(run_exports_info)
-            else:
-                s.run_exports_info = None
-
-        def append_or_replace(env, spec):
-            spec = CondaBuildSpec(spec)
-            name = spec.name
-            spec.from_run_export = True
-            for idx, r in enumerate(self.requirements[env]):
-                if r.final_name == name:
-                    self.requirements[env][idx] = spec
-                    return
-            self.requirements[env].append(spec)
-
-        if env == "build":
-            for rex in collected_run_exports:
-                if "strong" in rex:
-                    for r in rex["strong"]:
-                        append_or_replace("host", r)
-                        append_or_replace("run", r)
-                if "weak" in rex:
-                    for r in rex["weak"]:
-                        append_or_replace("host", r)
-
-        if env == "host":
-            for rex in collected_run_exports:
-                if "strong" in rex:
-                    for r in rex["strong"]:
-                        append_or_replace("run", r)
-                if "weak" in rex:
-                    for r in rex["weak"]:
-                        append_or_replace("run", r)
-
-    def _solve_env(self, env, all_outputs, solver):
-        if self.requirements.get(env):
-            print(f"Finalizing {Fore.YELLOW}{env}{Style.RESET_ALL} for {self.name}")
-            specs = self.requirements[env]
-            for s in specs:
-                if s.is_pin:
-                    s.eval_pin_subpackage(all_outputs)
-                if env == "run" and s.is_pin_compatible:
-                    s.eval_pin_compatible(
-                        self.requirements["build"], self.requirements["host"]
-                    )
-
-            spec_map = {s.final_name: s for s in specs}
-            specs = [str(x) for x in specs]
-            t = solver.solve(specs, "")
-
-            _, install_pkgs, _ = t.to_conda()
-            for _, _, p in install_pkgs:
-                p = json.loads(p)
-                if p["name"] in spec_map:
-                    spec_map[p["name"]].final_version = (
-                        p["version"],
-                        p["build_string"],
-                    )
-                    spec_map[p["name"]].channel = p["channel"]
-                else:
-                    cbs = CondaBuildSpec(f"{p['name']}")
-                    cbs.is_transitive_dependency = True
-                    cbs.final_version = (p["version"], p["build_string"])
-                    cbs.channel = p["channel"]
-                    self.requirements[env].append(cbs)
-
-            self.transactions[env] = t
-
-            downloaded = t.fetch_extract_packages(
-                PackageCacheData.first_writable().pkgs_dir,
-                solver.repos + list(solver.local_repos.values()),
-            )
-            if not downloaded:
-                raise RuntimeError("Did not succeed in downloading packages.")
-
-            if env in ("build", "host"):
-                self.propagate_run_exports(env)
-
-    def finalize_solve(self, all_outputs, solver):
-
-        self._solve_env("build", all_outputs, solver)
-        self._solve_env("host", all_outputs, solver)
-        self._solve_env("run", all_outputs, solver)
-
-        # TODO figure out if we can avoid this?!
-        if self.config.variant.get("python") is None:
-            for r in self.requirements["build"] + self.requirements["host"]:
-                if r.name == "python":
-                    self.config.variant["python"] = r.final_version[0]
-
-        if self.config.variant.get("python") is None:
-            self.config.variant["python"] = ".".join(
-                [str(v) for v in sys.version_info[:3]]
-            )
-
-        self.variant = self.config.variant
-
-
 def to_build_tree(ydoc, variants, config, selected_features):
-
-    print("\nVARIANTS:")
     for k in variants:
-        headerline = "-" * (len(k) + 8)
-        print(f"\nOutput: {Style.BRIGHT}{k}{Style.RESET_ALL}\n{headerline}\n")
-        table = []
+        table = Table(show_header=True, header_style="bold")
+        table.title = f"Output: [bold white]{k}[/bold white]"
+        table.add_column("Package")
+        table.add_column("Variant versions")
         for pkg, var in variants[k].items():
-            table.append([pkg, "\n".join(var)])
-
-        print(tabulate.tabulate(table, ["Package", "Variant versions"], tablefmt="rst"))
+            table.add_row(pkg, "\n".join(var))
+        console.print(table)
 
     # first we need to perform a topological sort taking into account all the outputs
     if ydoc.get("outputs"):
@@ -778,10 +338,6 @@ def get_config(folder):
     return cbc, config
 
 
-def normalize_recipe(ydoc):
-    pass
-
-
 def main(config=None):
 
     parser = argparse.ArgumentParser(
@@ -826,14 +382,15 @@ def main(config=None):
         transmute.main(args)
         exit()
 
-    print(banner)
+    console.print(banner)
 
     folder = args.recipe_dir
     cbc, config = get_config(folder)
 
     if not os.path.exists(config.output_folder):
         mkdir_p(config.output_folder)
-    print(f"Updating build index: {(config.output_folder)}\n")
+    console.print(f"Updating build index: {(config.output_folder)}\n")
+
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
     recipe_path = os.path.join(folder, "recipe.yaml")
@@ -860,7 +417,6 @@ def main(config=None):
         render_recursive(ydoc[key], context_dict, jenv)
 
     flatten_selectors(ydoc, ns_cfg(config))
-    normalize_recipe(ydoc)
 
     if args.features:
         assert args.features.startswith("[") and args.features.endswith("]")
@@ -918,7 +474,7 @@ def main(config=None):
     print("\n")
     if command == "render":
         for o in sorted_outputs:
-            print(o)
+            console.print(o)
         exit()
 
     # TODO this should be done cleaner
@@ -943,7 +499,6 @@ def main(config=None):
             if isdir(o.config.build_prefix):
                 utils.rm_rf(o.config.build_prefix)
             mkdir_p(o.config.build_prefix)
-            # ctx.target_prefix = o.config.build_prefix
             try:
                 o.transactions["build"].execute(
                     PrefixData(o.config.build_prefix),
@@ -955,7 +510,6 @@ def main(config=None):
 
         if "host" in o.transactions:
             mkdir_p(o.config.host_prefix)
-            # ctx.target_prefix = o.config.host_prefix
             o.transactions["host"].execute(
                 PrefixData(o.config.host_prefix),
                 PackageCacheData.first_writable().pkgs_dir,
@@ -970,8 +524,7 @@ def main(config=None):
         build(meta, None)
 
     for o in sorted_outputs:
-        print("\n")
-        print(o)
+        console.print(o)
 
 
 if __name__ == "__main__":
