@@ -58,5 +58,6 @@ jobs:
         export MAMBA_EXE=$(pwd)/micromamba
         . $MAMBA_ROOT_PREFIX/etc/profile.d/mamba.sh
         micromamba activate test
-
+        conda config --add channels conda-forge
+        conda config --set channel_priority strict
         pytest tests
