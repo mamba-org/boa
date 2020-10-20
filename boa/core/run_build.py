@@ -1,0 +1,339 @@
+import os
+import glob
+import itertools
+
+from mamba.mamba_api import PrefixData
+from conda.core.package_cache_data import PackageCacheData
+
+from boa.core.render import render
+from boa.core.utils import get_config
+from boa.core.recipe_output import Output, CondaBuildSpec
+from boa.core.solver import MambaSolver
+from boa.core.build import build, download_source
+from boa.core.metadata import MetaData
+
+from conda_build.utils import rm_rf
+import conda_build.jinja_context
+from conda.common import toposort
+from conda.models.match_spec import MatchSpec
+from conda.base.context import context
+from conda.gateways.disk.create import mkdir_p
+
+from conda_build.index import update_index
+
+from rich.console import Console
+from rich.table import Table
+
+console = Console()
+
+
+def find_all_recipes(target, config):
+    cwd = os.getcwd()
+    yamls = glob.glob(os.path.join(cwd, "**", "recipe.yaml"))
+    recipes = {}
+    for fn in yamls:
+        yml = render(fn, config=config)
+        recipes[yml["package"]["name"]] = yml
+
+    target = recipes[target]
+    sort_recipes = {}
+
+    for r in recipes:
+        sort_recipes[r] = recipes[r].get("requirements", {}).get("host", [])
+    # console.print(sort_recipes)
+    return recipes
+
+
+def get_dependency_variants(requirements, conda_build_config, config, features=()):
+    host = requirements.get("host") or []
+    build = requirements.get("build") or []
+    # run = requirements.get("run") or []
+
+    def get_variants(env):
+        specs = {}
+        variants = {}
+
+        for s in env:
+            spec = CondaBuildSpec(s)
+            specs[spec.name] = spec
+
+        for n, cb_spec in specs.items():
+            if cb_spec.is_compiler:
+                # This is a compiler package
+                _, lang = cb_spec.raw.split()
+                compiler = conda_build.jinja_context.compiler(lang, config)
+                cb_spec.final = compiler
+                config_key = f"{lang}_compiler"
+                config_version_key = f"{lang}_compiler_version"
+
+                if conda_build_config.get(config_key):
+                    variants[config_key] = conda_build_config[config_key]
+                if conda_build_config.get(config_version_key):
+                    variants[config_version_key] = conda_build_config[
+                        config_version_key
+                    ]
+
+            variant_key = n.replace("_", "-")
+            if variant_key in conda_build_config:
+                vlist = conda_build_config[variant_key]
+                # we need to check if v matches the spec
+                if cb_spec.is_simple:
+                    variants[cb_spec.name] = vlist
+                elif cb_spec.is_pin:
+                    # ignore variants?
+                    pass
+                else:
+                    # check intersection of MatchSpec and variants
+                    ms = MatchSpec(cb_spec.raw)
+                    filtered = []
+                    for var in vlist:
+                        vsplit = var.split()
+                        if len(vsplit) == 1:
+                            p = {
+                                "name": n,
+                                "version": vsplit[0],
+                                "build_number": 0,
+                                "build": "",
+                            }
+                        elif len(vsplit) == 2:
+                            p = {
+                                "name": n,
+                                "version": var.split()[0],
+                                "build": var.split()[1],
+                                "build_number": 0,
+                            }
+                        else:
+                            raise RuntimeError("Check your conda_build_config")
+
+                        if ms.match(p):
+                            filtered.append(var)
+                        else:
+                            console.print(
+                                f"Configured variant ignored because of the recipe requirement:\n  {cb_spec.raw} : {var}"
+                            )
+
+                    if len(filtered):
+                        variants[cb_spec.name] = filtered
+
+        return variants
+
+    v = get_variants(host + build)
+    return v
+
+
+def to_build_tree(ydoc, variants, config, selected_features):
+    for k in variants:
+        table = Table(show_header=True, header_style="bold")
+        table.title = f"Output: [bold white]{k}[/bold white]"
+        table.add_column("Package")
+        table.add_column("Variant versions")
+        for pkg, var in variants[k].items():
+            table.add_row(pkg, "\n".join(var))
+        console.print(table)
+
+    # first we need to perform a topological sort taking into account all the outputs
+    if ydoc.get("outputs"):
+        outputs = [
+            Output(o, config, parent=ydoc, selected_features=selected_features)
+            for o in ydoc["outputs"]
+        ]
+        outputs = {o.name: o for o in outputs}
+    else:
+        outputs = [Output(ydoc, config, selected_features=selected_features)]
+        outputs = {o.name: o for o in outputs}
+
+    if len(outputs) > 1:
+        sort_dict = {
+            k: [x.name for x in o.all_requirements()] for k, o in outputs.items()
+        }
+        tsorted = toposort.toposort(sort_dict)
+        tsorted = [o for o in tsorted if o in sort_dict.keys()]
+    else:
+        tsorted = [o for o in outputs.keys()]
+
+    final_outputs = []
+
+    for name in tsorted:
+        output = outputs[name]
+        if variants.get(output.name):
+            v = variants[output.name]
+            combos = []
+
+            differentiating_keys = []
+            for k in v:
+                if len(v[k]) > 1:
+                    differentiating_keys.append(k)
+                combos.append([(k, x) for x in v[k]])
+
+            all_combinations = tuple(itertools.product(*combos))
+            all_combinations = [dict(x) for x in all_combinations]
+            for c in all_combinations:
+                x = output.apply_variant(c, differentiating_keys)
+                final_outputs.append(x)
+        else:
+            x = output.apply_variant({})
+            final_outputs.append(x)
+
+    temp = final_outputs
+    final_outputs = []
+    has_intermediate = False
+    for o in temp:
+        if o.sections["build"].get("intermediate"):
+            if has_intermediate:
+                raise RuntimeError(
+                    "Already found an intermediate build. There can be only one!"
+                )
+            final_outputs.insert(0, o)
+            has_intermediate = True
+        else:
+            final_outputs.append(o)
+
+    # Note: maybe this should happen _before_ apply variant?!
+    if has_intermediate:
+        # inherit dependencies
+        def merge_requirements(a, b):
+            b_names = [x.name for x in b]
+            for r in a:
+                if r.name in b_names:
+                    continue
+                else:
+                    b.append(r)
+
+        intermediate = final_outputs[0]
+        for o in final_outputs[1:]:
+            merge_requirements(
+                intermediate.requirements["host"], o.requirements["host"]
+            )
+            merge_requirements(
+                intermediate.requirements["build"], o.requirements["build"]
+            )
+            merged_variant = {}
+            merged_variant.update(intermediate.config.variant)
+            merged_variant.update(o.config.variant)
+            o.config.variant = merged_variant
+
+    return final_outputs
+
+
+def run_build(args):
+
+    folder = args.recipe_dir
+    cbc, config = get_config(folder)
+
+    if not os.path.exists(config.output_folder):
+        mkdir_p(config.output_folder)
+    console.print(f"Updating build index: {(config.output_folder)}\n")
+
+    update_index(config.output_folder, verbose=config.debug, threads=1)
+
+    # all_recipes = find_all_recipes("bzip2", config)  # [noqa]
+
+    recipe_path = os.path.join(folder, "recipe.yaml")
+
+    if args.features:
+        assert args.features.startswith("[") and args.features.endswith("]")
+        features = [f.strip() for f in args.features[1:-1].split(",")]
+    else:
+        features = []
+
+    selected_features = {}
+    for f in features:
+        if f.startswith("~"):
+            selected_features[f[1:]] = False
+        else:
+            selected_features[f] = True
+
+    ydoc = render(recipe_path, config=config)
+    # We need to assemble the variants for each output
+    variants = {}
+    # if we have a outputs section, use that order the outputs
+    if ydoc.get("outputs"):
+        for o in ydoc["outputs"]:
+            # inherit from global package
+            pkg_meta = {}
+            pkg_meta.update(ydoc["package"])
+            pkg_meta.update(o["package"])
+            o["package"] = pkg_meta
+
+            build_meta = {}
+            build_meta.update(ydoc.get("build"))
+            build_meta.update(o.get("build") or {})
+            o["build"] = build_meta
+
+            o["features"] = selected_features
+
+            variants[o["package"]["name"]] = get_dependency_variants(
+                o.get("requirements", {}), cbc, config, features
+            )
+    else:
+        # we only have one output
+        variants[ydoc["package"]["name"]] = get_dependency_variants(
+            ydoc.get("requirements", {}), cbc, config, features
+        )
+
+    # this takes in all variants and outputs, builds a dependency tree and returns
+    # the final metadata
+    sorted_outputs = to_build_tree(ydoc, variants, config, selected_features)
+
+    # then we need to solve and build from the bottom up
+    # we can't first solve all packages without finalizing everything
+    #
+    # FLOW:
+    # =====
+    # - solve the package
+    #   - solv build, add weak run exports to
+    # - add run exports from deps!
+
+    if args.command == "render":
+        for o in sorted_outputs:
+            console.print(o)
+        exit()
+
+    # TODO this should be done cleaner
+    top_name = ydoc["package"]["name"]
+    o0 = sorted_outputs[0]
+    o0.is_first = True
+    o0.config.compute_build_id(top_name)
+
+    solver = MambaSolver([], context.subdir)
+    print("\n")
+
+    download_source(MetaData(recipe_path, o0))
+    cached_source = o0.sections["source"]
+
+    for o in sorted_outputs:
+        solver.replace_channels()
+        o.finalize_solve(sorted_outputs, solver)
+
+        o.config._build_id = o0.config.build_id
+
+        if "build" in o.transactions:
+            if os.path.isdir(o.config.build_prefix):
+                rm_rf(o.config.build_prefix)
+            mkdir_p(o.config.build_prefix)
+            try:
+                o.transactions["build"].execute(
+                    PrefixData(o.config.build_prefix),
+                    PackageCacheData.first_writable().pkgs_dir,
+                )
+            except Exception:
+                # This currently enables windows-multi-build...
+                print("Could not instantiate build environment")
+
+        if "host" in o.transactions:
+            mkdir_p(o.config.host_prefix)
+            o.transactions["host"].execute(
+                PrefixData(o.config.host_prefix),
+                PackageCacheData.first_writable().pkgs_dir,
+            )
+
+        meta = MetaData(recipe_path, o)
+        o.final_build_id = meta.build_id()
+
+        if cached_source != o.sections["source"]:
+            download_source(meta)
+
+        build(meta, None)
+
+    for o in sorted_outputs:
+        console.print(o)

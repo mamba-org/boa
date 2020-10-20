@@ -188,6 +188,9 @@ class Output:
 
             feat["activated"] = activated
 
+        if self.feature_map.get("static") and self.feature_map["static"]["activated"]:
+            self.name += "-static"
+
         if len(self.feature_map):
             table = Table()
             table.title = "Activated Features"
