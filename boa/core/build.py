@@ -364,6 +364,14 @@ def write_build_scripts(m, script, build_file):
 
     env["CONDA_BUILD_STATE"] = "BUILD"
 
+    # forcing shiny colors everywhere
+    env["CLICOLOR_FORCE"] = 1
+    env["AM_COLOR_TESTS"] = "always"
+    env["MAKE_TERMOUT"] = "1"
+    env["CMAKE_COLOR_MAKEFILE"] = "ON"
+    # env["CXXFLAGS"] = "-fdiagnostics-color=always"
+    # env["CFLAGS"] = "-fdiagnostics-color=always"
+
     # hard-code this because we never want pip's build isolation
     #    https://github.com/conda/conda-build/pull/2972#discussion_r198290241
     #
