@@ -74,4 +74,7 @@ def main():
     solver.replace_channels()
     cbc, _ = conda_build.variants.get_package_combined_spec(recipe, config=config)
 
-    api.build(recipe)
+    if args["test"]:
+        api.test(recipe, config=config)
+    else:
+        api.build(recipe)
