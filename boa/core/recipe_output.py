@@ -220,10 +220,25 @@ class Output:
 
         self.parent = parent
 
-        for section in ("build", "host", "run"):
+        for section in ("build", "host", "run", "run_constrained"):
             self.requirements[section] = [
                 CondaBuildSpec(r) for r in (self.requirements.get(section) or [])
             ]
+
+        # handle strong and weak run exports
+        run_exports = []
+        for el in self.sections["build"].get("run_exports", []):
+            if type(el) is str:
+                run_exports.append(CondaBuildSpec(el))
+            else:
+                raise RuntimeError("no strong run exports supported as of now.")
+                # sub_run_exports = []
+                # for key, val in el:
+                #     for x in val:
+                #         sub_run_exports.append(CondaBuildSpec(x))
+                #     run_exports.append({})
+        if run_exports:
+            self.sections["build"]["run_exports"] = run_exports
 
     def skip(self):
         skips = self.sections["build"].get("skip")
@@ -348,13 +363,11 @@ class Output:
                 )
 
         def add_header(header, head=False):
-            p = Padding("", (0, 0), style="black on black")
+            p = Padding("", (0, 0), style="black")
             if head:
-                pns = Padding("", (0, 0), style="black on black")
+                pns = Padding("", (0, 0), style="black")
                 table.add_row(pns, pns, pns, pns, pns)
-            table.add_row(
-                Padding(header, (0, 0), style="bold yellow on black"), p, p, p, p
-            )
+            table.add_row(Padding(header, (0, 0), style="bold yellow"), p, p, p, p)
 
         if self.requirements["build"]:
             add_header("Build")
@@ -516,6 +529,16 @@ class Output:
 
             if env in ("build", "host"):
                 self.propagate_run_exports(env)
+
+    def set_final_build_id(self, meta):
+        self.final_build_id = meta.build_id()
+        # we need to evaluate run_exports pin_subpackage here...
+        if self.sections["build"].get("run_exports"):
+            run_exports_list = self.sections["build"]["run_exports"]
+            for x in run_exports_list:
+                x.eval_pin_subpackage([self])
+            run_exports_list[:] = [x.final for x in run_exports_list]
+            self.data["build"]["run_exports"] = run_exports_list
 
     def finalize_solve(self, all_outputs, solver):
 

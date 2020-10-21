@@ -222,11 +222,12 @@ def run_build(args):
 
     if not os.path.exists(config.output_folder):
         mkdir_p(config.output_folder)
-    console.print(f"Updating build index: {(config.output_folder)}\n")
 
+    console.print(f"Updating build index: {(config.output_folder)}\n")
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
     # all_recipes = find_all_recipes("bzip2", config)  # [noqa]
+    console.print("\n[yellow]Assembling all recipes and variants[/yellow]\n")
 
     recipe_path = os.path.join(folder, "recipe.yaml")
 
@@ -295,13 +296,17 @@ def run_build(args):
     o0.is_first = True
     o0.config.compute_build_id(top_name)
 
+    console.print("\n[yellow]Initializing mamba solver[/yellow]\n")
     solver = MambaSolver([], context.subdir)
-    print("\n")
 
+    console.print("\n[yellow]Downloading source[/yellow]\n")
     download_source(MetaData(recipe_path, o0))
     cached_source = o0.sections["source"]
 
     for o in sorted_outputs:
+        console.print(
+            f"\n[yellow]Preparing environment for [bold]{o.name}[/bold][/yellow]\n"
+        )
         solver.replace_channels()
         o.finalize_solve(sorted_outputs, solver)
 
@@ -328,12 +333,15 @@ def run_build(args):
             )
 
         meta = MetaData(recipe_path, o)
-        o.final_build_id = meta.build_id()
+        o.set_final_build_id(meta)
 
         if cached_source != o.sections["source"]:
             download_source(meta)
 
+        console.print(f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n")
+
         build(meta, None)
 
     for o in sorted_outputs:
+        print("\n\n")
         console.print(o)
