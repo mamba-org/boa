@@ -521,7 +521,7 @@ def execute_build_script(m, src_dir, env, provision_only=False):
 def download_source(m):
     # Download all the stuff that's necessary
     with utils.path_prepended(m.config.build_prefix):
-        try_download(m, no_download_source=False, raise_error=False)
+        try_download(m, no_download_source=False, raise_error=True)
 
 
 def build(m, stats=None):

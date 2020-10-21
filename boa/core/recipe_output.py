@@ -152,6 +152,7 @@ class Output:
         if selected_features is None:
             selected_features = {}
         self.data = d
+        self.data["source"] = d.get("source", parent.get("source", {}))
         self.config = config
 
         self.name = d["package"]["name"]
@@ -172,7 +173,7 @@ class Output:
         set_section("extra")
 
         self.sections["files"] = d.get("files")
-        self.sections["source"] = d.get("source", parent.get("source", {}))
+        self.sections["source"] = self.data.get("source", {})
         if hasattr(self.sections["source"], "keys"):
             self.sections["source"] = [self.sections["source"]]
 
