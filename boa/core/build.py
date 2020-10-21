@@ -358,7 +358,7 @@ def write_build_scripts(m, script, build_file):
 
     with utils.path_prepended(m.config.host_prefix):
         with utils.path_prepended(m.config.build_prefix):
-            env = environ.get_dict(m=m, variant={"no": "variant"})
+            env = environ.get_dict(m=m)
 
     env.update(m.build_features())
 

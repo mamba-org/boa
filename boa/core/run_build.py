@@ -18,6 +18,7 @@ from conda.common import toposort
 from conda.models.match_spec import MatchSpec
 from conda.base.context import context
 from conda.gateways.disk.create import mkdir_p
+from conda_build.variants import get_default_variant
 
 from conda_build.index import update_index
 
@@ -49,9 +50,16 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
     build = requirements.get("build") or []
     # run = requirements.get("run") or []
 
+    variants = {}
+    default_variant = get_default_variant(config)
+
+    variants["target_platform"] = conda_build_config.get(
+        "target_platform", [default_variant["target_platform"]]
+    )
+    config.variant["target_platform"] = variants["target_platform"][0]
+
     def get_variants(env):
         specs = {}
-        variants = {}
 
         for s in env:
             spec = CondaBuildSpec(s)
@@ -74,8 +82,13 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
                     ]
 
             variant_key = n.replace("_", "-")
+
+            vlist = None
             if variant_key in conda_build_config:
                 vlist = conda_build_config[variant_key]
+            elif variant_key in default_variant:
+                vlist = [default_variant[variant_key]]
+            if vlist:
                 # we need to check if v matches the spec
                 if cb_spec.is_simple:
                     variants[cb_spec.name] = vlist
