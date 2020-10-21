@@ -559,12 +559,12 @@ def build(m, stats=None):
 
         bundle_conda(m, files_before_script, env, m.output.sections["files"])
     except subprocess.CalledProcessError:
-        console.print("[red]BUILD ERROR: [/red]", sys.exc_info()[1])
-
         ext = "bat" if utils.on_win else "sh"
-        build_cmd = str(
-            pathlib.Path(m.config.build_prefix).parent / "work" / f"conda_build.{ext}"
-        )
+        work_dir = pathlib.Path(m.config.build_prefix).parent / "work"
+        build_cmd = work_dir / f"conda_build.{ext}"
+
+        console.print("\n")
+        console.print(f"Work directory: {work_dir}")
         console.print(f"Try building again with {build_cmd}")
 
         exit(1)
