@@ -561,7 +561,7 @@ def build(m, stats=None):
     except subprocess.CalledProcessError:
         console.print("[red]BUILD ERROR: [/red]", sys.exc_info()[1])
 
-        ext = "sh" if os.name != "nt" else "bat"
+        ext = "bat" if utils.on_win else "sh"
         build_cmd = str(
             pathlib.Path(m.config.build_prefix).parent / "work" / f"conda_build.{ext}"
         )
