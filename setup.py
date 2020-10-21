@@ -11,7 +11,6 @@ with open(os.path.join(here, "boa", "_version.py")) as f:
 __version__ = version_ns["__version__"]
 
 deps = [
-    "pyyaml",
     "jinja2",
     "setuptools",
     "mamba",
