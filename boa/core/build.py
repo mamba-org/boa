@@ -9,6 +9,8 @@ import os
 from os.path import isdir, isfile, join
 import shutil
 import sys
+import pathlib
+import subprocess
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
 #   eventually
@@ -63,6 +65,10 @@ from conda_build.build import (
     write_run_exports,
     create_info_files_json_v1,
 )
+
+from rich.console import Console
+
+console = Console()
 
 
 def create_post_scripts(m):
@@ -235,12 +241,12 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
             files, files_selector.get("include"), files_selector.get("exclude")
         )
 
-    print(
+    console.print(
         f"\nAdding files for {metadata.name()}\n{'=' * (len(metadata.name()) + 20)}\n"
     )
     for f in sorted(files):
-        print(f"- {f}")
-    print("\n")
+        console.print(f"- {f}")
+    console.print("\n")
 
     # this is also copying things like run_test.sh into info/recipe
     utils.rm_rf(os.path.join(metadata.config.info_dir, "test"))
@@ -338,7 +344,7 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
             os.path.dirname(prefix),
             "_".join(("_h_env_moved", metadata.dist(), metadata.config.host_subdir)),
         )
-        print("Renaming host env directory, ", prefix, " to ", dest)
+        console.print("Renaming host env directory, ", prefix, " to ", dest)
         if os.path.exists(dest):
             utils.rm_rf(dest)
         shutil.move(prefix, dest)
@@ -390,7 +396,7 @@ def write_build_scripts(m, script, build_file):
         for k, v in env.items():
             if v != "" and v is not None:
                 bf.write('export {0}="{1}"\n'.format(k, v))
-                # print('export {0}="{1}"\n'.format(k, v))
+                # console.print('export {0}="{1}"\n'.format(k, v))
 
         if m.activate_build_script:
             _write_sh_activation_text(bf, m)
@@ -432,7 +438,7 @@ def execute_build_script(m, src_dir, env, provision_only=False):
         script = "\n".join(script)
 
     if not m.output.is_first and not script:
-        print("No build script found and not top-level build")
+        console.print("No build script found and not top-level build")
         return
 
     if isdir(src_dir):
@@ -477,7 +483,7 @@ def execute_build_script(m, src_dir, env, provision_only=False):
                             rewrite_vars.insert(1, "BUILD_PREFIX")
                         rewrite_env = {k: env[k] for k in rewrite_vars if k in env}
                         for k, v in rewrite_env.items():
-                            print(
+                            console.print(
                                 "{0} {1}={2}".format(
                                     "set" if build_file.endswith(".bat") else "export",
                                     k,
@@ -511,43 +517,54 @@ def download_source(m):
 
 
 def build(m, stats=None):
-    if not stats:
-        stats = {}
+    try:
+        if not stats:
+            stats = {}
 
-    if m.skip():
-        print(utils.get_skip_message(m))
-        return {}
+        if m.skip():
+            console.print(utils.get_skip_message(m))
+            return {}
 
-    with utils.path_prepended(m.config.build_prefix):
-        env = environ.get_dict(m=m)
+        with utils.path_prepended(m.config.build_prefix):
+            env = environ.get_dict(m=m)
 
-    env["CONDA_BUILD_STATE"] = "BUILD"
-    if env_path_backup_var_exists:
-        env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
+        env["CONDA_BUILD_STATE"] = "BUILD"
+        if env_path_backup_var_exists:
+            env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
-    m.output.sections["package"]["name"] = m.output.name
-    env["PKG_NAME"] = m.get_value("package/name")
+        m.output.sections["package"]["name"] = m.output.name
+        env["PKG_NAME"] = m.get_value("package/name")
 
-    src_dir = m.config.work_dir
-    if isdir(src_dir):
-        if m.config.verbose:
-            print("source tree in:", src_dir)
-    else:
-        if m.config.verbose:
-            print("no source - creating empty work folder")
-        os.makedirs(src_dir)
+        src_dir = m.config.work_dir
+        if isdir(src_dir):
+            if m.config.verbose:
+                console.print("source tree in:", src_dir)
+        else:
+            if m.config.verbose:
+                console.print("no source - creating empty work folder")
+            os.makedirs(src_dir)
 
-    utils.rm_rf(m.config.info_dir)
-    files_before_script = utils.prefix_files(prefix=m.config.host_prefix)
+        utils.rm_rf(m.config.info_dir)
+        files_before_script = utils.prefix_files(prefix=m.config.host_prefix)
 
-    with open(join(m.config.build_folder, "prefix_files.txt"), "w") as f:
-        f.write("\n".join(sorted(list(files_before_script))))
-        f.write("\n")
+        with open(join(m.config.build_folder, "prefix_files.txt"), "w") as f:
+            f.write("\n".join(sorted(list(files_before_script))))
+            f.write("\n")
 
-    execute_build_script(m, src_dir, env)
+        execute_build_script(m, src_dir, env)
 
-    if m.output.sections["build"].get("intermediate"):
-        utils.rm_rf(m.config.host_prefix)
-        return
+        if m.output.sections["build"].get("intermediate"):
+            utils.rm_rf(m.config.host_prefix)
+            return
 
-    bundle_conda(m, files_before_script, env, m.output.sections["files"])
+        bundle_conda(m, files_before_script, env, m.output.sections["files"])
+    except subprocess.CalledProcessError:
+        console.print("[red]BUILD ERROR: [/red]", sys.exc_info()[1])
+
+        ext = "sh" if os.name != "nt" else "bat"
+        build_cmd = str(
+            pathlib.Path(m.config.build_prefix).parent / "work" / f"conda_build.{ext}"
+        )
+        console.print(f"Try building again with {build_cmd}")
+
+        exit(1)
