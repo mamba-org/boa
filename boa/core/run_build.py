@@ -34,15 +34,46 @@ def find_all_recipes(target, config):
     recipes = {}
     for fn in yamls:
         yml = render(fn, config=config)
-        recipes[yml["package"]["name"]] = yml
+        pkg_name = yml["package"]["name"]
+        recipes[pkg_name] = yml
+        recipes[pkg_name]["recipe_file"] = fn
+        # find all outputs from recipe
+        output_names = set([yml["package"]["name"]])
+        for output in yml.get("outputs", []):
+            output_names.add(output["package"]["name"])
 
-    target = recipes[target]
+        if "static" in [f["name"] for f in yml.get("features", [])]:
+            output_names.add(yml["package"]["name"] + "-static")
+
+        recipes[pkg_name]["output_names"] = output_names
+        console.print(output_names)
+
     sort_recipes = {}
 
-    for r in recipes:
-        sort_recipes[r] = recipes[r].get("requirements", {}).get("host", [])
-    # console.print(sort_recipes)
-    return recipes
+    def get_all_requirements(x):
+        req = x.get("requirements", {}).get("host", [])
+        for feat in x.get("features", []):
+            req += feat.get("requirements", {}).get("host", [])
+        return req
+
+    def recursive_add(target):
+        print(f"adding  {target}")
+        all_requirements = {
+            x.split(" ")[0] for x in get_all_requirements(recipes[target])
+        }
+        all_requirements = all_requirements.intersection(recipes.keys())
+        sort_recipes[target] = all_requirements
+        print(all_requirements)
+        for req in all_requirements:
+            if req not in sort_recipes:
+                recursive_add(req)
+
+    recursive_add(target)
+
+    sorted_recipes = toposort.toposort(sort_recipes)
+    console.print(sorted_recipes)
+
+    return [recipes[x] for x in sorted_recipes]
 
 
 def get_dependency_variants(requirements, conda_build_config, config, features=()):
@@ -228,21 +259,7 @@ def to_build_tree(ydoc, variants, config, selected_features):
     return final_outputs
 
 
-def run_build(args):
-
-    folder = args.recipe_dir
-    cbc, config = get_config(folder)
-
-    if not os.path.exists(config.output_folder):
-        mkdir_p(config.output_folder)
-
-    console.print(f"Updating build index: {(config.output_folder)}\n")
-    update_index(config.output_folder, verbose=config.debug, threads=1)
-
-    # all_recipes = find_all_recipes("bzip2", config)  # [noqa]
-    console.print("\n[yellow]Assembling all recipes and variants[/yellow]\n")
-
-    recipe_path = os.path.join(folder, "recipe.yaml")
+def build_recipe(args, recipe_path, cbc, config):
 
     if args.features:
         assert args.features.startswith("[") and args.features.endswith("]")
@@ -358,3 +375,26 @@ def run_build(args):
     for o in sorted_outputs:
         print("\n\n")
         console.print(o)
+
+
+def run_build(args):
+
+    folder = args.recipe_dir
+    cbc, config = get_config(folder)
+
+    target = os.path.dirname(args.target)
+
+    if not os.path.exists(config.output_folder):
+        mkdir_p(config.output_folder)
+
+    console.print(f"Updating build index: {(config.output_folder)}\n")
+    update_index(config.output_folder, verbose=config.debug, threads=1)
+
+    all_recipes = find_all_recipes(target, config)  # [noqa]
+
+    console.print(all_recipes)
+
+    console.print("\n[yellow]Assembling all recipes and variants[/yellow]\n")
+
+    for recipe in all_recipes:
+        build_recipe(args, recipe["recipe_file"], cbc, config)

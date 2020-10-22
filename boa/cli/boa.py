@@ -1,4 +1,6 @@
 import argparse
+import os
+
 from boa.core.run_build import run_build
 
 from boa.cli import convert
@@ -25,7 +27,8 @@ def main(config=None):
 
     subparsers = parser.add_subparsers(help="sub-command help", dest="command")
     parent_parser = argparse.ArgumentParser(add_help=False)
-    parent_parser.add_argument("recipe_dir", type=str)
+    parent_parser.add_argument("--recipe-dir", type=str, default=os.getcwd())
+    parent_parser.add_argument("target", type=str, default="")
     parent_parser.add_argument("--features", type=str)
 
     subparsers.add_parser("render", parents=[parent_parser], help="render a recipe")
@@ -50,7 +53,7 @@ def main(config=None):
     command = args.command
 
     if command == "convert":
-        convert.main(args.recipe_dir)
+        convert.main(args.target)
         exit()
 
     if command == "transmute":

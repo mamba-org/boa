@@ -545,6 +545,12 @@ class Output:
         if self.sections["build"].get("run_exports"):
             run_exports_list = self.sections["build"]["run_exports"]
             for x in run_exports_list:
+                if self.name.endswith("-static") and self.name.startswith(x.name):
+                    # remove self-run-exports for static packages
+                    run_exports_list[:] = []
+                else:
+                    x.eval_pin_subpackage([self])
+
                 x.eval_pin_subpackage([self])
             run_exports_list[:] = [x.final for x in run_exports_list]
             self.data["build"]["run_exports"] = run_exports_list
