@@ -241,11 +241,12 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
             files, files_selector.get("include"), files_selector.get("exclude")
         )
 
-    console.print(
-        f"\nAdding files for {metadata.name()}\n{'=' * (len(metadata.name()) + 20)}\n"
-    )
-    for f in sorted(files):
-        console.print(f"- {f}")
+    console.print(f"\n[yellow]Adding files for {metadata.name()}[/yellow]\n")
+    if files:
+        for f in sorted(files):
+            console.print(f"- {f}")
+    else:
+        console.print(f"[red]ATTENTION: No files added in target {metadata.name}[/red]")
     console.print("\n")
 
     # this is also copying things like run_test.sh into info/recipe
