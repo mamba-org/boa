@@ -14,6 +14,7 @@ from rich.padding import Padding
 
 # TODO remove
 import conda_build.jinja_context
+from conda.base.context import context
 from conda_build.config import get_or_merge_config
 from conda_build.utils import apply_pin_expressions
 from conda.models.channel import Channel as CondaChannel
@@ -324,6 +325,13 @@ class Output:
         def spec_format(x):
             version, fv = " ", " "
             channel = CondaChannel.from_url(x.channel).name
+
+            if (
+                x.channel.startswith("file://")
+                and context.local_build_root in x.channel
+            ):
+                channel = "local"
+
             if len(x.final.split(" ")) > 1:
                 version = " ".join(r.final.split(" ")[1:])
             if hasattr(x, "final_version"):
