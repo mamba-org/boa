@@ -49,7 +49,10 @@ class MambaSolver:
     def __init__(self, channels, platform):
 
         api_ctx = mamba_api.Context()
+        api_ctx.root_prefix = context.conda_prefix
         api_ctx.conda_prefix = context.conda_prefix
+        api_ctx.envs_dirs = [os.path.join(context.conda_prefix, "envs")]
+        api_ctx.pkgs_dirs = [os.path.join(context.conda_prefix, "pkgs")]
 
         self.channels = channels
         self.platform = platform
