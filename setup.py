@@ -16,6 +16,8 @@ deps = [
     "mamba",
     "rich",
     "ruamel.yaml",
+    "jsoncomment",
+    "jsonschema",
 ]
 
 setup(
