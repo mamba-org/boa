@@ -5,6 +5,7 @@ from boa.core.run_build import run_build
 
 from boa.cli import convert
 from boa.cli import transmute
+from boa.cli import validate
 
 from rich.console import Console
 
@@ -37,6 +38,9 @@ def main(config=None):
         parents=[parent_parser],
         help="convert recipe.yaml to old-style meta.yaml",
     )
+    subparsers.add_parser(
+        "validate", parents=[parent_parser], help="Validate recipe.yaml",
+    )
     subparsers.add_parser("build", parents=[parent_parser], help="build a recipe")
 
     transmute_parser = subparsers.add_parser(
@@ -54,6 +58,10 @@ def main(config=None):
 
     if command == "convert":
         convert.main(args.target)
+        exit()
+
+    if command == "validate":
+        validate.main(args.target)
         exit()
 
     if command == "transmute":

@@ -42,6 +42,21 @@
           }
         }
       ]
+    },
+    "outputs": {
+      "type": "array"
+    },
+    "features": {
+      "type": "array"
+    },
+    "extra": {
+      "type": "object"
+    },
+    "build": {
+      "type": "object"
+    },
+    "about": {
+      "type": "object"
     }
   }
 }
