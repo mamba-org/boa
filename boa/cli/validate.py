@@ -1,5 +1,5 @@
 from jsonschema import validate
-from jsoncomment import JsonComment
+import json5 as json
 import os
 
 from rich.console import Console
@@ -19,10 +19,8 @@ test_obj = {
 
 
 def main():
-    json = JsonComment()
     with open(os.path.join(schema_dir(), "recipe.v1.json")) as schema_in:
-        # print(schema_in.read())
-        schema = json.loads(schema_in.read())
+        schema = json.load(schema_in)
     validation_result = validate(instance=test_obj, schema=schema)
 
     if validation_result is None:
