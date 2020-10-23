@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-import os
+from pathlib import Path
 from setuptools import setup
 
-here = os.path.dirname(os.path.abspath(__file__))
+here = Path(__file__).parent.absolute()
 
 version_ns = {}
-with open(os.path.join(here, "boa", "_version.py")) as f:
+with open(here.joinpath("boa", "_version.py")) as f:
     exec(f.read(), {}, version_ns)
 
 __version__ = version_ns["__version__"]
