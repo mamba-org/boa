@@ -29,8 +29,13 @@ console = Console()
 
 
 def find_all_recipes(target, config):
-    cwd = os.getcwd()
-    yamls = glob.glob(os.path.join(cwd, "**", "recipe.yaml"))
+    if os.path.isdir(target):
+        cwd = target
+    else:
+        cwd = os.getcwd()
+    yamls = glob.glob(os.path.join(cwd, "recipe.yaml"))
+    yamls += glob.glob(os.path.join(cwd, "**", "recipe.yaml"))
+    print(yamls)
     recipes = {}
     for fn in yamls:
         yml = render(fn, config=config)
@@ -67,6 +72,16 @@ def find_all_recipes(target, config):
         for req in all_requirements:
             if req not in sort_recipes:
                 recursive_add(req)
+
+    print(target)
+    if target == "" or target not in recipes.keys():
+        keys = list(recipes.keys())
+        if len(keys) > 1:
+            console.print(
+                f"[red]Warning, multiple recipes found. Selecting {keys[0]}.[/red]"
+            )
+        target = keys[0]
+    print(target)
 
     recursive_add(target)
 

@@ -16,6 +16,19 @@ ruamel.yaml.add_representer(
 )
 
 
+def order_output_dict(d):
+    keys = ["package", "build", "requirements", "test"]
+
+    result_list = []
+    for k in keys:
+        if k in d:
+            result_list.append((k, d[k]))
+
+    leftover_keys = d.keys() - set(keys)
+    result_list += [(k, d[k]) for k in leftover_keys]
+    return OrderedDict(result_list)
+
+
 def main(docname):
 
     with open(docname, "r") as fi:
@@ -126,6 +139,10 @@ def main(docname):
 
             o["package"] = package
             o["build"] = build
+
+        for d in result_yaml["outputs"]:
+            print(order_output_dict(d))
+        result_yaml["outputs"] = [order_output_dict(d) for d in result_yaml["outputs"]]
 
     from io import StringIO
 
