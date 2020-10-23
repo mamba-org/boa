@@ -452,10 +452,8 @@ class Output:
                 print(f"{s} has no final version")
                 continue
             path = Path(PackageCacheData.first_writable().pkgs_dir).joinpath(
-                final_triple,
-                "info",
-                "run_exports.json",
-                )
+                final_triple, "info", "run_exports.json",
+            )
             if path.exists():
                 with open(path) as fi:
                     run_exports_info = json.load(fi)
