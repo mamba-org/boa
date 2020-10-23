@@ -1,0 +1,47 @@
+/*
+  initial, non complete spec...
+*/
+{
+  "$id": "https://mamba.pm/boa/recipe.v1.schema.json",
+  "title": "Boa Recipe V1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "context": {
+      "type": "object",
+      "description": "The recipe context."
+    },
+    "package": {
+      "type": "object",
+      "description": "The package name and version.",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The package name"
+        },
+        "version": {
+          "type": "string",
+          "description": "The package version"
+        }
+      }
+    },
+    "source": {
+      "type": "array",
+      "description": "The package name and version.",
+      "additionalProperties": false,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "url": {"type": "string"},
+            "sha256": {"type": "string"},
+            "md5": {"type": "string"},
+            // "sha1": {"type": "string"}, ???
+            "patches": {"type": "array", "items": [{"type": "string"}]}
+          }
+        }
+      ]
+    }
+  }
+}
