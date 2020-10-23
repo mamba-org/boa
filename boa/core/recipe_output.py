@@ -179,8 +179,6 @@ class Output:
             self.sections["source"] = [self.sections["source"]]
 
         self.sections["features"] = parent.get("features", [])
-        if d.get("features"):
-            self.sections["features"].extend(d.get("features", []))
 
         self.feature_map = {f["name"]: f for f in self.sections.get("features", [])}
         for fname, feat in self.feature_map.items():

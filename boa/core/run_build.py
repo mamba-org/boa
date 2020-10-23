@@ -73,7 +73,6 @@ def find_all_recipes(target, config):
             if req not in sort_recipes:
                 recursive_add(req)
 
-    print(target)
     if target == "" or target not in recipes.keys():
         keys = list(recipes.keys())
         if len(keys) > 1:
@@ -127,8 +126,7 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
                         config_version_key
                     ]
 
-            variant_key = n.replace("_", "-")
-
+            variant_key = n.replace("-", "_")
             vlist = None
             if variant_key in conda_build_config:
                 vlist = conda_build_config[variant_key]
@@ -137,7 +135,7 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
             if vlist:
                 # we need to check if v matches the spec
                 if cb_spec.is_simple:
-                    variants[cb_spec.name] = vlist
+                    variants[variant_key] = vlist
                 elif cb_spec.is_pin:
                     # ignore variants?
                     pass
@@ -172,7 +170,7 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
                             )
 
                     if len(filtered):
-                        variants[cb_spec.name] = filtered
+                        variants[variant_key] = filtered
 
         return variants
 
@@ -306,7 +304,7 @@ def build_recipe(args, recipe_path, cbc, config):
             build_meta.update(o.get("build") or {})
             o["build"] = build_meta
 
-            o["features"] = selected_features
+            o["selected_features"] = selected_features
 
             variants[o["package"]["name"]] = get_dependency_variants(
                 o.get("requirements", {}), cbc, config, features
@@ -397,7 +395,7 @@ def run_build(args):
     folder = args.recipe_dir
     cbc, config = get_config(folder)
 
-    target = os.path.dirname(args.target)
+    # target = os.path.dirname(args.target)
 
     if not os.path.exists(config.output_folder):
         mkdir_p(config.output_folder)
@@ -405,7 +403,7 @@ def run_build(args):
     console.print(f"Updating build index: {(config.output_folder)}\n")
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
-    all_recipes = find_all_recipes(target, config)  # [noqa]
+    all_recipes = find_all_recipes(args.target, config)  # [noqa]
 
     console.print(all_recipes)
 

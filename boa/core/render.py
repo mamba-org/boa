@@ -118,14 +118,21 @@ def normalize_recipe(ydoc):
         toplevel_output["test"] = ydoc["test"]
         del ydoc["test"]
 
-    if ydoc.get("build", {}).get("run_exports"):
-        toplevel_output["build"]["run_exports"] = ydoc["build"]["run_exports"]
-        del ydoc["build"]["run_exports"]
+    def move_to_toplevel(key):
+        if ydoc.get("build", {}).get(key):
+            if not toplevel_output.get("build"):
+                toplevel_output["build"] = {}
+            toplevel_output["build"][key] = ydoc["build"][key]
+            del ydoc["build"][key]
+
+    move_to_toplevel("run_exports")
+    move_to_toplevel("ignore_run_exports")
 
     return ydoc
 
 
 def render(recipe_path, config=None):
+    console.print(f"\n[yellow]Rendering {recipe_path}[/yellow]\n")
     # step 1: parse YAML
     with open(recipe_path) as fi:
         loader = YAML(typ="safe")
