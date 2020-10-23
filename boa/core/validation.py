@@ -1,0 +1,22 @@
+from jsonschema import validate as json_validate
+import json5 as json
+from jsonschema.exceptions import ValidationError
+from pathlib import Path
+from rich.console import Console
+
+console = Console()
+
+
+def schema_dir():
+    return Path(__file__).parent / ".." / ".." / "schemas"
+
+
+def validate(obj):
+    with open(schema_dir() / "recipe.v1.json") as schema_in:
+        schema = json.load(schema_in)
+    try:
+        validation_result = json_validate(instance=obj, schema=schema)
+    except ValidationError as e:
+        console.print(e, style="red")
+        exit(1)
+    return validation_result
