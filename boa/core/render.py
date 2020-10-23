@@ -4,6 +4,10 @@ from boa.core.jinja_support import jinja_functions
 from conda_build.metadata import eval_selector, ns_cfg
 import collections
 
+from rich.console import Console
+
+console = Console()
+
 
 def render_recursive(dict_or_array, context_dict, jenv):
     # check if it's a dict?
@@ -71,6 +75,56 @@ def flatten_selectors(ydoc, namespace):
     return ydoc
 
 
+def ensure_list(x):
+    if not type(x) is list:
+        return [x]
+    else:
+        return x
+
+
+def normalize_recipe(ydoc):
+    # normalizing recipe:
+    # sources -> list
+    # every output -> to outputs list
+    if ydoc.get("context"):
+        del ydoc["context"]
+
+    if ydoc.get("source"):
+        ydoc["source"] = ensure_list(ydoc["source"])
+
+    if not ydoc.get("outputs"):
+        ydoc["outputs"] = [{"package": ydoc["package"]}]
+
+        toplevel_output = ydoc["outputs"][0]
+    else:
+        for o in ydoc["outputs"]:
+            if o["package"]["name"] == ydoc["package"]["name"]:
+                toplevel_output = o
+                break
+        else:
+            # how do we handle no-output toplevel?!
+            toplevel_output = None
+            assert not ydoc["requirements"]
+
+    if ydoc.get("requirements"):
+        # move these under toplevel output
+        assert not toplevel_output.get("requirements")
+        toplevel_output["requirements"] = ydoc["requirements"]
+        del ydoc["requirements"]
+
+    if ydoc.get("test"):
+        # move these under toplevel output
+        assert not toplevel_output.get("test")
+        toplevel_output["test"] = ydoc["test"]
+        del ydoc["test"]
+
+    if ydoc.get("build", {}).get("run_exports"):
+        toplevel_output["build"]["run_exports"] = ydoc["build"]["run_exports"]
+        del ydoc["build"]["run_exports"]
+
+    return ydoc
+
+
 def render(recipe_path, config=None):
     # step 1: parse YAML
     with open(recipe_path) as fi:
@@ -85,9 +139,6 @@ def render(recipe_path, config=None):
             tmpl = jenv.from_string(value)
             context_dict[key] = tmpl.render(context_dict)
 
-    if ydoc.get("context"):
-        del ydoc["context"]
-
     # step 3: recursively loop over the entire recipe and render jinja with context
     jenv.globals.update(jinja_functions(config, context_dict))
     for key in ydoc:
@@ -95,4 +146,7 @@ def render(recipe_path, config=None):
 
     flatten_selectors(ydoc, ns_cfg(config))
 
+    ydoc = normalize_recipe(ydoc)
+    console.print("\n[yellow]Normalized recipe[/yellow]\n")
+    console.print(ydoc)
     return ydoc
