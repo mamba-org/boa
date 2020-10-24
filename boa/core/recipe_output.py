@@ -1,7 +1,7 @@
 import copy
 import re
 import json
-import os
+from pathlib import Path
 import sys
 
 from dataclasses import dataclass
@@ -449,12 +449,10 @@ class Output:
             else:
                 print(f"{s} has no final version")
                 continue
-            path = os.path.join(
-                PackageCacheData.first_writable().pkgs_dir,
-                final_triple,
-                "info/run_exports.json",
+            path = Path(PackageCacheData.first_writable().pkgs_dir).joinpath(
+                final_triple, "info", "run_exports.json",
             )
-            if os.path.exists(path):
+            if path.exists():
                 with open(path) as fi:
                     run_exports_info = json.load(fi)
                     s.run_exports_info = run_exports_info
