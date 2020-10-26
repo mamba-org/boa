@@ -12,6 +12,7 @@ from conda_build.conda_interface import get_rc_urls
 from conda_build.index import update_index
 
 from boa.core.solver import MambaSolver
+from mamba.utils import init_api_context
 
 only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
 
@@ -60,6 +61,8 @@ def main():
 
     config = Config(**args)
     channel_urls = get_rc_urls() + get_channel_urls({})
+
+    init_api_context()
 
     print(f"Updating build index: {(config.output_folder)}\n")
     update_index(config.output_folder, verbose=config.debug, threads=1)
