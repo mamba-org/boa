@@ -37,7 +37,7 @@
             "url": {"type": "string"},
             "sha256": {"type": "string"},
             "md5": {"type": "string"},
-            // "sha1": {"type": "string"}, ???
+            "sha1": {"type": "string"},
             "patches": {"type": "array", "items": {"type": "string"}}
           }
         }

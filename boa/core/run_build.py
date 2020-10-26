@@ -382,7 +382,6 @@ def build_recipe(args, recipe_path, cbc, config):
             download_source(meta)
 
         console.print(f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n")
-
         build(meta, None)
 
     for o in sorted_outputs:

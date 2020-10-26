@@ -524,7 +524,7 @@ def download_source(m):
         try_download(m, no_download_source=False, raise_error=True)
 
 
-def build(m, stats=None):
+def build(m, stats=None, from_interactive=False):
     try:
         if not stats:
             stats = {}
@@ -575,4 +575,11 @@ def build(m, stats=None):
         console.print(f"Work directory: {work_dir}")
         console.print(f"Try building again with {build_cmd}")
 
-        exit(1)
+        if not from_interactive:
+            console.print("Build went wrong, entering interactive mode!")
+            from boa.tui import tui
+            import asyncio
+
+            asyncio.run(tui.enter_tui(m))
+
+        # exit(1)
