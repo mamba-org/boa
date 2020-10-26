@@ -1,0 +1,200 @@
+from prompt_toolkit import PromptSession
+from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.patch_stdout import patch_stdout
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.completion import NestedCompleter, PathCompleter
+
+from boa.core.build import build
+
+from inotify_simple import INotify, flags
+
+import asyncio
+import subprocess
+import os
+from glob import glob
+
+from rich.console import Console
+
+console = Console()
+inotify = INotify()
+watch_flags = flags.MODIFY
+
+help_text = """
+Enter a command:
+    glob <host | build>
+    edit <recipe | script>
+    show <host | build>
+    build
+"""
+
+build_context = None
+
+
+def install_watches():
+    recipe = os.path.join(build_context["recipe_dir"], "recipe.yaml")
+    wd = inotify.add_watch(recipe, watch_flags)
+    return {wd: os.path.join(build_context["recipe_dir"], "recipe.yaml")}
+
+
+def print_help():
+    print(help_text)
+
+
+def _get_prefix(env):
+    if env == "host":
+        return build_context.config.host_prefix
+    if env == "build":
+        return build_context.config.build_prefix
+    if env == "work":
+        return build_context.config.work_dir
+
+
+def remove_prefix(strings):
+    def replace_all(strings, x, r):
+        for s in strings:
+            res = []
+            for s in strings:
+                res.append(s.replace(x, r))
+            return res
+
+    res = replace_all(strings, build_context.config.build_prefix, "$BUILD_PREFIX/")
+    res = replace_all(res, build_context.config.host_prefix, "$PREFIX/")
+    res = replace_all(res, build_context.config.work_dir, "$WORK_DIR/")
+    return res
+
+
+def glob_search(env, search_text):
+    p = _get_prefix(env)
+    search_result = glob(os.path.join(p, search_text))
+    if search_result:
+        console.print(remove_prefix(search_result))
+    else:
+        console.print(f"[red]No results found for glob {search_text}[/red]")
+
+
+def bottom_toolbar():
+    return HTML('Interactive mode is <b><style bg="ansired">experimental</style></b>!')
+
+
+fh = FileHistory(".boa_tui_history")
+session = PromptSession(fh)
+
+
+def get_completer():
+    def get_paths():
+        return [build_context.config.work_dir]
+
+    return NestedCompleter.from_nested_dict(
+        {
+            "help": None,
+            "glob": {"build": None, "host": None},
+            "exit": None,
+            "ls": PathCompleter(get_paths=get_paths),
+            "edit": {
+                "file": PathCompleter(get_paths=get_paths),
+                "script": None,
+                "recipe": None,
+            },
+            "build": None,
+        }
+    )
+
+
+async def input_coroutine():
+    completer = get_completer()
+    while True:
+        with patch_stdout():
+            text = await session.prompt_async(
+                "> ", bottom_toolbar=bottom_toolbar, completer=completer
+            )
+            token = text.split()
+
+            if len(token) == 0:
+                continue
+
+            if token[0] == "help":
+                print_help()
+            elif token[0] == "glob":
+                glob_search(*token[1:])
+            elif token[0] == "edit":
+                if token[1] == "recipe":
+                    subprocess.call([os.environ["EDITOR"], build_context.meta_path])
+                if token[1] == "script":
+                    subprocess.call(
+                        [
+                            os.environ["EDITOR"],
+                            os.path.join(build_context.path, "build.sh"),
+                        ]
+                    )
+                elif token[1] == "file":
+                    subprocess.call(
+                        [
+                            os.environ["EDITOR"],
+                            os.path.join(build_context.config.work_dir, token[2]),
+                        ]
+                    )
+
+            elif token[0] == "ls":
+                # TODO add autocomplete
+                subprocess.call(
+                    [
+                        "ls",
+                        "-l",
+                        "-a",
+                        "--color=always",
+                        os.path.join(build_context.config.work_dir, *token[1:]),
+                    ]
+                )
+            elif token[0] == "build":
+                console.print("[yellow]Running build![/yellow]")
+                build(build_context, from_interactive=True)
+            elif token[0] == "exit":
+                raise KeyboardInterrupt()
+            else:
+                console.print(f'[red]Could not understand command "{token[0]}"[/red]')
+
+
+async def watch_files_coroutine():
+    wds = install_watches()
+    while True:
+        await asyncio.sleep(0.5)
+        for event in inotify.read(timeout=0):
+            if wds[event.wd] == build_context.meta_path:
+                console.print(
+                    "\n[green]recipe.yaml changed: rebuild by entering [/green][white]> [italic]build[/italic][/white]\n"
+                )
+            # console.print(event)
+            # for flag in flags.from_mask(event.mask):
+            #     console.print('    ' + str(flag))
+
+
+async def enter_tui(context):
+    global build_context
+    build_context = context
+
+    with patch_stdout():
+        background_task = asyncio.create_task(watch_files_coroutine())
+        try:
+            await input_coroutine()
+        except EOFError:
+            console.print("Goodbye!")
+        except KeyboardInterrupt:
+            console.print("Goodbye!")
+        finally:
+            background_task.cancel()
+        print("Quitting event loop. Bye.")
+
+
+async def main():
+    await enter_tui(
+        {
+            "work_dir": "/home/wolfv/miniconda3/conda-bld/micromamba_1603476359590/work/",
+            "host_prefix": "/home/wolfv/miniconda3/conda-bld/micromamba_1603476359590/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_/",
+            "build_prefix": "/home/wolfv/miniconda3/conda-bld/micromamba_1603476359590/_build_env/",
+            "recipe_dir": "/home/wolfv/Programs/recipes/micromamba-feedstock/recipe/",
+        }
+    )
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

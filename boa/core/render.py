@@ -132,7 +132,7 @@ def normalize_recipe(ydoc):
 
 
 def render(recipe_path, config=None):
-    console.print(f"\n[yellow]Rendering {recipe_path}[/yellow]\n")
+    # console.print(f"\n[yellow]Rendering {recipe_path}[/yellow]\n")
     # step 1: parse YAML
     with open(recipe_path) as fi:
         loader = YAML(typ="safe")
@@ -154,6 +154,6 @@ def render(recipe_path, config=None):
     flatten_selectors(ydoc, ns_cfg(config))
 
     ydoc = normalize_recipe(ydoc)
-    console.print("\n[yellow]Normalized recipe[/yellow]\n")
-    console.print(ydoc)
+    # console.print("\n[yellow]Normalized recipe[/yellow]\n")
+    # console.print(ydoc)
     return ydoc
