@@ -80,4 +80,11 @@ def main():
     if args["test"]:
         api.test(recipe, config=config)
     else:
-        api.build(recipe)
+        api.build(
+            recipe,
+            post=args["post"],
+            build_only=args["build_only"],
+            notest=args["notest"],
+            config=config,
+            variants=args["variants"],
+        )
