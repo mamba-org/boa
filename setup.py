@@ -17,6 +17,8 @@ deps = [
     "rich",
     "ruamel.yaml",
     "json5",
+    "inotify_simple",
+    "prompt-toolkit",
 ]
 
 setup(

@@ -35,7 +35,7 @@ def find_all_recipes(target, config):
         cwd = os.getcwd()
     yamls = glob.glob(os.path.join(cwd, "recipe.yaml"))
     yamls += glob.glob(os.path.join(cwd, "**", "recipe.yaml"))
-    print(yamls)
+
     recipes = {}
     for fn in yamls:
         yml = render(fn, config=config)
@@ -51,7 +51,6 @@ def find_all_recipes(target, config):
             output_names.add(yml["package"]["name"] + "-static")
 
         recipes[pkg_name]["output_names"] = output_names
-        console.print(output_names)
 
     sort_recipes = {}
 
@@ -62,13 +61,11 @@ def find_all_recipes(target, config):
         return req
 
     def recursive_add(target):
-        print(f"adding  {target}")
         all_requirements = {
             x.split(" ")[0] for x in get_all_requirements(recipes[target])
         }
         all_requirements = all_requirements.intersection(recipes.keys())
         sort_recipes[target] = all_requirements
-        print(all_requirements)
         for req in all_requirements:
             if req not in sort_recipes:
                 recursive_add(req)
@@ -80,12 +77,10 @@ def find_all_recipes(target, config):
                 f"[red]Warning, multiple recipes found. Selecting {keys[0]}.[/red]"
             )
         target = keys[0]
-    print(target)
 
     recursive_add(target)
 
     sorted_recipes = toposort.toposort(sort_recipes)
-    console.print(sorted_recipes)
 
     return [recipes[x] for x in sorted_recipes]
 
@@ -166,7 +161,7 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
                             filtered.append(var)
                         else:
                             console.print(
-                                f"Configured variant ignored because of the recipe requirement:\n  {cb_spec.raw} : {var}"
+                                f"Configured variant ignored because of the recipe requirement:\n  {cb_spec.raw} : {var}\n"
                             )
 
                     if len(filtered):
@@ -383,7 +378,7 @@ def build_recipe(args, recipe_path, cbc, config):
 
         console.print(f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n")
 
-        build(meta, None)
+        build(meta, None, allow_interactive=args.interactive)
 
     for o in sorted_outputs:
         print("\n\n")
@@ -404,8 +399,6 @@ def run_build(args):
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
     all_recipes = find_all_recipes(args.target, config)  # [noqa]
-
-    console.print(all_recipes)
 
     console.print("\n[yellow]Assembling all recipes and variants[/yellow]\n")
 

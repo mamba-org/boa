@@ -246,7 +246,9 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
         for f in sorted(files):
             console.print(f"- {f}")
     else:
-        console.print(f"[red]ATTENTION: No files added in target {metadata.name}[/red]")
+        console.print(
+            f"[red]ATTENTION: No files added in target [bold]{metadata.name()}[/bold][/red]"
+        )
     console.print("\n")
 
     # this is also copying things like run_test.sh into info/recipe
@@ -524,7 +526,7 @@ def download_source(m):
         try_download(m, no_download_source=False, raise_error=True)
 
 
-def build(m, stats=None):
+def build(m, stats=None, from_interactive=False, allow_interactive=False):
     try:
         if not stats:
             stats = {}
@@ -575,4 +577,11 @@ def build(m, stats=None):
         console.print(f"Work directory: {work_dir}")
         console.print(f"Try building again with {build_cmd}")
 
-        exit(1)
+        if not from_interactive and allow_interactive:
+            console.print("[red]Build went wrong, entering interactive mode![/red]")
+            from boa.tui import tui
+            import asyncio
+
+            asyncio.run(tui.enter_tui(m))
+
+        # exit(1)

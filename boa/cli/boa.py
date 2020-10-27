@@ -41,7 +41,18 @@ def main(config=None):
     subparsers.add_parser(
         "validate", parents=[parent_parser], help="Validate recipe.yaml",
     )
-    subparsers.add_parser("build", parents=[parent_parser], help="build a recipe")
+
+    build_parser = argparse.ArgumentParser(add_help=False)
+    build_parser.add_argument(
+        "-i",
+        "--interactive",
+        action="store_true",
+        help="Use interactive mode if build fails",
+    )
+
+    subparsers.add_parser(
+        "build", parents=[parent_parser, build_parser], help="build a recipe"
+    )
 
     transmute_parser = subparsers.add_parser(
         "transmute",
