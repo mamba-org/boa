@@ -2,11 +2,17 @@ import collections
 
 from conda_build.config import get_or_merge_config
 from conda_build.variants import find_config_files, parse_config_file
+from conda_build import __version__ as cb_version
+
+cb_split_version = tuple(int(x) for x in cb_version.split("."))
 
 
 def get_config(folder):
     config = get_or_merge_config(None, {})
-    config_files = find_config_files(folder)
+    if cb_split_version >= (3, 20, 5):
+        config_files = find_config_files(folder, config)
+    else:
+        config_files = find_config_files(folder)
     parsed_cfg = collections.OrderedDict()
     for f in config_files:
         parsed_cfg[f] = parse_config_file(f, config)

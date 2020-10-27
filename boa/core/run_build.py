@@ -350,6 +350,9 @@ def build_recipe(args, recipe_path, cbc, config):
 
         o.config._build_id = o0.config.build_id
 
+        packages_dir = PackageCacheData.first_writable().pkgs_dir
+        print("\n\n\nPackage Dir: ", packages_dir)
+
         if "build" in o.transactions:
             if os.path.isdir(o.config.build_prefix):
                 rm_rf(o.config.build_prefix)
