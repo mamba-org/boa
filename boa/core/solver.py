@@ -5,14 +5,16 @@ from conda.models.prefix_graph import PrefixGraph
 from conda.core.prefix_data import PrefixData
 from conda._vendor.boltons.setutils import IndexedSet
 from conda.models.match_spec import MatchSpec
+from conda.common.url import split_anaconda_token
 
 from conda.base.context import context
 from conda.plan import get_blank_actions
 from conda.models.dist import Dist
 from conda_build.conda_interface import pkgs_dirs
+from conda.models.channel import Channel
 
 from mamba import mamba_api
-from mamba.utils import get_index, to_package_record_from_subjson
+from mamba.utils import get_index, load_channels, to_package_record_from_subjson
 
 
 def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
@@ -23,12 +25,12 @@ def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
 
     lookup_dict = {}
     for _, c in index:
-        lookup_dict[str(c)] = c
+        lookup_dict[Channel(c).url(with_credentials=True)] = c
 
     assert len(to_unlink) == 0
 
     for c, pkg, jsn_s in to_link:
-        sdir = lookup_dict[c]
+        sdir = lookup_dict[split_anaconda_token(c)[0]]
         rec = to_package_record_from_subjson(sdir, pkg, jsn_s)
         final_precs.add(rec)
         to_link_records.append(rec)
@@ -56,24 +58,12 @@ class MambaSolver:
 
         self.channels = channels
         self.platform = platform
-        self.index = get_index(channels, platform=platform)
-        self.local_index = []
         self.pool = mamba_api.Pool()
         self.repos = []
-
-        start_prio = len(channels)
-        subpriority = 0  # wrong! :)
-        for subdir, channel in self.index:
-            repo = mamba_api.Repo(
-                self.pool,
-                str(channel),
-                subdir.cache_path(),
-                channel.url(with_credentials=True),
-            )
-            repo.set_priority(start_prio, subpriority)
-            start_prio -= 1
-            self.repos.append(repo)
-
+        self.index = load_channels(
+            self.pool, self.channels, self.repos, platform=platform
+        )
+        self.local_index = []
         self.local_repos = {}
 
     def replace_channels(self):
