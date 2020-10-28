@@ -5,8 +5,13 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.completion import NestedCompleter, PathCompleter
 
 from boa.core.build import build
-
-from inotify_simple import INotify, flags
+from boa.tui import patching
+try:
+    from inotify_simple import INotify, flags
+    inotify_available = True
+    inotify = INotify()
+except:
+    inotify_available = False
 
 import asyncio
 import subprocess
@@ -16,7 +21,6 @@ from glob import glob
 from rich.console import Console
 
 console = Console()
-inotify = INotify()
 watch_flags = flags.MODIFY
 
 help_text = """
@@ -28,12 +32,6 @@ Enter a command:
 """
 
 build_context = None
-
-
-def install_watches():
-    recipe = os.path.join(build_context["recipe_dir"], "recipe.yaml")
-    wd = inotify.add_watch(recipe, watch_flags)
-    return {wd: os.path.join(build_context["recipe_dir"], "recipe.yaml")}
 
 
 def print_help():
@@ -100,6 +98,11 @@ def get_completer():
     )
 
 
+def generate_patch():
+    ref_dir = patching.create_reference_dir(build_context)
+    patching.create_patch(os.path.join(ref_dir, 'work'), build_context.config.work_dir)
+
+
 async def input_coroutine():
     completer = get_completer()
     while True:
@@ -114,6 +117,8 @@ async def input_coroutine():
 
             if token[0] == "help":
                 print_help()
+            elif token[0] == "patch":
+                generate_patch()
             elif token[0] == "glob":
                 glob_search(*token[1:])
             elif token[0] == "edit":
@@ -127,10 +132,14 @@ async def input_coroutine():
                         ]
                     )
                 elif token[1] == "file":
+                    if len(token) == 3:
+                        file = os.path.join(build_context.config.work_dir, token[2])
+                    else:
+                        file = build_context.config.work_dir
                     subprocess.call(
                         [
                             os.environ["EDITOR"],
-                            os.path.join(build_context.config.work_dir, token[2]),
+                            file,
                         ]
                     )
 
@@ -154,7 +163,16 @@ async def input_coroutine():
                 console.print(f'[red]Could not understand command "{token[0]}"[/red]')
 
 
+def install_watches():
+    recipe = os.path.join(build_context["recipe_dir"], "recipe.yaml")
+    wd = inotify.add_watch(recipe, watch_flags)
+    return {wd: os.path.join(build_context["recipe_dir"], "recipe.yaml")}
+
+
 async def watch_files_coroutine():
+    if not inotify_available:
+        return
+
     wds = install_watches()
     while True:
         await asyncio.sleep(0.5)
