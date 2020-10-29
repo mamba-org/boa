@@ -25,7 +25,7 @@ def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
 
     lookup_dict = {}
     for _, c in index:
-        lookup_dict[Channel(c).url(with_credentials=True)] = c
+        lookup_dict[Channel(c).url(with_credentials=False)] = c
 
     assert len(to_unlink) == 0
 
