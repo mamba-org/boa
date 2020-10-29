@@ -104,7 +104,7 @@ def normalize_recipe(ydoc):
         else:
             # how do we handle no-output toplevel?!
             toplevel_output = None
-            assert not ydoc["requirements"]
+            assert not ydoc.get("requirements")
 
     if ydoc.get("requirements"):
         # move these under toplevel output

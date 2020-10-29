@@ -5,18 +5,27 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.completion import NestedCompleter, PathCompleter
 
 from boa.core.build import build
+from boa.tui import patching
 
-from inotify_simple import INotify, flags
+
+try:
+    from inotify_simple import INotify, flags
+
+    inotify_available = True
+    inotify = INotify()
+except ImportError:
+    inotify_available = False
 
 import asyncio
 import subprocess
 import os
+import shutil
+
 from glob import glob
 
 from rich.console import Console
 
 console = Console()
-inotify = INotify()
 watch_flags = flags.MODIFY
 
 help_text = """
@@ -30,10 +39,8 @@ Enter a command:
 build_context = None
 
 
-def install_watches():
-    recipe = os.path.join(build_context["recipe_dir"], "recipe.yaml")
-    wd = inotify.add_watch(recipe, watch_flags)
-    return {wd: os.path.join(build_context["recipe_dir"], "recipe.yaml")}
+class BoaExitException(Exception):
+    pass
 
 
 def print_help():
@@ -54,7 +61,9 @@ def remove_prefix(strings):
         for s in strings:
             res = []
             for s in strings:
-                res.append(s.replace(x, r))
+                tmp = s.replace(x, r)
+                tmp = tmp.replace("//", "/")
+                res.append(tmp)
             return res
 
     res = replace_all(strings, build_context.config.build_prefix, "$BUILD_PREFIX/")
@@ -100,6 +109,74 @@ def get_completer():
     )
 
 
+def generate_patch():
+    ref_dir = patching.create_reference_dir(build_context)
+    patching.create_patch(os.path.join(ref_dir, "work"), build_context.config.work_dir)
+
+
+cache_editor = None
+
+
+def get_editor():
+    global cache_editor
+
+    if os.environ.get("EDITOR"):
+        print(f"EDITOR: {os.environ['EDITOR']}")
+        return os.environ["EDITOR"]
+    elif cache_editor:
+        return cache_editor
+    else:
+        for e in ["subl", "code", "vim", "emacs", "nano"]:
+            cmd = shutil.which(e)
+            if cmd:
+                cache_editor = cmd
+                break
+    return cache_editor
+
+
+def execute_tokens(token):
+    if token[0] == "help":
+        print_help()
+    elif token[0] == "patch":
+        generate_patch()
+    elif token[0] == "glob":
+        glob_search(*token[1:])
+    elif token[0] == "edit":
+        if token[1] == "recipe":
+            subprocess.call([get_editor(), build_context.meta_path])
+        if token[1] == "script":
+            subprocess.call(
+                [get_editor(), os.path.join(build_context.path, "build.sh")]
+            )
+        elif token[1] == "file":
+            if len(token) == 3:
+                file = os.path.join(build_context.config.work_dir, token[2])
+            else:
+                file = build_context.config.work_dir
+            subprocess.call([get_editor(), file])
+
+    elif token[0] == "ls":
+        # TODO add autocomplete
+        out = subprocess.check_output(
+            [
+                "ls",
+                "-l",
+                "-a",
+                "--color=always",
+                os.path.join(build_context.config.work_dir, *token[1:]),
+            ]
+        )
+        print(out.decode("utf-8", errors="ignore"))
+    elif token[0] == "build":
+        console.print("[yellow]Running build![/yellow]")
+        build(build_context, from_interactive=True)
+    elif token[0] == "exit":
+        print("Exiting.")
+        raise BoaExitException()
+    else:
+        console.print(f'[red]Could not understand command "{token[0]}"[/red]')
+
+
 async def input_coroutine():
     completer = get_completer()
     while True:
@@ -112,49 +189,26 @@ async def input_coroutine():
             if len(token) == 0:
                 continue
 
-            if token[0] == "help":
-                print_help()
-            elif token[0] == "glob":
-                glob_search(*token[1:])
-            elif token[0] == "edit":
-                if token[1] == "recipe":
-                    subprocess.call([os.environ["EDITOR"], build_context.meta_path])
-                if token[1] == "script":
-                    subprocess.call(
-                        [
-                            os.environ["EDITOR"],
-                            os.path.join(build_context.path, "build.sh"),
-                        ]
-                    )
-                elif token[1] == "file":
-                    subprocess.call(
-                        [
-                            os.environ["EDITOR"],
-                            os.path.join(build_context.config.work_dir, token[2]),
-                        ]
-                    )
+            try:
+                execute_tokens(token)
+            except KeyboardInterrupt:
+                pass
+            except BoaExitException as e:
+                raise e
+            except Exception as e:
+                console.print(e)
 
-            elif token[0] == "ls":
-                # TODO add autocomplete
-                subprocess.call(
-                    [
-                        "ls",
-                        "-l",
-                        "-a",
-                        "--color=always",
-                        os.path.join(build_context.config.work_dir, *token[1:]),
-                    ]
-                )
-            elif token[0] == "build":
-                console.print("[yellow]Running build![/yellow]")
-                build(build_context, from_interactive=True)
-            elif token[0] == "exit":
-                raise KeyboardInterrupt()
-            else:
-                console.print(f'[red]Could not understand command "{token[0]}"[/red]')
+
+def install_watches():
+    recipe = os.path.join(build_context["recipe_dir"], "recipe.yaml")
+    wd = inotify.add_watch(recipe, watch_flags)
+    return {wd: os.path.join(build_context["recipe_dir"], "recipe.yaml")}
 
 
 async def watch_files_coroutine():
+    if not inotify_available:
+        return
+
     wds = install_watches()
     while True:
         await asyncio.sleep(0.5)
@@ -172,28 +226,46 @@ async def enter_tui(context):
     global build_context
     build_context = context
 
-    with patch_stdout():
-        background_task = asyncio.create_task(watch_files_coroutine())
+    exit_tui = False
+    background_task = asyncio.create_task(watch_files_coroutine())
+
+    while not exit_tui:
         try:
             await input_coroutine()
         except EOFError:
-            console.print("Goodbye!")
+            text = await session.prompt_async(
+                "Do you really want to exit ([y]/n)? ", bottom_toolbar=bottom_toolbar
+            )
+            if text == "y" or text == "":
+                exit_tui = True
+        except BoaExitException:
+            exit_tui = True
         except KeyboardInterrupt:
-            console.print("Goodbye!")
-        finally:
-            background_task.cancel()
-        print("Quitting event loop. Bye.")
+            print("CTRL+C pressed. Use CTRL-D to exit.")
+
+    background_task.cancel()
+    console.print("[yellow]Goodbye![/yellow]")
 
 
 async def main():
-    await enter_tui(
+    class Bunch(object):
+        def __init__(self, adict):
+            self.__dict__.update(adict)
+
+    meta = Bunch(
         {
-            "work_dir": "/home/wolfv/miniconda3/conda-bld/micromamba_1603476359590/work/",
-            "host_prefix": "/home/wolfv/miniconda3/conda-bld/micromamba_1603476359590/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_/",
-            "build_prefix": "/home/wolfv/miniconda3/conda-bld/micromamba_1603476359590/_build_env/",
-            "recipe_dir": "/home/wolfv/Programs/recipes/micromamba-feedstock/recipe/",
+            "meta_path": "/home/wolfv/Programs/recipes/micromamba-feedstock/recipe/recipe.yaml",
+            "config": Bunch(
+                {
+                    "work_dir": "/home/wolfv/miniconda3/conda-bld/micromamba_1603476359590/work/",
+                    "host_prefix": "/home/wolfv/miniconda3/conda-bld/micromamba_1603476359590/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_/",
+                    "build_prefix": "/home/wolfv/miniconda3/conda-bld/micromamba_1603476359590/_build_env/",
+                    "recipe_dir": "/home/wolfv/Programs/recipes/micromamba-feedstock/recipe/",
+                }
+            ),
         }
     )
+    await enter_tui(meta)
 
 
 if __name__ == "__main__":
