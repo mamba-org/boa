@@ -67,9 +67,6 @@ def main():
     print(f"Updating build index: {(config.output_folder)}\n")
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
-    # setting the repodata timeout to very high for conda
-    context.local_repodata_ttl = 100000
-
     recipe = args["recipe"][0]
 
     global solver
