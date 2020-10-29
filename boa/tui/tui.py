@@ -7,7 +7,6 @@ from prompt_toolkit.completion import NestedCompleter, PathCompleter
 from boa.core.build import build
 from boa.tui import patching
 
-
 try:
     from inotify_simple import INotify, flags
 
@@ -20,10 +19,12 @@ import asyncio
 import subprocess
 import os
 import shutil
-
+from pathlib import Path
 from glob import glob
 
 from rich.console import Console
+from rich.syntax import Syntax
+from rich.rule import Rule
 
 console = Console()
 watch_flags = flags.MODIFY
@@ -105,13 +106,42 @@ def get_completer():
                 "recipe": None,
             },
             "build": None,
+            "patch": {"show": None, "save": None},
         }
     )
 
 
-def generate_patch():
+def generate_patch(args):
+    if len(args):
+        cmd = args[0]
+    else:
+        cmd = "show"
+
     ref_dir = patching.create_reference_dir(build_context)
-    patching.create_patch(os.path.join(ref_dir, "work"), build_context.config.work_dir)
+    patch_contents = patching.create_patch(
+        os.path.join(ref_dir, "work"), build_context.config.work_dir
+    )
+    if patch_contents is None:
+        console.print("[red]No difference found![/red]")
+    else:
+        console.print("\n")
+        console.print(Rule("Diff Contents", end="\n\n"))
+        console.print(Syntax(patch_contents, "diff"))
+        console.print(Rule("", end="\n"))
+
+    if cmd == "save" and patch_contents:
+        if len(args) >= 2:
+            fn = args[1]
+            if not fn.endswith(".patch"):
+                fn += ".patch"
+            out_fn = Path(build_context.meta_path).parent / fn
+            with open(out_fn, "w") as fo:
+                fo.write(patch_contents)
+            console.print(f"[green]Patch saved under: {out_fn}")
+        else:
+            console.print("[red]Please give a patch name as third argument")
+
+    # TODO add modifications to the recipe! (adding patch)
 
 
 cache_editor = None
@@ -121,7 +151,6 @@ def get_editor():
     global cache_editor
 
     if os.environ.get("EDITOR"):
-        print(f"EDITOR: {os.environ['EDITOR']}")
         return os.environ["EDITOR"]
     elif cache_editor:
         return cache_editor
@@ -138,7 +167,7 @@ def execute_tokens(token):
     if token[0] == "help":
         print_help()
     elif token[0] == "patch":
-        generate_patch()
+        generate_patch(token[1:])
     elif token[0] == "glob":
         glob_search(*token[1:])
     elif token[0] == "edit":
@@ -200,9 +229,9 @@ async def input_coroutine():
 
 
 def install_watches():
-    recipe = os.path.join(build_context["recipe_dir"], "recipe.yaml")
+    recipe = os.path.join(build_context.meta_path)
     wd = inotify.add_watch(recipe, watch_flags)
-    return {wd: os.path.join(build_context["recipe_dir"], "recipe.yaml")}
+    return {wd: os.path.join(build_context.meta_path)}
 
 
 async def watch_files_coroutine():
