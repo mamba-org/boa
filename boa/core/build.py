@@ -538,7 +538,8 @@ def _try_download(m, interactive):
                 )
 
                 answer = Confirm.ask(
-                    "Do you want to automatically update your recipe with the new hash? [y/n]"
+                    "Do you want to automatically update your recipe with the new hash?",
+                    default=False,
                 )
 
                 if answer:
