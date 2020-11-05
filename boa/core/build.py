@@ -26,7 +26,6 @@ from conda_build.utils import tmp_chdir
 
 from conda_build import environ, source, utils
 from conda_build.index import update_index
-from conda_build.render import try_download
 from conda_build.post import (
     post_process,
     post_build,
@@ -67,6 +66,7 @@ from conda_build.build import (
 )
 
 from rich.console import Console
+from rich.prompt import Confirm
 
 console = Console()
 
@@ -520,10 +520,54 @@ def execute_build_script(m, src_dir, env, provision_only=False):
         #     if stats is not None:
 
 
-def download_source(m):
-    # Download all the stuff that's necessary
+def _try_download(m, interactive):
+    try:
+        source.provide(m)
+    except RuntimeError as e:
+        if interactive:
+            msg = str(e)
+
+            if "mismatch: " in msg:
+                # parse the mismatch
+                parts = msg.split(" ")
+                hash_type = parts[0]
+                hash_pkg = parts[2]
+                hash_recipe = parts[4]
+                console.print(
+                    f"[red]Error: {hash_type} hash mismatch![/red]\nExpected: [red]{hash_recipe}[/red]\nGot:      [green]{hash_pkg}"
+                )
+
+                answer = Confirm.ask(
+                    "Do you want to automatically update your recipe with the new hash? [y/n]"
+                )
+
+                if answer:
+                    sources = m.get_section("source")
+                    hash_type = hash_type.lower()
+                    hash_pkg = hash_pkg[1:-1]
+                    hash_recipe = hash_recipe[1:-1]
+                    for x in sources:
+                        if hash_type in x and x[hash_type] == hash_recipe:
+                            x[hash_type] = hash_pkg
+                            console.print("Changed ", x)
+
+                    with open(m.meta_path) as fi:
+                        recipe_txt = fi.read()
+                    recipe_txt = recipe_txt.replace(hash_recipe, hash_pkg)
+                    with open(m.meta_path, "w") as fo:
+                        fo.write(recipe_txt)
+                    console.print(f"Written new hash to {m.meta_path}")
+                    # call self again
+                    return _try_download(m, interactive)
+
+            raise (e)
+        else:
+            raise (e)
+
+
+def download_source(m, interactive=False):
     with utils.path_prepended(m.config.build_prefix):
-        try_download(m, no_download_source=False, raise_error=True)
+        _try_download(m, interactive)
 
 
 def build(m, stats=None, from_interactive=False, allow_interactive=False):
