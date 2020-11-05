@@ -338,7 +338,7 @@ def build_recipe(args, recipe_path, cbc, config):
     solver = MambaSolver([], context.subdir)
 
     console.print("\n[yellow]Downloading source[/yellow]\n")
-    download_source(MetaData(recipe_path, o0))
+    download_source(MetaData(recipe_path, o0), args.interactive)
     cached_source = o0.sections["source"]
 
     for o in sorted_outputs:
@@ -374,7 +374,7 @@ def build_recipe(args, recipe_path, cbc, config):
         o.set_final_build_id(meta)
 
         if cached_source != o.sections["source"]:
-            download_source(meta)
+            download_source(meta, args.interactive)
 
         console.print(f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n")
 
