@@ -40,12 +40,7 @@ import conda_build.noarch_python as noarch_python
 if sys.platform == "win32":
     import conda_build.windows as windows
 
-if "bsd" in sys.platform:
-    shell_path = "/bin/sh"
-elif utils.on_win:
-    shell_path = "bash"
-else:
-    shell_path = "/bin/bash"
+from boa.core.utils import shell_path
 
 
 from conda_build.build import (

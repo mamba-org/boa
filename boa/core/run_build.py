@@ -11,6 +11,7 @@ from boa.core.recipe_output import Output, CondaBuildSpec
 from boa.core.solver import MambaSolver
 from boa.core.build import build, download_source
 from boa.core.metadata import MetaData
+from boa.core.test import run_test
 
 from conda_build.utils import rm_rf
 import conda_build.jinja_context
@@ -379,6 +380,10 @@ def build_recipe(args, recipe_path, cbc, config):
         console.print(f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n")
 
         build(meta, None, allow_interactive=args.interactive)
+
+        stats = {}
+        run_test(meta, o.config, stats, move_broken=False, provision_only=False)
+        print(stats)
 
     for o in sorted_outputs:
         print("\n\n")
