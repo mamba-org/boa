@@ -1,17 +1,52 @@
-import os
-import sys
-import subprocess
 import json
+import logging
+import os
 import shutil
+import subprocess
+import sys
+from conda.core.package_cache_data import PackageCacheData
+import yaml
 from os.path import isdir, join
+
+from mamba.mamba_api import PrefixData
+
+from conda.gateways.disk.create import mkdir_p
 from conda.base.context import context
 
-import logging
+from conda_build.utils import CONDA_PACKAGE_EXTENSIONS
+from conda_build.build import (
+    copy_test_source_files,
+    create_info_files,
+    get_all_replacements,
+    log_stats,
+)
+from conda_build.conda_interface import (
+    url_path,
+    env_path_backup_var_exists,
+    pkgs_dirs,
+)
+from conda_build.create_test import create_all_test_files
+from conda_build.index import update_index
+from conda_build.post import post_build
+from conda_build.render import bldpkg_path, try_download
+from conda_build.utils import shutil_move_more_retrying
+from conda_build.variants import set_language_env_vars
+
+from conda_build import environ, utils
+
+from boa.core.utils import shell_path
+from boa.core.recipe_output import Output
+from boa.core.metadata import MetaData
+from boa.core.solver import MambaSolver
 
 log = logging.getLogger("boa")
 
-from conda_build import environ, source, utils
-from boa.core.utils import shell_path
+
+def get_metadata(yml, config):
+    with open(yml, "r") as fi:
+        d = yaml.load(fi)
+    o = Output(d, config)
+    return MetaData(os.path.dirname(yml), o)
 
 
 def _write_test_run_script(
@@ -161,106 +196,6 @@ def write_test_scripts(
     return test_run_script, test_env_script
 
 
-def construct_metadata_for_test_from_package(package, config):
-    recipe_dir, need_cleanup = utils.get_recipe_abspath(package)
-    config.need_cleanup = need_cleanup
-    config.recipe_dir = recipe_dir
-    hash_input = {}
-
-    info_dir = os.path.normpath(os.path.join(recipe_dir, "info"))
-    with open(os.path.join(info_dir, "index.json")) as f:
-        package_data = json.load(f)
-
-    if package_data["subdir"] != "noarch":
-        config.host_subdir = package_data["subdir"]
-    # We may be testing an (old) package built without filename hashing.
-    hash_input = os.path.join(info_dir, "hash_input.json")
-    if os.path.isfile(hash_input):
-        with open(os.path.join(info_dir, "hash_input.json")) as f:
-            hash_input = json.load(f)
-    else:
-        config.filename_hashing = False
-        hash_input = {}
-    # not actually used as a variant, since metadata will have been finalized.
-    #    This is still necessary for computing the hash correctly though
-    config.variant = hash_input
-
-    log = utils.get_logger(__name__)
-
-    # get absolute file location
-    local_pkg_location = os.path.normpath(os.path.abspath(os.path.dirname(package)))
-
-    # get last part of the path
-    last_element = os.path.basename(local_pkg_location)
-    is_channel = False
-    for platform in ("win-", "linux-", "osx-", "noarch"):
-        if last_element.startswith(platform):
-            is_channel = True
-
-    if not is_channel:
-        log.warn(
-            "Copying package to conda-build croot.  No packages otherwise alongside yours will"
-            " be available unless you specify -c local.  To avoid this warning, your package "
-            "must reside in a channel structure with platform-subfolders.  See more info on "
-            "what a valid channel is at "
-            "https://conda.io/docs/user-guide/tasks/create-custom-channels.html"
-        )
-
-        local_dir = os.path.join(config.croot, config.host_subdir)
-        try:
-            os.makedirs(local_dir)
-        except:
-            pass
-        local_pkg_location = os.path.join(local_dir, os.path.basename(package))
-        utils.copy_into(package, local_pkg_location)
-        local_pkg_location = local_dir
-
-    local_channel = os.path.dirname(local_pkg_location)
-
-    # update indices in the channel
-    update_index(local_channel, verbose=config.debug, threads=1)
-
-    try:
-        metadata = render_recipe(
-            os.path.join(info_dir, "recipe"), config=config, reset_build_id=False
-        )[0][0]
-
-    # no recipe in package.  Fudge metadata
-    except (IOError, SystemExit, OSError):
-        # force the build string to line up - recomputing it would
-        #    yield a different result
-        metadata = MetaData.fromdict(
-            {
-                "package": {
-                    "name": package_data["name"],
-                    "version": package_data["version"],
-                },
-                "build": {
-                    "number": int(package_data["build_number"]),
-                    "string": package_data["build"],
-                },
-                "requirements": {"run": package_data["depends"]},
-            },
-            config=config,
-        )
-    # HACK: because the recipe is fully baked, detecting "used" variables no longer works.  The set
-    #     of variables in the hash_input suffices, though.
-
-    if metadata.noarch:
-        metadata.config.variant["target_platform"] = "noarch"
-
-    metadata.config.used_vars = list(hash_input.keys())
-    urls = list(utils.ensure_list(metadata.config.channel_urls))
-    local_path = url_path(local_channel)
-    # replace local with the appropriate real channel.  Order is maintained.
-    urls = [url if url != "local" else local_path for url in urls]
-    if local_path not in urls:
-        urls.insert(0, local_path)
-    metadata.config.channel_urls = urls
-    utils.rm_rf(metadata.config.test_dir)
-    return metadata, hash_input
-
-
 def _extract_test_files_from_package(metadata):
     recipe_dir = (
         metadata.config.recipe_dir
@@ -300,12 +235,129 @@ def _extract_test_files_from_package(metadata):
                     try_download(metadata, no_download_source=False)
 
 
+def _construct_metadata_for_test_from_package(package, config):
+    recipe_dir, need_cleanup = utils.get_recipe_abspath(package)
+    config.need_cleanup = need_cleanup
+    config.recipe_dir = recipe_dir
+    hash_input = {}
+
+    info_dir = os.path.normpath(os.path.join(recipe_dir, "info"))
+    with open(os.path.join(info_dir, "index.json")) as f:
+        package_data = json.load(f)
+
+    if package_data["subdir"] != "noarch":
+        config.host_subdir = package_data["subdir"]
+    # We may be testing an (old) package built without filename hashing.
+    hash_input = os.path.join(info_dir, "hash_input.json")
+    if os.path.isfile(hash_input):
+        with open(os.path.join(info_dir, "hash_input.json")) as f:
+            hash_input = json.load(f)
+    else:
+        config.filename_hashing = False
+        hash_input = {}
+    # not actually used as a variant, since metadata will have been finalized.
+    #    This is still necessary for computing the hash correctly though
+    config.variant = hash_input
+    log = utils.get_logger(__name__)
+
+    # get absolute file location
+    local_pkg_location = os.path.normpath(os.path.abspath(os.path.dirname(package)))
+
+    # get last part of the path
+    last_element = os.path.basename(local_pkg_location)
+    is_channel = False
+    for platform in ("win-", "linux-", "osx-", "noarch"):
+        if last_element.startswith(platform):
+            is_channel = True
+
+    if not is_channel:
+        log.warn(
+            "Copying package to conda-build croot.  No packages otherwise alongside yours will"
+            " be available unless you specify -c local.  To avoid this warning, your package "
+            "must reside in a channel structure with platform-subfolders.  See more info on "
+            "what a valid channel is at "
+            "https://conda.io/docs/user-guide/tasks/create-custom-channels.html"
+        )
+
+        local_dir = os.path.join(config.croot, config.host_subdir)
+        mkdir_p(local_dir)
+        local_pkg_location = os.path.join(local_dir, os.path.basename(package))
+        utils.copy_into(package, local_pkg_location)
+        local_pkg_location = local_dir
+
+    local_channel = os.path.dirname(local_pkg_location)
+
+    # update indices in the channel
+    update_index(local_channel, verbose=config.debug, threads=1)
+
+    try:
+        # raise IOError()
+        # metadata = render_recipe(
+        #     os.path.join(info_dir, "recipe"), config=config, reset_build_id=False
+        # )[0][0]
+
+        metadata = get_metadata(os.path.join(info_dir, "recipe", "recipe.yaml"), config)
+        # with open(os.path.join(info_dir, "recipe", "recipe.yaml")) as fi:
+        # metadata = yaml.load(fi)
+    # no recipe in package.  Fudge metadata
+    except SystemExit:
+        # force the build string to line up - recomputing it would
+        #    yield a different result
+        metadata = MetaData.fromdict(
+            {
+                "package": {
+                    "name": package_data["name"],
+                    "version": package_data["version"],
+                },
+                "build": {
+                    "number": int(package_data["build_number"]),
+                    "string": package_data["build"],
+                },
+                "requirements": {"run": package_data["depends"]},
+            },
+            config=config,
+        )
+    # HACK: because the recipe is fully baked, detecting "used" variables no longer works.  The set
+    #     of variables in the hash_input suffices, though.
+
+    if metadata.noarch:
+        metadata.config.variant["target_platform"] = "noarch"
+
+    metadata.config.used_vars = list(hash_input.keys())
+    urls = list(utils.ensure_list(metadata.config.channel_urls))
+    local_path = url_path(local_channel)
+    # replace local with the appropriate real channel.  Order is maintained.
+    urls = [url if url != "local" else local_path for url in urls]
+    if local_path not in urls:
+        urls.insert(0, local_path)
+    metadata.config.channel_urls = urls
+    utils.rm_rf(metadata.config.test_dir)
+    return metadata, hash_input
+
+
+def construct_metadata_for_test(recipedir_or_package, config):
+    if (
+        os.path.isdir(recipedir_or_package)
+        or os.path.basename(recipedir_or_package) == "meta.yaml"
+    ):
+        raise NotImplementedError("Not yet implemented.")
+        # m, hash_input = _construct_metadata_for_test_from_recipe(
+        #     recipedir_or_package, config
+        # )
+    else:
+        m, hash_input = _construct_metadata_for_test_from_package(
+            recipedir_or_package, config
+        )
+    return m, hash_input
+
+
 def run_test(
     recipedir_or_package_or_metadata,
     config,
     stats,
     move_broken=True,
     provision_only=False,
+    solver=None,
 ):
     """
     Execute any test scripts for the given package.
@@ -332,7 +384,7 @@ def run_test(
         metadata = recipedir_or_package_or_metadata
         utils.rm_rf(metadata.config.test_dir)
     else:
-        metadata, hash_input = construct_metadata_for_test_from_package(
+        metadata, hash_input = construct_metadata_for_test(
             recipedir_or_package_or_metadata, config
         )
 
@@ -357,9 +409,11 @@ def run_test(
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir
 
+    print("Test commands: ", metadata.get_value("test/commands", []))
     _, pl_files, py_files, r_files, lua_files, shell_files = create_all_test_files(
         metadata
     )
+
     if (
         not any([py_files, shell_files, pl_files, lua_files, r_files])
         and not metadata.config.test_run_post
@@ -402,7 +456,8 @@ def run_test(
             "in the work directory that are not included with your package"
         )
 
-    get_build_metadata(metadata)
+    # looks like a dead function to me
+    # get_build_metadata(metadata)
 
     specs = metadata.get_test_deps(py_files, pl_files, lua_files, r_files)
 
@@ -432,64 +487,26 @@ def run_test(
     #     something like QEMU or Wine will be used on the build machine,
     #     therefore, for now, we use host_subdir.
 
-    subdir = (
-        "noarch"
-        if (metadata.noarch or metadata.noarch_python)
-        else metadata.config.host_subdir
-    )
     # ensure that the test prefix isn't kept between variants
     utils.rm_rf(metadata.config.test_prefix)
 
-    try:
-        actions = environ.get_install_actions(
-            metadata.config.test_prefix,
-            tuple(specs),
-            "host",
-            subdir=subdir,
-            debug=metadata.config.debug,
-            verbose=metadata.config.verbose,
-            locking=metadata.config.locking,
-            bldpkgs_dirs=tuple(metadata.config.bldpkgs_dirs),
-            timeout=metadata.config.timeout,
-            disable_pip=metadata.config.disable_pip,
-            max_env_retry=metadata.config.max_env_retry,
-            output_folder=metadata.config.output_folder,
-            channel_urls=tuple(metadata.config.channel_urls),
-        )
-    except (
-        DependencyNeedsBuildingError,
-        NoPackagesFoundError,
-        UnsatisfiableError,
-        CondaError,
-        AssertionError,
-    ) as exc:
-        log.warn(
-            "failed to get install actions, retrying.  exception was: %s", str(exc)
-        )
-        tests_failed(
-            metadata,
-            move_broken=move_broken,
-            broken_dir=metadata.config.broken_dir,
-            config=metadata.config,
-        )
-        raise
-    # upgrade the warning from silently clobbering to warning.  If it is preventing, just
-    #     keep it that way.
-    conflict_verbosity = (
-        "warn"
-        if str(context.path_conflict) == "clobber"
-        else str(context.path_conflict)
+    if solver is None:
+        solver = MambaSolver([], context.subdir)
+
+    solver.replace_channels()
+    transaction = solver.solve(specs, "")
+
+    downloaded = transaction.fetch_extract_packages(
+        PackageCacheData.first_writable().pkgs_dir,
+        solver.repos + list(solver.local_repos.values()),
     )
-    with env_var("CONDA_PATH_CONFLICT", conflict_verbosity, reset_context):
-        environ.create_env(
-            metadata.config.test_prefix,
-            actions,
-            config=metadata.config,
-            env="host",
-            subdir=subdir,
-            is_cross=metadata.is_cross,
-            is_conda=metadata.name() == "conda",
-        )
+    if not downloaded:
+        raise RuntimeError("Did not succeed in downloading packages.")
+
+    transaction.execute(
+        PrefixData(metadata.config.test_prefix),
+        PackageCacheData.first_writable().pkgs_dir,
+    )
 
     with utils.path_prepended(metadata.config.test_prefix):
         env = dict(os.environ.copy())
@@ -552,10 +569,11 @@ def run_test(
                 rewrite_stdout_env=rewrite_env,
             )
             log_stats(test_stats, "testing {}".format(metadata.name()))
-            if stats is not None and metadata.config.variants:
-                stats[
-                    stats_key(metadata, "test_{}".format(metadata.name()))
-                ] = test_stats
+            # TODO need to implement metadata.get_used_loop_vars
+            # if stats is not None and metadata.config.variants:
+            #     stats[
+            #         stats_key(metadata, "test_{}".format(metadata.name()))
+            #     ] = test_stats
             if os.path.exists(join(metadata.config.test_dir, "TEST_FAILED")):
                 raise subprocess.CalledProcessError(-1, "")
             print("TEST END:", test_package_name)

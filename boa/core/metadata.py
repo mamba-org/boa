@@ -365,7 +365,7 @@ class MetaData:
                 filtered_deps.append(req)
 
         take_keys = set(self.config.variant.keys())
-        if "python" not in dependencies:
+        if "python" in take_keys and "python" not in dependencies:
             take_keys.remove("python")
 
         # retrieve values - this dictionary is what makes up the hash.
@@ -438,8 +438,33 @@ class MetaData:
         return self.get_value("build/has_prefix_files", [])
 
     def copy(self):
-        new = copy.copy(self)
+        new = copy.deepcopy(self)
         # new.variant = copy.deepcopy(self.variant)
         # if hasattr(self, 'variants'):
         #     new.variants = copy.deepcopy(self.variants)
         return new
+
+    def get_test_deps(self, py_files, pl_files, lua_files, r_files):
+        specs = ["%s %s %s" % (self.name(), self.version(), self.build_id())]
+
+        # add packages listed in the run environment and test/requires
+        specs.extend(ms.spec for ms in self.ms_depends("run"))
+        specs += self.get_value("test/requires", [])
+        spec_names = set((s.split()[0] for s in specs))
+
+        if py_files and "python" not in spec_names:
+            # as the tests are run by python, ensure that python is installed.
+            specs += ["python"]
+        if pl_files and "perl" not in spec_names:
+            # as the tests are run by perl, we need to specify it
+            specs += ["perl"]
+        if lua_files and "lua" not in spec_names:
+            # not sure how this shakes out
+            specs += ["lua"]
+        if r_files and not any(s in ("r-base", "mro-base") for s in spec_names):
+            # not sure how this shakes out
+            specs += ["r-base"]
+
+        # What is this?!
+        # specs.extend(utils.ensure_list(self.config.extra_deps))
+        return specs

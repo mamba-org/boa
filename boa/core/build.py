@@ -11,6 +11,7 @@ import shutil
 import sys
 import pathlib
 import subprocess
+from conda_build.create_test import create_all_test_files
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
 #   eventually
@@ -41,13 +42,15 @@ if sys.platform == "win32":
     import conda_build.windows as windows
 
 from boa.core.utils import shell_path
-
+from boa.core.recipe_handling import copy_recipe
 
 from conda_build.build import (
     _write_sh_activation_text,
     copy_readme,
     copy_license,
     copy_recipe_log,
+    copy_test_source_files,
+    log_stats,
     write_hash_input,
     get_files_with_prefix,
     record_prefix_files,
@@ -88,20 +91,21 @@ def create_info_files(m, files, prefix):
         write_hash_input(m)
 
     write_info_json(m)  # actually index.json
+
     write_about_json(m)
     write_link_json(m)
     write_run_exports(m)
 
     # TODO
-    # copy_recipe(m)
+    copy_recipe(m)
     copy_readme(m)
     copy_license(m)
     copy_recipe_log(m)
     # files.extend(jsonify_info_yamls(m))
 
-    # create_all_test_files(m, test_dir=join(m.config.info_dir, 'test'))
-    # if m.config.copy_test_source_files:
-    #     copy_test_source_files(m, join(m.config.info_dir, 'test'))
+    create_all_test_files(m, test_dir=join(m.config.info_dir, "test"))
+    if m.config.copy_test_source_files:
+        copy_test_source_files(m, join(m.config.info_dir, "test"))
 
     write_info_files_file(m, files)
 
@@ -133,6 +137,7 @@ def create_info_files(m, files, prefix):
             m.config.timeout,
             locking=m.config.locking,
         )
+
     return checksums
 
 
@@ -510,9 +515,10 @@ def execute_build_script(m, src_dir, env, provision_only=False):
 
                     utils.remove_pycache_from_scripts(m.config.host_prefix)
 
-        # if build_stats and not provision_only:
-        #     log_stats(build_stats, "building {}".format(m.name()))
-        #     if stats is not None:
+        if build_stats and not provision_only:
+            log_stats(build_stats, "building {}".format(m.name()))
+            # if stats is not None:
+            #     stats[stats_key(m, "build")] = build_stats
 
 
 def _try_download(m, interactive):
@@ -607,7 +613,10 @@ def build(m, stats=None, from_interactive=False, allow_interactive=False):
             utils.rm_rf(m.config.host_prefix)
             return
 
-        bundle_conda(m, files_before_script, env, m.output.sections["files"])
+        final_outputs = bundle_conda(
+            m, files_before_script, env, m.output.sections["files"]
+        )
+        return final_outputs
     except subprocess.CalledProcessError:
         ext = "bat" if utils.on_win else "sh"
         work_dir = pathlib.Path(m.config.build_prefix).parent / "work"

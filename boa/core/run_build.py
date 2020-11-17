@@ -379,11 +379,19 @@ def build_recipe(args, recipe_path, cbc, config):
 
         console.print(f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n")
 
-        build(meta, None, allow_interactive=args.interactive)
+        final_outputs = build(meta, None, allow_interactive=args.interactive)
 
         stats = {}
-        run_test(meta, o.config, stats, move_broken=False, provision_only=False)
-        print(stats)
+        for final_out in final_outputs:
+            run_test(
+                final_out,
+                o.config,
+                stats,
+                move_broken=False,
+                provision_only=False,
+                solver=solver,
+            )
+        # print(stats)
 
     for o in sorted_outputs:
         print("\n\n")

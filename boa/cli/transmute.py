@@ -56,6 +56,10 @@ def main(args):
     # api_ctx = Context()
     # api_ctx.set_verbosity(1)
 
+    # from mamba.mamba_api import Context
+    # api_ctx = Context()
+    # api_ctx.set_verbosity(1)
+
     files = args.files
     final_files = []
 

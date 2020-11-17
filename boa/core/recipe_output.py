@@ -172,6 +172,7 @@ class Output:
         set_section("package")
         set_section("app")
         set_section("extra")
+        set_section("test")
 
         self.sections["files"] = d.get("files")
         self.sections["source"] = self.data.get("source", {})
