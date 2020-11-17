@@ -27,6 +27,10 @@ def sizeof_fmt(num):
 def main(args):
     from mamba.mamba_api import transmute as mamba_transmute
 
+    # from mamba.mamba_api import Context
+    # api_ctx = Context()
+    # api_ctx.set_verbosity(1)
+
     files = args.files
     final_files = []
 
@@ -34,7 +38,7 @@ def main(args):
         Path(args.output_directory).mkdir(parents=True, exist_ok=True)
 
     for f in files:
-        final_files += glob(f)
+        final_files += [os.path.abspath(fx) for fx in glob(f)]
 
     for f in final_files:
 
