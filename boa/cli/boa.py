@@ -62,6 +62,13 @@ def main(config=None):
     transmute_parser.add_argument("files", type=str, nargs="+")
     transmute_parser.add_argument("-o", "--output-directory", type=str, default=".")
     transmute_parser.add_argument("-c", "--compression-level", type=int, default=22)
+    transmute_parser.add_argument(
+        "-n_jobs",
+        "--num_jobs",
+        type=int,
+        default=1,
+        help="the number of parallel processing elements",
+    )
 
     args = parser.parse_args()
 
