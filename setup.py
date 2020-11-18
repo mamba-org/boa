@@ -19,6 +19,7 @@ deps = [
     "json5",
     "inotify_simple",
     "prompt-toolkit",
+    "joblib",
 ]
 
 setup(

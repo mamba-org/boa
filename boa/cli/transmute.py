@@ -39,20 +39,15 @@ def transmute_task(f, args):
     else:
         console.print("[bold red]Transmute can only handle .tar.bz2 and .conda formats")
 
-    console.print(f"\nConverting [bold]{os.path.basename(f)}")
     mamba_transmute(f, outfile, args.compression_level)
 
-    if args.num_jobs == 1:
-        stat_before = Path(f).stat()
-        stat_after = Path(outfile).stat()
+    stat_before = Path(f).stat()
+    stat_after = Path(outfile).stat()
 
-        saved_percent = 1.0 - (stat_after.st_size / stat_before.st_size)
+    saved_percent = 1.0 - (stat_after.st_size / stat_before.st_size)
+    color = "[bold green]" if saved_percent > 0 else "[bold red]"
 
-        console.print(f"Done: [bold]{outfile}")
-        console.print(f"   Before    : {sizeof_fmt(stat_before.st_size)}")
-        console.print(f"   After     : {sizeof_fmt(stat_after.st_size)}")
-        color = "[bold green]" if saved_percent > 0 else "[bold red]"
-        console.print(f"   Difference: {color}{saved_percent * 100:.2f}%")
+    return filename, outfile, stat_before, stat_after, saved_percent, color
 
 
 def main(args):
@@ -69,6 +64,13 @@ def main(args):
     for f in files:
         final_files += [os.path.abspath(fx) for fx in glob(f)]
 
-    Parallel(n_jobs=args.num_jobs)(
+    logs = Parallel(n_jobs=args.num_jobs)(
         delayed(transmute_task)(f, args) for f in final_files
     )
+
+    for filename, outfile, stat_before, stat_after, saved_percent, color in logs:
+        console.print(f"\nConverting [bold]{filename}")
+        console.print(f"Done: [bold]{outfile}")
+        console.print(f"   Before    : {sizeof_fmt(stat_before.st_size)}")
+        console.print(f"   After     : {sizeof_fmt(stat_after.st_size)}")
+        console.print(f"   Difference: {color}{saved_percent * 100:.2f}%")
