@@ -39,6 +39,7 @@ def transmute_task(f, args):
     else:
         console.print("[bold red]Transmute can only handle .tar.bz2 and .conda formats")
 
+    console.print(f"Processing {filename}")
     mamba_transmute(f, outfile, args.compression_level)
 
     stat_before = Path(f).stat()
