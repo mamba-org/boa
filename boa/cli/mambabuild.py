@@ -1,8 +1,10 @@
+import os
 import sys
 import re
 
 from conda.models.match_spec import MatchSpec
 from conda.base.context import context
+from conda.gateways.disk.create import mkdir_p
 
 import conda_build.environ
 from conda_build import api
@@ -63,6 +65,9 @@ def main():
     channel_urls = get_rc_urls() + get_channel_urls({})
 
     init_api_context()
+
+    if not os.path.exists(config.output_folder):
+        mkdir_p(config.output_folder)
 
     print(f"Updating build index: {(config.output_folder)}\n")
     update_index(config.output_folder, verbose=config.debug, threads=1)
