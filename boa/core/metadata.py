@@ -438,19 +438,19 @@ class MetaData:
         return self.get_value("build/has_prefix_files", [])
 
     def copy(self):
+        # delete transactions as we can't copy them
+        # TODO find a better way ...
+        self.output.transactions = None
         new = copy.deepcopy(self)
-        # new.variant = copy.deepcopy(self.variant)
-        # if hasattr(self, 'variants'):
-        #     new.variants = copy.deepcopy(self.variants)
         return new
 
     def get_test_deps(self, py_files, pl_files, lua_files, r_files):
         specs = ["%s %s %s" % (self.name(), self.version(), self.build_id())]
 
         # add packages listed in the run environment and test/requires
-        specs.extend(ms.spec for ms in self.ms_depends("run"))
+        specs.extend(ms.final for ms in self.ms_depends("run"))
         specs += self.get_value("test/requires", [])
-        spec_names = set((s.split()[0] for s in specs))
+        spec_names = set((s.name for s in self.ms_depends("run")))
 
         if py_files and "python" not in spec_names:
             # as the tests are run by python, ensure that python is installed.

@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 from conda.core.package_cache_data import PackageCacheData
-import yaml
+import ruamel
 from os.path import isdir, join
 
 from mamba.mamba_api import PrefixData
@@ -44,7 +44,7 @@ log = logging.getLogger("boa")
 
 def get_metadata(yml, config):
     with open(yml, "r") as fi:
-        d = yaml.load(fi)
+        d = ruamel.yaml.safe_load(fi)
     o = Output(d, config)
     return MetaData(os.path.dirname(yml), o)
 
@@ -409,7 +409,6 @@ def run_test(
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir
 
-    print("Test commands: ", metadata.get_value("test/commands", []))
     _, pl_files, py_files, r_files, lua_files, shell_files = create_all_test_files(
         metadata
     )
@@ -503,6 +502,7 @@ def run_test(
     if not downloaded:
         raise RuntimeError("Did not succeed in downloading packages.")
 
+    mkdir_p(metadata.config.test_prefix)
     transaction.execute(
         PrefixData(metadata.config.test_prefix),
         PackageCacheData.first_writable().pkgs_dir,
@@ -577,6 +577,7 @@ def run_test(
             if os.path.exists(join(metadata.config.test_dir, "TEST_FAILED")):
                 raise subprocess.CalledProcessError(-1, "")
             print("TEST END:", test_package_name)
+
     except subprocess.CalledProcessError as _:  # noqa
         tests_failed(
             metadata,

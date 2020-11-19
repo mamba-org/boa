@@ -90,7 +90,7 @@ class CondaBuildSpec:
         max_pin, exact = self.splitted[1][len("PIN_SUBPACKAGE") + 1 : -1].split(",")
         exact = exact == "True"
         output = None
-
+        # TODO are we pinning the right version if building multiple variants?!
         for o in all_outputs:
             if o.name == pkg_name:
                 output = o
@@ -492,8 +492,6 @@ class Output:
 
     def _solve_env(self, env, all_outputs, solver):
         if self.requirements.get(env):
-            if not self.requirements[env]:
-                return
             console.print(f"Finalizing [yellow]{env}[/yellow] for {self.name}")
             specs = self.requirements[env]
             for s in specs:
@@ -503,6 +501,9 @@ class Output:
                     s.eval_pin_compatible(
                         self.requirements["build"], self.requirements["host"]
                     )
+
+            # save finalized requirements in data for usage in metadata
+            self.data["requirements"][env] = [s.final for s in self.requirements[env]]
 
             spec_map = {s.final_name: s for s in specs}
             specs = [str(x) for x in specs]
