@@ -20,6 +20,7 @@ deps = [
     "inotify_simple",
     "prompt-toolkit",
     "joblib",
+    "beautifulsoup4",
 ]
 
 setup(

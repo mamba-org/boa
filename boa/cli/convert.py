@@ -15,16 +15,26 @@ ruamel.yaml.add_representer(
     OrderedDict, MyRepresenter.represent_dict, representer=MyRepresenter
 )
 
+RECIPE_FIELD_ORDER = [
+    "package",
+    "source",
+    "build",
+    "requirements",
+    "test",
+    "app",
+    "outputs",
+    "about",
+    "extra",
+]
+
 
 def order_output_dict(d):
-    keys = ["package", "build", "requirements", "test"]
-
     result_list = []
-    for k in keys:
+    for k in RECIPE_FIELD_ORDER:
         if k in d:
             result_list.append((k, d[k]))
 
-    leftover_keys = d.keys() - set(keys)
+    leftover_keys = d.keys() - set(RECIPE_FIELD_ORDER)
     result_list += [(k, d[k]) for k in leftover_keys]
     return OrderedDict(result_list)
 
