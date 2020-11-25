@@ -1,3 +1,4 @@
+from boa.core.solver import get_solver
 import copy
 import re
 import json
@@ -490,7 +491,7 @@ class Output:
                     for r in rex["weak"]:
                         append_or_replace("run", r)
 
-    def _solve_env(self, env, all_outputs, solver):
+    def _solve_env(self, env, all_outputs):
         if self.requirements.get(env):
             console.print(f"Finalizing [yellow]{env}[/yellow] for {self.name}")
             specs = self.requirements[env]
@@ -507,7 +508,15 @@ class Output:
 
             spec_map = {s.final_name: s for s in specs}
             specs = [str(x) for x in specs]
-            t = solver.solve(specs, "")
+
+            pkg_cache = PackageCacheData.first_writable().pkgs_dir
+            if env in ("host", "run") and not self.config.subdirs_same:
+                subdir = self.config.host_subdir
+            else:
+                subdir = self.config.build_subdir
+
+            solver, pkg_cache = get_solver(subdir)
+            t = solver.solve(specs, [pkg_cache])
 
             _, install_pkgs, _ = t.to_conda()
             for _, _, p in install_pkgs:
@@ -525,11 +534,14 @@ class Output:
                     cbs.channel = p["channel"]
                     self.requirements[env].append(cbs)
 
-            self.transactions[env] = t
+            self.transactions[env] = {
+                "transaction": t,
+                "pkg_cache": pkg_cache,
+            }
 
+            print("Package cache: ", pkg_cache)
             downloaded = t.fetch_extract_packages(
-                PackageCacheData.first_writable().pkgs_dir,
-                solver.repos + list(solver.local_repos.values()),
+                pkg_cache, solver.repos + list(solver.local_repos.values()),
             )
             if not downloaded:
                 raise RuntimeError("Did not succeed in downloading packages.")
@@ -553,11 +565,11 @@ class Output:
             run_exports_list[:] = [x.final for x in run_exports_list]
             self.data["build"]["run_exports"] = run_exports_list
 
-    def finalize_solve(self, all_outputs, solver):
+    def finalize_solve(self, all_outputs):
 
-        self._solve_env("build", all_outputs, solver)
-        self._solve_env("host", all_outputs, solver)
-        self._solve_env("run", all_outputs, solver)
+        self._solve_env("build", all_outputs)
+        self._solve_env("host", all_outputs)
+        self._solve_env("run", all_outputs)
 
         # TODO figure out if we can avoid this?!
         if self.config.variant.get("python") is None:

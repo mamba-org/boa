@@ -31,6 +31,8 @@ def main(config=None):
     parent_parser.add_argument("--recipe-dir", type=str, default=os.getcwd())
     parent_parser.add_argument("target", type=str, default="")
     parent_parser.add_argument("--features", type=str)
+    parent_parser.add_argument("--offline", action="store_true")
+    parent_parser.add_argument("--target-platform", type=str)
 
     subparsers.add_parser("render", parents=[parent_parser], help="render a recipe")
     subparsers.add_parser(
