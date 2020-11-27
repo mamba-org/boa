@@ -3,12 +3,11 @@ import glob
 import itertools
 
 from mamba.mamba_api import PrefixData
-from conda.core.package_cache_data import PackageCacheData
 
 from boa.core.render import render
 from boa.core.utils import get_config
 from boa.core.recipe_output import Output, CondaBuildSpec
-from boa.core.solver import MambaSolver
+from boa.core.solver import refresh_solvers
 from boa.core.build import build, download_source
 from boa.core.metadata import MetaData
 from boa.core.test import run_test
@@ -17,7 +16,6 @@ from conda_build.utils import rm_rf
 import conda_build.jinja_context
 from conda.common import toposort
 from conda.models.match_spec import MatchSpec
-from conda.base.context import context
 from conda.gateways.disk.create import mkdir_p
 from conda_build.variants import get_default_variant
 
@@ -94,9 +92,24 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
     variants = {}
     default_variant = get_default_variant(config)
 
+    # When compiling for OS X, we should fetch the clang compilers ...
+    # I think this needs a more thorough rework
+    # if config.variant["target_platform"] == "osx-64":
+    # default_variant.update(
+    #     {
+    #         "c_compiler": "clang",
+    #         "cxx_compiler": "clangxx",
+    #         "fortran_compiler": "gfortran",
+    #     },
+    # )
+
     variants["target_platform"] = conda_build_config.get(
         "target_platform", [default_variant["target_platform"]]
     )
+
+    if conda_build_config["target_platform"] == [None]:
+        variants["target_platform"] = [default_variant["target_platform"]]
+
     config.variant["target_platform"] = variants["target_platform"][0]
 
     def get_variants(env):
@@ -336,7 +349,6 @@ def build_recipe(args, recipe_path, cbc, config):
     o0.config.compute_build_id(top_name)
 
     console.print("\n[yellow]Initializing mamba solver[/yellow]\n")
-    solver = MambaSolver([], context.subdir)
 
     console.print("\n[yellow]Downloading source[/yellow]\n")
     download_source(MetaData(recipe_path, o0), args.interactive)
@@ -346,8 +358,8 @@ def build_recipe(args, recipe_path, cbc, config):
         console.print(
             f"\n[yellow]Preparing environment for [bold]{o.name}[/bold][/yellow]\n"
         )
-        solver.replace_channels()
-        o.finalize_solve(sorted_outputs, solver)
+        refresh_solvers()
+        o.finalize_solve(sorted_outputs)
 
         o.config._build_id = o0.config.build_id
 
@@ -356,9 +368,9 @@ def build_recipe(args, recipe_path, cbc, config):
                 rm_rf(o.config.build_prefix)
             mkdir_p(o.config.build_prefix)
             try:
-                o.transactions["build"].execute(
+                o.transactions["build"]["transaction"].execute(
                     PrefixData(o.config.build_prefix),
-                    PackageCacheData.first_writable().pkgs_dir,
+                    o.transactions["build"]["pkg_cache"],
                 )
             except Exception:
                 # This currently enables windows-multi-build...
@@ -366,9 +378,8 @@ def build_recipe(args, recipe_path, cbc, config):
 
         if "host" in o.transactions:
             mkdir_p(o.config.host_prefix)
-            o.transactions["host"].execute(
-                PrefixData(o.config.host_prefix),
-                PackageCacheData.first_writable().pkgs_dir,
+            o.transactions["host"]["transaction"].execute(
+                PrefixData(o.config.host_prefix), o.transactions["host"]["pkg_cache"],
             )
 
         meta = MetaData(recipe_path, o)
@@ -384,12 +395,7 @@ def build_recipe(args, recipe_path, cbc, config):
         stats = {}
         for final_out in final_outputs:
             run_test(
-                final_out,
-                o.config,
-                stats,
-                move_broken=False,
-                provision_only=False,
-                solver=solver,
+                final_out, o.config, stats, move_broken=False, provision_only=False,
             )
         # print(stats)
 
@@ -401,9 +407,13 @@ def build_recipe(args, recipe_path, cbc, config):
 def run_build(args):
 
     folder = args.recipe_dir
-    cbc, config = get_config(folder)
+    variant = {}
+    if args.target_platform:
+        variant["target_platform"] = args.target_platform
 
-    # target = os.path.dirname(args.target)
+    cbc, config = get_config(folder, variant)
+
+    cbc["target_platform"] = [args.target_platform]
 
     if not os.path.exists(config.output_folder):
         mkdir_p(config.output_folder)

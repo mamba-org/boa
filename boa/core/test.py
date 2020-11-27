@@ -7,11 +7,10 @@ import sys
 from conda.core.package_cache_data import PackageCacheData
 import ruamel
 from os.path import isdir, join
-
+from boa.core.solver import get_solver
 from mamba.mamba_api import PrefixData
 
 from conda.gateways.disk.create import mkdir_p
-from conda.base.context import context
 
 from conda_build.utils import CONDA_PACKAGE_EXTENSIONS
 from conda_build.build import (
@@ -37,7 +36,6 @@ from conda_build import environ, utils
 from boa.core.utils import shell_path
 from boa.core.recipe_output import Output
 from boa.core.metadata import MetaData
-from boa.core.solver import MambaSolver
 
 log = logging.getLogger("boa")
 
@@ -490,22 +488,22 @@ def run_test(
     utils.rm_rf(metadata.config.test_prefix)
 
     if solver is None:
-        solver = MambaSolver([], context.subdir)
+        solver, pkg_cache_path = get_solver(metadata.config.host_subdir)
+    else:
+        pkg_cache_path = PackageCacheData.first_writable().pkgs_dir
 
     solver.replace_channels()
-    transaction = solver.solve(specs, "")
+    transaction = solver.solve(specs, [pkg_cache_path])
 
     downloaded = transaction.fetch_extract_packages(
-        PackageCacheData.first_writable().pkgs_dir,
-        solver.repos + list(solver.local_repos.values()),
+        pkg_cache_path, solver.repos + list(solver.local_repos.values()),
     )
     if not downloaded:
         raise RuntimeError("Did not succeed in downloading packages.")
 
     mkdir_p(metadata.config.test_prefix)
     transaction.execute(
-        PrefixData(metadata.config.test_prefix),
-        PackageCacheData.first_writable().pkgs_dir,
+        PrefixData(metadata.config.test_prefix), pkg_cache_path,
     )
 
     with utils.path_prepended(metadata.config.test_prefix):

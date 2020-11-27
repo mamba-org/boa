@@ -12,9 +12,35 @@ from conda.plan import get_blank_actions
 from conda.models.dist import Dist
 from conda_build.conda_interface import pkgs_dirs
 from conda.models.channel import Channel
+from conda.core.package_cache_data import PackageCacheData
+
 
 from mamba import mamba_api
 from mamba.utils import get_index, load_channels, to_package_record_from_subjson
+
+
+solver_cache = {}
+
+
+def refresh_solvers():
+    for _, v in solver_cache.items():
+        v.replace_channels()
+
+
+def get_solver(subdir):
+    pkg_cache = PackageCacheData.first_writable().pkgs_dir
+    if subdir == "noarch":
+        # actually use platform subdir ...
+        subdir = context.subdir
+    elif subdir != context.subdir:
+        pkg_cache = os.path.join(pkg_cache, subdir)
+        if not os.path.exists(pkg_cache):
+            os.makedirs(pkg_cache, exist_ok=True)
+
+    if not solver_cache.get(subdir):
+        solver_cache[subdir] = MambaSolver([], subdir)
+
+    return solver_cache[subdir], pkg_cache
 
 
 def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
@@ -53,6 +79,8 @@ class MambaSolver:
         api_ctx = mamba_api.Context()
         api_ctx.root_prefix = context.conda_prefix
         api_ctx.conda_prefix = context.conda_prefix
+        # api_ctx.set_verbosity(1)
+        api_ctx.offline = context.offline
         api_ctx.envs_dirs = [os.path.join(context.conda_prefix, "envs")]
         api_ctx.pkgs_dirs = [os.path.join(context.conda_prefix, "pkgs")]
 
@@ -88,7 +116,7 @@ class MambaSolver:
             self.local_repos[str(channel)].set_priority(start_prio, 0)
             start_prio -= 1
 
-    def solve(self, specs, prefix):
+    def solve(self, specs, pkg_cache_path=pkgs_dirs):
         """Solve given a set of specs.
         Parameters
         ----------
@@ -121,13 +149,12 @@ class MambaSolver:
             print(error_string)
             exit(1)
 
-        package_cache = mamba_api.MultiPackageCache(pkgs_dirs)
-
+        package_cache = mamba_api.MultiPackageCache(pkg_cache_path)
         t = mamba_api.Transaction(api_solver, package_cache)
         return t
 
     def solve_for_action(self, specs, prefix):
-        t = self.solve(specs, prefix)
+        t = self.solve(specs)
         t.print()
 
         mmb_specs, to_link, to_unlink = t.to_conda()
