@@ -126,6 +126,7 @@ def create_info_files(m, files, prefix):
             if src.get("git_url"):
                 source.git_info(
                     os.path.join(m.config.work_dir, src.get("folder", "")),
+                    build_prefix=m.config.build_prefix,
                     verbose=m.config.verbose,
                     fo=fo,
                 )
