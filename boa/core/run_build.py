@@ -393,10 +393,11 @@ def build_recipe(args, recipe_path, cbc, config):
         final_outputs = build(meta, None, allow_interactive=args.interactive)
 
         stats = {}
-        for final_out in final_outputs:
-            run_test(
-                final_out, o.config, stats, move_broken=False, provision_only=False,
-            )
+        if final_outputs is not None:
+            for final_out in final_outputs:
+                run_test(
+                    final_out, o.config, stats, move_broken=False, provision_only=False,
+                )
         # print(stats)
 
     for o in sorted_outputs:

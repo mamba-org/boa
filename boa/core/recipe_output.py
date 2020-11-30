@@ -125,6 +125,7 @@ class CondaBuildSpec:
         versions = {b.name: b for b in build}
         versions.update({h.name: h for h in host})
 
+        compatibility = None
         if versions:
             if exact and versions.get(self.name):
                 compatibility = " ".join(versions[self.name].final_version)
