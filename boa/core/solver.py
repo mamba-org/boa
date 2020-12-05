@@ -93,6 +93,8 @@ class MambaSolver:
         )
         self.local_index = []
         self.local_repos = {}
+        # load local repo, too
+        self.replace_channels()
 
     def replace_channels(self):
         self.local_index = get_index(("local",), platform=self.platform, prepend=False)
