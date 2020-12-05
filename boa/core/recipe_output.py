@@ -149,7 +149,7 @@ class CondaBuildSpec:
 
 
 class Output:
-    def __init__(self, d, config, parent=None, selected_features=None):
+    def __init__(self, d, config, parent=None, conda_build_config=None, selected_features=None):
         if parent is None:
             parent = {}
         if selected_features is None:
@@ -157,7 +157,7 @@ class Output:
         self.data = d
         self.data["source"] = d.get("source", parent.get("source", {}))
         self.config = config
-
+        self.conda_build_config = conda_build_config or {}
         self.name = d["package"]["name"]
         self.version = d["package"]["version"]
         self.build_string = d["package"].get("build_string")
@@ -263,23 +263,26 @@ class Output:
 
         copied.variant = variant
         for idx, r in enumerate(self.requirements["build"]):
-            if r.name in variant:
+            vname = r.name.replace('-', '_')
+            if vname in variant:
                 copied.requirements["build"][idx] = CondaBuildSpec(
-                    r.name + " " + variant[r.name]
+                    r.name + " " + variant[vname]
                 )
                 copied.requirements["build"][idx].from_pinnings = True
         for idx, r in enumerate(self.requirements["host"]):
-            if r.name in variant:
+            vname = r.name.replace('-', '_')
+            if vname in variant:
                 copied.requirements["host"][idx] = CondaBuildSpec(
-                    r.name + " " + variant[r.name]
+                    r.name + " " + variant[vname]
                 )
                 copied.requirements["host"][idx].from_pinnings = True
 
         # todo figure out if we should pin like that in the run reqs as well?
         for idx, r in enumerate(self.requirements["run"]):
-            if r.name in variant:
+            vname = r.name.replace('-', '_')
+            if vname in variant:
                 copied.requirements["run"][idx] = CondaBuildSpec(
-                    r.name + " " + variant[r.name]
+                    r.name + " " + variant[vname]
                 )
                 copied.requirements["run"][idx].from_pinnings = True
 
@@ -437,9 +440,10 @@ class Output:
             s += spec_format(r)
         return s
 
-    def propagate_run_exports(self, env):
+    def propagate_run_exports(self, env, pkg_cache):
         # find all run exports
         collected_run_exports = []
+        config_pins = self.conda_build_config.get('pin_run_as_build', {})
         for s in self.requirements[env]:
             if s.is_transitive_dependency:
                 continue
@@ -450,18 +454,25 @@ class Output:
                     f"{s.final_name}-{s.final_version[0]}-{s.final_version[1]}"
                 )
             else:
-                print(f"{s} has no final version")
+                console.print(f"[red]{s} has no final version")
                 continue
-            path = Path(PackageCacheData.first_writable().pkgs_dir).joinpath(
-                final_triple, "info", "run_exports.json",
-            )
-            if path.exists():
-                with open(path) as fi:
-                    run_exports_info = json.load(fi)
-                    s.run_exports_info = run_exports_info
-                    collected_run_exports.append(run_exports_info)
+
+            if s.name.replace('-', '_') in config_pins:
+                s.run_exports_info = { 'weak': [
+                    f"{s.final_name} {apply_pin_expressions(s.final_version[0], **config_pins[s.name.replace('-', '_')])}"
+                ]}
+                collected_run_exports.append(s.run_exports_info)
             else:
-                s.run_exports_info = None
+                path = Path(pkg_cache).joinpath(
+                    final_triple, "info", "run_exports.json",
+                )
+                if path.exists():
+                    with open(path) as fi:
+                        run_exports_info = json.load(fi)
+                        s.run_exports_info = run_exports_info
+                        collected_run_exports.append(run_exports_info)
+                else:
+                    s.run_exports_info = None
 
         def append_or_replace(env, spec):
             spec = CondaBuildSpec(spec)
@@ -540,7 +551,6 @@ class Output:
                 "pkg_cache": pkg_cache,
             }
 
-            print("Package cache: ", pkg_cache)
             downloaded = t.fetch_extract_packages(
                 pkg_cache, solver.repos + list(solver.local_repos.values()),
             )
@@ -548,7 +558,7 @@ class Output:
                 raise RuntimeError("Did not succeed in downloading packages.")
 
             if env in ("build", "host"):
-                self.propagate_run_exports(env)
+                self.propagate_run_exports(env, self.transactions[env]["pkg_cache"])
 
     def set_final_build_id(self, meta):
         self.final_build_id = meta.build_id()

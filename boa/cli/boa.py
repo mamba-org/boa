@@ -51,6 +51,11 @@ def main(config=None):
         action="store_true",
         help="Use interactive mode if build fails",
     )
+    build_parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip building existing packages",
+    )
 
     subparsers.add_parser(
         "build", parents=[parent_parser, build_parser], help="build a recipe"

@@ -55,8 +55,12 @@ def find_all_recipes(target, config):
 
     def get_all_requirements(x):
         req = x.get("requirements", {}).get("host", [])
+        req += x.get("requirements", {}).get("run", [])
         for feat in x.get("features", []):
             req += feat.get("requirements", {}).get("host", [])
+            req += feat.get("requirements", {}).get("run", [])
+        for o in x.get("outputs", []):
+            req += get_all_requirements(o)
         return req
 
     def recursive_add(target):
@@ -69,17 +73,14 @@ def find_all_recipes(target, config):
             if req not in sort_recipes:
                 recursive_add(req)
 
-    if target == "" or target not in recipes.keys():
-        keys = list(recipes.keys())
-        if len(keys) > 1:
-            console.print(
-                f"[red]Warning, multiple recipes found. Selecting {keys[0]}.[/red]"
-            )
-        target = keys[0]
-
-    recursive_add(target)
+    if not target or target not in recipes.keys():
+        for k in recipes.keys():
+            recursive_add(k)
+    else:
+        recursive_add(target)
 
     sorted_recipes = toposort.toposort(sort_recipes)
+    print(sorted_recipes)
 
     return [recipes[x] for x in sorted_recipes]
 
@@ -187,7 +188,7 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
     return v
 
 
-def to_build_tree(ydoc, variants, config, selected_features):
+def to_build_tree(ydoc, variants, config, cbc, selected_features):
     for k in variants:
         table = Table(show_header=True, header_style="bold")
         table.title = f"Output: [bold white]{k}[/bold white]"
@@ -200,12 +201,12 @@ def to_build_tree(ydoc, variants, config, selected_features):
     # first we need to perform a topological sort taking into account all the outputs
     if ydoc.get("outputs"):
         outputs = [
-            Output(o, config, parent=ydoc, selected_features=selected_features)
+            Output(o, config, parent=ydoc, conda_build_config=cbc, selected_features=selected_features)
             for o in ydoc["outputs"]
         ]
         outputs = {o.name: o for o in outputs}
     else:
-        outputs = [Output(ydoc, config, selected_features=selected_features)]
+        outputs = [Output(ydoc, config, conda_build_config=cbc, selected_features=selected_features)]
         outputs = {o.name: o for o in outputs}
 
     if len(outputs) > 1:
@@ -326,7 +327,7 @@ def build_recipe(args, recipe_path, cbc, config):
 
     # this takes in all variants and outputs, builds a dependency tree and returns
     # the final metadata
-    sorted_outputs = to_build_tree(ydoc, variants, config, selected_features)
+    sorted_outputs = to_build_tree(ydoc, variants, config, cbc, selected_features)
 
     # then we need to solve and build from the bottom up
     # we can't first solve all packages without finalizing everything
@@ -340,7 +341,6 @@ def build_recipe(args, recipe_path, cbc, config):
     if args.command == "render":
         for o in sorted_outputs:
             console.print(o)
-        exit()
 
     # TODO this should be done cleaner
     top_name = ydoc["package"]["name"]
@@ -350,10 +350,13 @@ def build_recipe(args, recipe_path, cbc, config):
 
     console.print("\n[yellow]Initializing mamba solver[/yellow]\n")
 
-    console.print("\n[yellow]Downloading source[/yellow]\n")
-    download_source(MetaData(recipe_path, o0), args.interactive)
-    cached_source = o0.sections["source"]
-
+    # Do not download source if we might skip
+    if not args.skip_existing:
+        console.print("\n[yellow]Downloading source[/yellow]\n")
+        download_source(MetaData(recipe_path, o0), args.interactive)
+        cached_source = o0.sections["source"]
+    else:
+        cached_source = {}
     for o in sorted_outputs:
         console.print(
             f"\n[yellow]Preparing environment for [bold]{o.name}[/bold][/yellow]\n"
@@ -362,6 +365,15 @@ def build_recipe(args, recipe_path, cbc, config):
         o.finalize_solve(sorted_outputs)
 
         o.config._build_id = o0.config.build_id
+
+        meta = MetaData(recipe_path, o)
+        o.set_final_build_id(meta)
+
+        if args.skip_existing:
+            final_name = meta.dist()
+            if os.path.exists(os.path.join(o.config.output_folder, o.variant["target_platform"], final_name + ".tar.bz2")):
+                console.print(f"\n[green]Skipping existing {final_name}\n")
+                continue
 
         if "build" in o.transactions:
             if os.path.isdir(o.config.build_prefix):
@@ -382,11 +394,9 @@ def build_recipe(args, recipe_path, cbc, config):
                 PrefixData(o.config.host_prefix), o.transactions["host"]["pkg_cache"],
             )
 
-        meta = MetaData(recipe_path, o)
-        o.set_final_build_id(meta)
-
         if cached_source != o.sections["source"]:
             download_source(meta, args.interactive)
+            cached_source = o.sections["source"]
 
         console.print(f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n")
 
@@ -406,14 +416,12 @@ def build_recipe(args, recipe_path, cbc, config):
 
 
 def run_build(args):
-
     folder = args.recipe_dir
     variant = {}
     if args.target_platform:
         variant["target_platform"] = args.target_platform
 
     cbc, config = get_config(folder, variant)
-
     cbc["target_platform"] = [args.target_platform]
 
     if not os.path.exists(config.output_folder):
