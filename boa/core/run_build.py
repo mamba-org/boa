@@ -136,6 +136,8 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
                         config_version_key
                     ]
 
+            # Note: as a historical artifact we __have to__ use underscore-replaced
+            # names here!
             variant_key = n.replace("-", "_")
             vlist = None
             if variant_key in conda_build_config:
