@@ -52,9 +52,7 @@ def main(config=None):
         help="Use interactive mode if build fails",
     )
     build_parser.add_argument(
-        "--skip-existing",
-        action="store_true",
-        help="Skip building existing packages",
+        "--skip-existing", action="store_true", help="Skip building existing packages",
     )
 
     subparsers.add_parser(

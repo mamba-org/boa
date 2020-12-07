@@ -633,5 +633,6 @@ def build(m, stats=None, from_interactive=False, allow_interactive=False):
             import asyncio
 
             asyncio.run(tui.enter_tui(m))
-
-        # exit(1)
+        else:
+            console.print("[red]ERROR: Build failed!")
+            exit(1)

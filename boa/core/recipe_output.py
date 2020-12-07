@@ -149,7 +149,9 @@ class CondaBuildSpec:
 
 
 class Output:
-    def __init__(self, d, config, parent=None, conda_build_config=None, selected_features=None):
+    def __init__(
+        self, d, config, parent=None, conda_build_config=None, selected_features=None
+    ):
         if parent is None:
             parent = {}
         if selected_features is None:
@@ -263,14 +265,14 @@ class Output:
 
         copied.variant = variant
         for idx, r in enumerate(self.requirements["build"]):
-            vname = r.name.replace('-', '_')
+            vname = r.name.replace("-", "_")
             if vname in variant:
                 copied.requirements["build"][idx] = CondaBuildSpec(
                     r.name + " " + variant[vname]
                 )
                 copied.requirements["build"][idx].from_pinnings = True
         for idx, r in enumerate(self.requirements["host"]):
-            vname = r.name.replace('-', '_')
+            vname = r.name.replace("-", "_")
             if vname in variant:
                 copied.requirements["host"][idx] = CondaBuildSpec(
                     r.name + " " + variant[vname]
@@ -279,7 +281,7 @@ class Output:
 
         # todo figure out if we should pin like that in the run reqs as well?
         for idx, r in enumerate(self.requirements["run"]):
-            vname = r.name.replace('-', '_')
+            vname = r.name.replace("-", "_")
             if vname in variant:
                 copied.requirements["run"][idx] = CondaBuildSpec(
                     r.name + " " + variant[vname]
@@ -443,7 +445,7 @@ class Output:
     def propagate_run_exports(self, env, pkg_cache):
         # find all run exports
         collected_run_exports = []
-        config_pins = self.conda_build_config.get('pin_run_as_build', {})
+        config_pins = self.conda_build_config.get("pin_run_as_build", {})
         for s in self.requirements[env]:
             if s.is_transitive_dependency:
                 continue
@@ -457,10 +459,12 @@ class Output:
                 console.print(f"[red]{s} has no final version")
                 continue
 
-            if s.name.replace('-', '_') in config_pins:
-                s.run_exports_info = { 'weak': [
-                    f"{s.final_name} {apply_pin_expressions(s.final_version[0], **config_pins[s.name.replace('-', '_')])}"
-                ]}
+            if s.name.replace("-", "_") in config_pins:
+                s.run_exports_info = {
+                    "weak": [
+                        f"{s.final_name} {apply_pin_expressions(s.final_version[0], **config_pins[s.name.replace('-', '_')])}"
+                    ]
+                }
                 collected_run_exports.append(s.run_exports_info)
             else:
                 path = Path(pkg_cache).joinpath(

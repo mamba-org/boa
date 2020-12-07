@@ -201,12 +201,25 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
     # first we need to perform a topological sort taking into account all the outputs
     if ydoc.get("outputs"):
         outputs = [
-            Output(o, config, parent=ydoc, conda_build_config=cbc, selected_features=selected_features)
+            Output(
+                o,
+                config,
+                parent=ydoc,
+                conda_build_config=cbc,
+                selected_features=selected_features,
+            )
             for o in ydoc["outputs"]
         ]
         outputs = {o.name: o for o in outputs}
     else:
-        outputs = [Output(ydoc, config, conda_build_config=cbc, selected_features=selected_features)]
+        outputs = [
+            Output(
+                ydoc,
+                config,
+                conda_build_config=cbc,
+                selected_features=selected_features,
+            )
+        ]
         outputs = {o.name: o for o in outputs}
 
     if len(outputs) > 1:
@@ -371,7 +384,13 @@ def build_recipe(args, recipe_path, cbc, config):
 
         if args.skip_existing:
             final_name = meta.dist()
-            if os.path.exists(os.path.join(o.config.output_folder, o.variant["target_platform"], final_name + ".tar.bz2")):
+            if os.path.exists(
+                os.path.join(
+                    o.config.output_folder,
+                    o.variant["target_platform"],
+                    final_name + ".tar.bz2",
+                )
+            ):
                 console.print(f"\n[green]Skipping existing {final_name}\n")
                 continue
 
