@@ -140,13 +140,18 @@ class MetaData:
             section, key = key.split("/")
             num = 0
 
+        print(f"Getting {section}/{key}")
         # conda-build compat
         if default_structs:
+            print("Old school conda-build")
             if default is None and key in default_structs:
                 default = default_structs[key]()
         if FIELDS:
+            print("New school conda-build")
+            print(f"{autotype} and {default}")
             if autotype and default is None and FIELDS.get(section, {}).get(key):
                 default = FIELDS[section][key]()
+            print(f"The default is {default}")
 
         section = self.output.sections.get(section, {})
         if isinstance(section, list):
