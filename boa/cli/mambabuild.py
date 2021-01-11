@@ -37,10 +37,10 @@ def mamba_get_install_actions(
 ):
     if not solver_map.get(subdir):
         solver = MambaSolver(channel_urls, subdir, output_folder)
-        solver.replace_channels()
         solver_map[subdir] = solver
     else:
         solver = solver_map[subdir]
+        solver.replace_channels()
 
     _specs = [MatchSpec(s) for s in specs]
     for idx, s in enumerate(_specs):
@@ -54,7 +54,6 @@ def mamba_get_install_actions(
 
     _specs = [s.conda_build_form() for s in _specs]
 
-    solver.replace_channels()
     solution = solver.solve_for_action(_specs, prefix)
     return solution
 
