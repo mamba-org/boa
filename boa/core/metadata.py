@@ -1,6 +1,13 @@
 from typing import Union, Dict, Iterable, Any, Optional
 
-from conda_build.metadata import default_structs, ARCH_MAP
+try:
+    from conda_build.metadata import default_structs, ARCH_MAP
+
+    FIELDS = None
+except ImportError:
+    from conda_build.metadata import FIELDS, ARCH_MAP
+
+    default_structs = None
 
 from conda_build.utils import ensure_list
 
@@ -126,15 +133,21 @@ class MetaData:
     def skip(self):
         return self.output.skip()
 
-    def get_value(self, key: str, default: Any = None) -> Any:
-        if default is None and key in default_structs:
-            default = default_structs[key]()
-
+    def get_value(self, key: str, default: Any = None, autotype=True) -> Any:
         if key.count("/") == 2:
             section, num, key = key.split("/")
         else:
             section, key = key.split("/")
             num = 0
+
+        # conda-build compat
+        if default_structs:
+            if default is None and key in default_structs:
+                default = default_structs[key]()
+        if FIELDS:
+            if autotype and default is None and FIELDS.get(section, {}).get(key):
+                default = FIELDS[section][key]()
+
         section = self.output.sections.get(section, {})
         if isinstance(section, list):
             return section[int(num)].get(key, default)
