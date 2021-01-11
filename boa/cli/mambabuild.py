@@ -3,14 +3,12 @@ import sys
 import re
 
 from conda.models.match_spec import MatchSpec
-from conda.base.context import context
 from conda.gateways.disk.create import mkdir_p
 
 import conda_build.environ
 from conda_build import api
-from conda_build.config import Config, get_channel_urls
+from conda_build.config import Config
 from conda_build.cli.main_build import parse_args
-from conda_build.conda_interface import get_rc_urls
 from conda_build.index import update_index
 
 from boa.core.solver import MambaSolver
@@ -18,7 +16,7 @@ from mamba.utils import init_api_context
 
 only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
 
-solver = None
+solver_map = {}
 
 
 def mamba_get_install_actions(
@@ -37,6 +35,13 @@ def mamba_get_install_actions(
     output_folder=None,
     channel_urls=None,
 ):
+    if not solver_map.get(subdir):
+        solver = MambaSolver(channel_urls, subdir, output_folder)
+        solver.replace_channels()
+        solver_map[subdir] = solver
+    else:
+        solver = solver_map[subdir]
+
     _specs = [MatchSpec(s) for s in specs]
     for idx, s in enumerate(_specs):
         if s.version:
@@ -62,7 +67,6 @@ def main():
     args = args.__dict__
 
     config = Config(**args)
-    channel_urls = get_rc_urls() + get_channel_urls({})
 
     init_api_context()
 
@@ -74,10 +78,6 @@ def main():
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
     recipe = args["recipe"][0]
-
-    global solver
-    solver = MambaSolver(channel_urls, context.subdir, config.output_folder)
-    solver.replace_channels()
     cbc, _ = conda_build.variants.get_package_combined_spec(recipe, config=config)
 
     if args["test"]:

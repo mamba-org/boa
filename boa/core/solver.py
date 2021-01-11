@@ -74,7 +74,7 @@ def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
 
 
 class MambaSolver:
-    def __init__(self, channels, platform, output_folder="local"):
+    def __init__(self, channels, platform, output_folder=None):
 
         api_ctx = mamba_api.Context()
         api_ctx.root_prefix = context.conda_prefix
@@ -86,7 +86,7 @@ class MambaSolver:
 
         self.channels = channels
         self.platform = platform
-        self.output_folder = output_folder
+        self.output_folder = output_folder or "local"
         self.pool = mamba_api.Pool()
         self.repos = []
         self.index = load_channels(
