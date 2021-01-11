@@ -66,6 +66,7 @@ def main():
 
     init_api_context()
 
+    config.output_folder = os.path.abspath(config.output_folder)
     if not os.path.exists(config.output_folder):
         mkdir_p(config.output_folder)
 
@@ -75,7 +76,7 @@ def main():
     recipe = args["recipe"][0]
 
     global solver
-    solver = MambaSolver(channel_urls, context.subdir)
+    solver = MambaSolver(channel_urls, context.subdir, config.output_folder)
     solver.replace_channels()
     cbc, _ = conda_build.variants.get_package_combined_spec(recipe, config=config)
 
