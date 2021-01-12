@@ -133,18 +133,18 @@ class MetaData:
     def skip(self):
         return self.output.skip()
 
-    def get_value(self, key: str, default: Any = None, autotype=True) -> Any:
-        if key.count("/") == 2:
-            section, num, key = key.split("/")
+    def get_value(self, in_key: str, default: Any = None, autotype=True) -> Any:
+        if in_key.count("/") == 2:
+            section, num, key = in_key.split("/")
         else:
-            section, key = key.split("/")
+            section, key = in_key.split("/")
             num = 0
 
         # conda-build compat
         if default_structs:
-            if default is None and key in default_structs:
-                default = default_structs[key]()
-        if FIELDS:
+            if default is None and in_key in default_structs:
+                default = default_structs[in_key]()
+        elif FIELDS:
             if autotype and default is None and FIELDS.get(section, {}).get(key):
                 default = FIELDS[section][key]()
 
