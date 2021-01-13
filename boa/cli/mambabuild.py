@@ -2,7 +2,6 @@ import os
 import sys
 import re
 
-from conda.base.context import context
 from conda.models.match_spec import MatchSpec
 from conda.gateways.disk.create import mkdir_p
 
@@ -13,6 +12,7 @@ from conda_build.cli.main_build import parse_args
 from conda_build.index import update_index
 
 from boa.core.solver import MambaSolver
+from boa.core.utils import normalize_subdir
 from mamba.utils import init_api_context
 
 only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
@@ -20,13 +20,19 @@ only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
 solver_map = {}
 
 
-def _get_solver(subdir):
-    if subdir == "noarch":
-        subdir = context.subdir
+def _get_solver(channel_urls, subdir, output_folder):
+    """ Gets a solver from cache or creates a new one if needed.
+    """
+    subdir = normalize_subdir(subdir)
+
     if subdir in solver_map:
         solver = solver_map[subdir]
         solver.replace_channels()
-        return solver
+    else:
+        solver = MambaSolver(channel_urls, subdir, output_folder)
+        solver_map[subdir] = solver
+
+    return solver
 
 
 def mamba_get_install_actions(
@@ -45,10 +51,7 @@ def mamba_get_install_actions(
     output_folder=None,
     channel_urls=None,
 ):
-    solver = _get_solver(subdir)
-    if solver is None:
-        solver = MambaSolver(channel_urls, subdir, output_folder)
-        solver_map[subdir] = solver
+    solver = _get_solver(channel_urls, subdir, output_folder)
 
     _specs = [MatchSpec(s) for s in specs]
     for idx, s in enumerate(_specs):
