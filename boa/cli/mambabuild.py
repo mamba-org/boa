@@ -12,11 +12,27 @@ from conda_build.cli.main_build import parse_args
 from conda_build.index import update_index
 
 from boa.core.solver import MambaSolver
+from boa.core.utils import normalize_subdir
 from mamba.utils import init_api_context
 
 only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
 
 solver_map = {}
+
+
+def _get_solver(channel_urls, subdir, output_folder):
+    """ Gets a solver from cache or creates a new one if needed.
+    """
+    subdir = normalize_subdir(subdir)
+
+    if subdir in solver_map:
+        solver = solver_map[subdir]
+        solver.replace_channels()
+    else:
+        solver = MambaSolver(channel_urls, subdir, output_folder)
+        solver_map[subdir] = solver
+
+    return solver
 
 
 def mamba_get_install_actions(
@@ -35,12 +51,7 @@ def mamba_get_install_actions(
     output_folder=None,
     channel_urls=None,
 ):
-    if not solver_map.get(subdir):
-        solver = MambaSolver(channel_urls, subdir, output_folder)
-        solver_map[subdir] = solver
-    else:
-        solver = solver_map[subdir]
-        solver.replace_channels()
+    solver = _get_solver(channel_urls, subdir, output_folder)
 
     _specs = [MatchSpec(s) for s in specs]
     for idx, s in enumerate(_specs):
@@ -77,7 +88,6 @@ def main():
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
     recipe = args["recipe"][0]
-    cbc, _ = conda_build.variants.get_package_combined_spec(recipe, config=config)
 
     if args["test"]:
         api.test(recipe, config=config)

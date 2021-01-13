@@ -14,7 +14,6 @@ from conda_build.conda_interface import pkgs_dirs
 from conda.models.channel import Channel
 from conda.core.package_cache_data import PackageCacheData
 
-
 from mamba import mamba_api
 from mamba.utils import get_index, load_channels, to_package_record_from_subjson
 
@@ -30,7 +29,6 @@ def refresh_solvers():
 def get_solver(subdir):
     pkg_cache = PackageCacheData.first_writable().pkgs_dir
     if subdir == "noarch":
-        # actually use platform subdir ...
         subdir = context.subdir
     elif subdir != context.subdir:
         pkg_cache = os.path.join(pkg_cache, subdir)

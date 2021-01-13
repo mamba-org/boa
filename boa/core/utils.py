@@ -1,6 +1,7 @@
 import collections
 import sys
 
+from conda.base.context import context
 from conda_build import utils
 from conda_build.config import get_or_merge_config
 from conda_build.variants import find_config_files, parse_config_file
@@ -43,3 +44,10 @@ def get_config(folder, variant=None):
         cbc = {}
 
     return cbc, config
+
+
+def normalize_subdir(subdir):
+    if subdir == "noarch":
+        subdir = context.subdir
+    else:
+        return subdir
