@@ -2,6 +2,7 @@ import os
 import sys
 import re
 
+from conda.base.context import context
 from conda.models.match_spec import MatchSpec
 from conda.gateways.disk.create import mkdir_p
 
@@ -17,6 +18,15 @@ from mamba.utils import init_api_context
 only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
 
 solver_map = {}
+
+
+def _get_solver(subdir):
+    if subdir == "noarch":
+        subdir = context.subdir
+    if subdir in solver_map:
+        solver = solver_map[subdir]
+        solver.replace_channels()
+        return solver
 
 
 def mamba_get_install_actions(
@@ -35,12 +45,10 @@ def mamba_get_install_actions(
     output_folder=None,
     channel_urls=None,
 ):
-    if not solver_map.get(subdir):
+    solver = _get_solver(subdir)
+    if solver is None:
         solver = MambaSolver(channel_urls, subdir, output_folder)
         solver_map[subdir] = solver
-    else:
-        solver = solver_map[subdir]
-        solver.replace_channels()
 
     _specs = [MatchSpec(s) for s in specs]
     for idx, s in enumerate(_specs):
@@ -77,7 +85,6 @@ def main():
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
     recipe = args["recipe"][0]
-    cbc, _ = conda_build.variants.get_package_combined_spec(recipe, config=config)
 
     if args["test"]:
         api.test(recipe, config=config)
