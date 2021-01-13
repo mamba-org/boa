@@ -51,4 +51,3 @@ def normalize_subdir(subdir):
         subdir = context.subdir
     else:
         return subdir
-
