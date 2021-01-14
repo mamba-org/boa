@@ -136,4 +136,4 @@ def main():
 
     action = "test" if args.test else "build"
 
-    return call_conda_build(action, config)
+    call_conda_build(action, config)
