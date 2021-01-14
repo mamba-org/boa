@@ -72,11 +72,14 @@ def mamba_get_install_actions(
 conda_build.environ.get_install_actions = mamba_get_install_actions
 
 
-def main():
-    _, args = parse_args(sys.argv[1:])
-    args = args.__dict__
+def prepare(**kwargs):
+    """
+    Prepare and configure the stage for mambabuild to run.
 
-    config = Config(**args)
+    The given **kwargs are passed to conda-build's Config which
+    is the value returned by this function.
+    """
+    config = Config(**kwargs)
 
     init_api_context()
 
@@ -87,16 +90,50 @@ def main():
     print(f"Updating build index: {(config.output_folder)}\n")
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
-    recipe = args["recipe"][0]
+    return config
 
-    if args["test"]:
-        api.test(recipe, config=config)
-    else:
-        api.build(
+
+def call_conda_build(action, config, **kwargs):
+    """
+    After having set up the stage for boa's mambabuild to
+    use the mamba solver, we delegate the work of building
+    the conda package back to conda-build.
+
+    Args:
+        action: "build" or "test"
+        config: conda-build's Config
+
+    Kwargs:
+        additional keyword arguments are passed to conda-build
+
+    Return:
+        The result of conda-build's build: the built packages
+    """
+    recipe = config.recipe[0]
+
+    if action == "test":
+        result = api.test(recipe, config=config, **kwargs)
+    elif action == "build":
+        result = api.build(
             recipe,
-            post=args["post"],
-            build_only=args["build_only"],
-            notest=args["notest"],
+            post=config.post,
+            build_only=config.build_only,
+            notest=config.notest,
             config=config,
-            variants=args["variants"],
+            variants=config.variants,
+            **kwargs,
         )
+    else:
+        raise ValueError("action should be 'build' or 'test', got: %r" % action)
+
+    return result
+
+
+def main():
+    _, args = parse_args(sys.argv[1:])
+
+    config = prepare(**args.__dict__)
+
+    action = "test" if args.test else "build"
+
+    return call_conda_build(action, config)
