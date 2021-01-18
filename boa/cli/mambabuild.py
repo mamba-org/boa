@@ -7,7 +7,7 @@ from conda.gateways.disk.create import mkdir_p
 
 import conda_build.environ
 from conda_build import api
-from conda_build.config import Config
+from conda_build.config import Config, get_channel_urls
 from conda_build.cli.main_build import parse_args
 from conda_build.index import update_index
 
@@ -80,6 +80,7 @@ def prepare(**kwargs):
     is the value returned by this function.
     """
     config = Config(**kwargs)
+    config.channel_urls = get_channel_urls(kwargs)
 
     init_api_context()
 
