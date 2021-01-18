@@ -1,12 +1,14 @@
 import os
+import tempfile
 
 from conda.core.solve import diff_for_unlink_link_precs
+from conda.common.serialize import json_dump
 from conda.models.prefix_graph import PrefixGraph
 from conda.core.prefix_data import PrefixData
 from conda._vendor.boltons.setutils import IndexedSet
 from conda.models.match_spec import MatchSpec
 from conda.common.url import split_anaconda_token
-
+from conda.core.index import _supplement_index_with_system
 from conda.base.context import context
 from conda.plan import get_blank_actions
 from conda.models.dist import Dist
@@ -71,6 +73,30 @@ def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
     return actions
 
 
+def get_virtual_packages():
+    result = {"packages": {}}
+
+    # add virtual packages as installed packages
+    # they are packages installed on the system that conda can do nothing
+    # about (e.g. glibc)
+    # if another version is needed, installation just fails
+    # they don't exist anywhere (they start with __)
+    installed = dict()
+    _supplement_index_with_system(installed)
+    installed = list(installed)
+
+    for prec in installed:
+        json_rec = prec.dist_fields_dump()
+        json_rec["depends"] = prec.depends
+        json_rec["build"] = prec.build
+        result["packages"][prec.fn] = json_rec
+
+    installed_json_f = tempfile.NamedTemporaryFile("w", delete=False)
+    installed_json_f.write(json_dump(result))
+    installed_json_f.flush()
+    return installed_json_f
+
+
 class MambaSolver:
     def __init__(self, channels, platform, output_folder=None):
 
@@ -90,6 +116,13 @@ class MambaSolver:
         self.index = load_channels(
             self.pool, self.channels, self.repos, platform=platform
         )
+
+        if platform == context.subdir:
+            installed_json_f = get_virtual_packages()
+            repo = mamba_api.Repo(self.pool, "installed", installed_json_f.name, "")
+            repo.set_installed()
+            self.repos.append(repo)
+
         self.local_index = []
         self.local_repos = {}
         # load local repo, too
