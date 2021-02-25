@@ -5,7 +5,7 @@ import itertools
 from mamba.mamba_api import PrefixData
 
 from boa.core.render import render
-from boa.core.utils import get_config
+from boa.core.utils import get_config, get_sys_vars_stubs
 from boa.core.recipe_output import Output, CondaBuildSpec
 from boa.core.solver import refresh_solvers
 from boa.core.build import build, download_source
@@ -113,8 +113,14 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
 
     config.variant["target_platform"] = variants["target_platform"][0]
 
+    sys_var_stubs = get_sys_vars_stubs(config.variant["target_platform"])
+
     def get_variants(env):
         specs = {}
+
+        for var in sys_var_stubs:
+            if var in conda_build_config:
+                variants[var] = conda_build_config[var]
 
         for s in env:
             spec = CondaBuildSpec(s)
@@ -437,7 +443,7 @@ def build_recipe(args, recipe_path, cbc, config):
 
 
 def run_build(args):
-    folder = args.recipe_dir
+    folder = args.recipe_dir or os.path.dirname(args.target)
     variant = {}
     if args.target_platform:
         variant["target_platform"] = args.target_platform

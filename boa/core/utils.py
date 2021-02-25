@@ -51,3 +51,66 @@ def normalize_subdir(subdir):
         subdir = context.subdir
     else:
         return subdir
+
+
+def get_sys_vars_stubs(target_platform):
+    res = []
+    if sys.platform == "win32":
+        res += [
+            "SCRIPTS",
+            "LIBRARY_PREFIX",
+            "LIBRARY_BIN",
+            "LIBRARY_INC",
+            "LIBRARY_LIB",
+            "CYGWIN_PREFIX",
+            "ALLUSERSPROFILE",
+            "APPDATA",
+            "CommonProgramFiles",
+            "CommonProgramFiles(x86)",
+            "CommonProgramW6432",
+            "COMPUTERNAME",
+            "ComSpec",
+            "HOMEDRIVE",
+            "HOMEPATH",
+            "LOCALAPPDATA",
+            "LOGONSERVER",
+            "NUMBER_OF_PROCESSORS",
+            "PATHEXT",
+            "ProgramData",
+            "ProgramFiles",
+            "ProgramFiles(x86)",
+            "ProgramW6432",
+            "PROMPT",
+            "PSModulePath",
+            "PUBLIC",
+            "SystemDrive",
+            "SystemRoot",
+            "TEMP",
+            "TMP",
+            "USERDOMAIN",
+            "USERNAME",
+            "USERPROFILE",
+            "windir",
+            "PROCESSOR_ARCHITEW6432",
+            "PROCESSOR_ARCHITECTURE",
+            "PROCESSOR_IDENTIFIER",
+            "BUILD",
+        ]
+    else:
+        res += ["HOME", "PKG_CONFIG_PATH", "CMAKE_GENERATOR", "SSL_CERT_FILE"]
+
+    if target_platform.startswith("osx"):
+        res += ["OSX_ARCH", "MACOSX_DEPLOYMENT_TARGET", "BUILD"]
+    elif target_platform.startswith("linux"):
+        res += [
+            "CFLAGS",
+            "CXXFLAGS",
+            "LDFLAGS",
+            "QEMU_LD_PREFIX",
+            "QEMU_UNAME",
+            "DEJAGNU",
+            "DISPLAY",
+            "LD_RUN_PATH",
+            "BUILD",
+        ]
+    return res

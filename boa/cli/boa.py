@@ -1,5 +1,4 @@
 import argparse
-import os
 
 from boa.core.run_build import run_build
 
@@ -28,7 +27,7 @@ def main(config=None):
 
     subparsers = parser.add_subparsers(help="sub-command help", dest="command")
     parent_parser = argparse.ArgumentParser(add_help=False)
-    parent_parser.add_argument("--recipe-dir", type=str, default=os.getcwd())
+    parent_parser.add_argument("--recipe-dir", type=str)
     parent_parser.add_argument("target", type=str, default="")
     parent_parser.add_argument("--features", type=str)
     parent_parser.add_argument("--offline", action="store_true")
