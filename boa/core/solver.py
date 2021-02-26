@@ -99,15 +99,6 @@ def get_virtual_packages():
 
 class MambaSolver:
     def __init__(self, channels, platform, output_folder=None):
-
-        api_ctx = mamba_api.Context()
-        api_ctx.root_prefix = context.conda_prefix
-        api_ctx.conda_prefix = context.conda_prefix
-        # api_ctx.set_verbosity(1)
-        api_ctx.offline = context.offline
-        api_ctx.envs_dirs = [os.path.join(context.conda_prefix, "envs")]
-        api_ctx.pkgs_dirs = [os.path.join(context.conda_prefix, "pkgs")]
-
         self.channels = channels
         self.platform = platform
         self.output_folder = output_folder or "local"
