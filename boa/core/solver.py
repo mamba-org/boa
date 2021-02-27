@@ -7,7 +7,7 @@ from conda.models.prefix_graph import PrefixGraph
 from conda.core.prefix_data import PrefixData
 from conda._vendor.boltons.setutils import IndexedSet
 from conda.models.match_spec import MatchSpec
-from conda.common.url import split_anaconda_token
+from conda.common.url import remove_auth, split_anaconda_token
 from conda.core.index import _supplement_index_with_system
 from conda.base.context import context
 from conda.plan import get_blank_actions
@@ -56,7 +56,7 @@ def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
     assert len(to_unlink) == 0
 
     for c, pkg, jsn_s in to_link:
-        sdir = lookup_dict[split_anaconda_token(c)[0]]
+        sdir = lookup_dict[split_anaconda_token(remove_auth(c))[0]]
         rec = to_package_record_from_subjson(sdir, pkg, jsn_s)
         final_precs.add(rec)
         to_link_records.append(rec)
