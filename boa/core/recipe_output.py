@@ -85,7 +85,7 @@ class CondaBuildSpec:
         return self.final
 
     def eval_pin_subpackage(self, all_outputs):
-        if not self.splitted[1].startswith("PIN_SUBPACKAGE"):
+        if len(self.splitted) <= 1 or not self.splitted[1].startswith("PIN_SUBPACKAGE"):
             return
         pkg_name = self.name
         max_pin, exact = self.splitted[1][len("PIN_SUBPACKAGE") + 1 : -1].split(",")
@@ -112,6 +112,8 @@ class CondaBuildSpec:
             self.final = f"{pkg_name} {version_pin}"
 
     def eval_pin_compatible(self, build, host):
+        if len(self.splitted) <= 1:
+            return
 
         lower_bound, upper_bound, min_pin, max_pin, exact = self.splitted[1][
             len("PIN_COMPATIBLE") + 1 : -1
