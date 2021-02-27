@@ -6,6 +6,7 @@ from boa.cli import convert
 from boa.cli import transmute
 from boa.cli import validate
 
+from mamba.utils import init_api_context
 from rich.console import Console
 
 console = Console()
@@ -77,6 +78,8 @@ def main(config=None):
     args = parser.parse_args()
 
     command = args.command
+
+    init_api_context()
 
     if command == "convert":
         convert.main(args.target)
