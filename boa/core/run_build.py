@@ -303,7 +303,7 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
     return final_outputs
 
 
-def build_recipe(args, recipe_path, cbc, config):
+def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
 
     if args.features:
         assert args.features.startswith("[") and args.features.endswith("]")
@@ -432,9 +432,14 @@ def build_recipe(args, recipe_path, cbc, config):
         stats = {}
         if final_outputs is not None:
             for final_out in final_outputs:
-                run_test(
-                    final_out, o.config, stats, move_broken=False, provision_only=False,
-                )
+                if not notest:
+                    run_test(
+                        final_out,
+                        o.config,
+                        stats,
+                        move_broken=False,
+                        provision_only=False,
+                    )
         # print(stats)
 
     for o in sorted_outputs:
@@ -462,4 +467,4 @@ def run_build(args):
     console.print("\n[yellow]Assembling all recipes and variants[/yellow]\n")
 
     for recipe in all_recipes:
-        build_recipe(args, recipe["recipe_file"], cbc, config)
+        build_recipe(args, recipe["recipe_file"], cbc, config, notest=args.notest)
