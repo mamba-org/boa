@@ -137,4 +137,8 @@ def main():
 
     action = "test" if args.test else "build"
 
-    call_conda_build(action, config)
+    kwargs = {}
+    if getattr(args, "notest", False):
+        kwargs["notest"] = True
+
+    call_conda_build(action, config, **kwargs)

@@ -54,6 +54,12 @@ def main(config=None):
     build_parser.add_argument(
         "--skip-existing", action="store_true", help="Skip building existing packages",
     )
+    build_parser.add_argument(
+        "--no-test",
+        action="store_true",
+        dest="notest",
+        help="Do not test the package.",
+    )
 
     subparsers.add_parser(
         "build", parents=[parent_parser, build_parser], help="build a recipe"
