@@ -18,7 +18,7 @@ from conda.common import toposort
 from conda.models.match_spec import MatchSpec
 from conda.gateways.disk.create import mkdir_p
 from conda_build.variants import get_default_variant
-
+from conda_build.utils import ensure_list
 from conda_build.index import update_index
 
 from rich.console import Console
@@ -120,7 +120,7 @@ def get_dependency_variants(requirements, conda_build_config, config, features=(
 
         for var in sys_var_stubs:
             if var in conda_build_config:
-                variants[var] = conda_build_config[var]
+                variants[var] = ensure_list(conda_build_config[var])
 
         for s in env:
             spec = CondaBuildSpec(s)
