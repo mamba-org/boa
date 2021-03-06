@@ -362,6 +362,7 @@ def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
     if args.command == "render":
         for o in sorted_outputs:
             console.print(o)
+        return
 
     # TODO this should be done cleaner
     top_name = ydoc["package"]["name"]
@@ -453,7 +454,7 @@ def run_build(args):
     if args.target_platform:
         variant["target_platform"] = args.target_platform
 
-    cbc, config = get_config(folder, variant)
+    cbc, config = get_config(folder, variant, args.variant_config_files)
     cbc["target_platform"] = [args.target_platform]
 
     if not os.path.exists(config.output_folder):
@@ -467,4 +468,10 @@ def run_build(args):
     console.print("\n[yellow]Assembling all recipes and variants[/yellow]\n")
 
     for recipe in all_recipes:
-        build_recipe(args, recipe["recipe_file"], cbc, config, notest=args.notest)
+        build_recipe(
+            args,
+            recipe["recipe_file"],
+            cbc,
+            config,
+            notest=getattr(args, "notest", False),
+        )

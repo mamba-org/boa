@@ -1,10 +1,11 @@
 import collections
 import sys
+import os
 
 from conda.base.context import context
 from conda_build import utils
 from conda_build.config import get_or_merge_config
-from conda_build.variants import find_config_files, parse_config_file
+from conda_build.variants import find_config_files, parse_config_file, combine_specs
 from conda_build import __version__ as cb_version
 
 from rich.console import Console
@@ -22,7 +23,9 @@ else:
     shell_path = "/bin/bash"
 
 
-def get_config(folder, variant=None):
+def get_config(folder, variant=None, additional_files=None):
+    if not additional_files:
+        additional_files = []
     if not variant:
         variant = {}
     config = get_or_merge_config(None, variant)
@@ -31,19 +34,29 @@ def get_config(folder, variant=None):
         config_files = find_config_files(folder, config)
     else:
         config_files = find_config_files(folder)
-    console.print(f"\nLoading config files: [green]{', '.join(config_files)}\n")
+
+    all_files = [os.path.abspath(p) for p in config_files + additional_files]
+
+    # reverse files an uniquify
+    def make_unique_list(lx):
+        seen = set()
+        return [x for x in lx if not (x in seen or seen.add(x))]
+
+    # we reverse the order so that command line can overwrite the hierarchy
+    all_files = make_unique_list(all_files[::-1])[::-1]
+
+    console.print(f"\nLoading config files: [green]{', '.join(all_files)}\n")
     parsed_cfg = collections.OrderedDict()
 
-    for f in config_files:
+    for f in all_files:
         parsed_cfg[f] = parse_config_file(f, config)
 
-    # TODO just using latest config here, should merge!
-    if len(config_files):
-        cbc = parsed_cfg[config_files[-1]]
-    else:
-        cbc = {}
+    # this merges each of the specs, providing a debug message when a given setting is overridden
+    #      by a later spec
+    combined_spec = combine_specs(parsed_cfg, log_output=config.verbose)
+    # console.print(combined_spec)
 
-    return cbc, config
+    return combined_spec, config
 
 
 def normalize_subdir(subdir):

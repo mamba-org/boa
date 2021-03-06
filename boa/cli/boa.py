@@ -34,7 +34,18 @@ def main(config=None):
     parent_parser.add_argument("--offline", action="store_true")
     parent_parser.add_argument("--target-platform", type=str)
 
-    subparsers.add_parser("render", parents=[parent_parser], help="render a recipe")
+    variant_parser = argparse.ArgumentParser(add_help=False)
+    variant_parser.add_argument(
+        "-m",
+        "--variant-config-files",
+        action="append",
+        help="""Additional variant config files to add.  These yaml files can contain
+        keys such as `c_compiler` and `target_platform` to form a build matrix.""",
+    )
+
+    subparsers.add_parser(
+        "render", parents=[parent_parser, variant_parser], help="render a recipe"
+    )
     subparsers.add_parser(
         "convert",
         parents=[parent_parser],
@@ -62,7 +73,9 @@ def main(config=None):
     )
 
     subparsers.add_parser(
-        "build", parents=[parent_parser, build_parser], help="build a recipe"
+        "build",
+        parents=[parent_parser, build_parser, variant_parser],
+        help="build a recipe",
     )
 
     transmute_parser = subparsers.add_parser(
