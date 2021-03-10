@@ -248,11 +248,17 @@ class Output:
             self.sections["build"]["run_exports"] = run_exports
 
     def skip(self):
-        skips = self.sections["build"].get("skip")
-
-        if skips:
-            return any([eval_selector(x, ns_cfg(self.config), []) for x in skips])
-        return False
+        skips = self.sections["build"].get("skip", [])
+        skip_reasons = []
+        for x in skips:
+            if eval_selector(x, ns_cfg(self.config), []):
+                skip_reasons.append(x)
+        if len(skip_reasons):
+            console.print(
+                f"[green]Skipping {self.name} {' | '.join(self.differentiating_variant)} because of[/green]\n"
+                + "\n".join([f"  - {x}" for x in skip_reasons])
+            )
+        return len(skip_reasons) != 0
 
     def all_requirements(self):
         requirements = (

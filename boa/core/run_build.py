@@ -372,6 +372,10 @@ def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
 
     console.print("\n[yellow]Initializing mamba solver[/yellow]\n")
 
+    if all([o.skip() for o in sorted_outputs]):
+        console.print("All outputs skipped.\n")
+        return
+
     # Do not download source if we might skip
     if not args.skip_existing:
         console.print("\n[yellow]Downloading source[/yellow]\n")
@@ -390,6 +394,9 @@ def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
 
         meta = MetaData(recipe_path, o)
         o.set_final_build_id(meta)
+
+        if o.skip():
+            continue
 
         if args.skip_existing:
             final_name = meta.dist()
