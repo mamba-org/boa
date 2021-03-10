@@ -579,7 +579,7 @@ def build(m, stats=None, from_interactive=False, allow_interactive=False):
             stats = {}
 
         if m.skip():
-            console.print(utils.get_skip_message(m))
+            # console.print(utils.get_skip_message(m))
             return {}
 
         with utils.path_prepended(m.config.build_prefix):
