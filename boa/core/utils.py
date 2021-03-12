@@ -67,7 +67,7 @@ def normalize_subdir(subdir):
 
 
 def get_sys_vars_stubs(target_platform):
-    res = []
+    res = ["CONDA_BUILD_SYSROOT"]
     if sys.platform == "win32":
         res += [
             "SCRIPTS",
@@ -113,7 +113,13 @@ def get_sys_vars_stubs(target_platform):
         res += ["HOME", "PKG_CONFIG_PATH", "CMAKE_GENERATOR", "SSL_CERT_FILE"]
 
     if target_platform.startswith("osx"):
-        res += ["OSX_ARCH", "MACOSX_DEPLOYMENT_TARGET", "BUILD"]
+        res += [
+            "OSX_ARCH",
+            "MACOSX_DEPLOYMENT_TARGET",
+            "BUILD",
+            "macos_machine",
+            "macos_min_version",
+        ]
     elif target_platform.startswith("linux"):
         res += [
             "CFLAGS",
