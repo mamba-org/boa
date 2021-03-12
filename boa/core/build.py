@@ -41,7 +41,7 @@ import conda_build.noarch_python as noarch_python
 if sys.platform == "win32":
     import conda_build.windows as windows
 
-from boa.core.utils import shell_path
+from boa.core.utils import shell_path, get_sys_vars_stubs
 from boa.core.recipe_handling import copy_recipe
 
 from conda_build.build import (
@@ -363,6 +363,12 @@ def write_build_scripts(m, script, build_file):
     with utils.path_prepended(m.config.host_prefix):
         with utils.path_prepended(m.config.build_prefix):
             env = environ.get_dict(m=m)
+
+    sysvars = get_sys_vars_stubs(env["target_platform"])
+    for s in sysvars:
+        if s not in env and s in m.config.variant:
+            env[s] = m.config.variant[s]
+
     env.update(m.build_features())
 
     env["CONDA_BUILD_STATE"] = "BUILD"

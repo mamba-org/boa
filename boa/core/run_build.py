@@ -241,12 +241,21 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
 
     final_outputs = []
 
+    # need to strip static away from output name... :/
+    static_feature = selected_features.get("static", False)
+
     for name in tsorted:
         output = outputs[name]
-        if variants.get(output.name):
-            v = variants[output.name]
-            combos = []
 
+        # this is all a bit hacky ... will have to clean that up eventually
+        variant_name = name
+        if static_feature and name.endswith("-static"):
+            variant_name = name[: -len("-static")]
+
+        if variants.get(variant_name):
+            v = variants[variant_name]
+            combos = []
+            print(v)
             differentiating_keys = []
             for k in v:
                 if len(v[k]) > 1:
