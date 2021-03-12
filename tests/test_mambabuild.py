@@ -12,7 +12,7 @@ def test_build_recipes():
 
 
 def test_build_notest():
-    recipes_dir = pathlib.Path(__file__).parent / "recipes-v2"
+    recipes_dir = pathlib.Path(__file__).parent / "recipes"
 
     recipes = [str(x) for x in recipes_dir.iterdir() if x.is_dir()]
     recipe = recipes[0]
