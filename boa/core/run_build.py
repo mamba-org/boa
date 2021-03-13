@@ -255,7 +255,6 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
         if variants.get(variant_name):
             v = variants[variant_name]
             combos = []
-            print(v)
             differentiating_keys = []
             for k in v:
                 if len(v[k]) > 1:
