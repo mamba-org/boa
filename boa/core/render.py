@@ -131,6 +131,28 @@ def normalize_recipe(ydoc):
     return ydoc
 
 
+def default_jinja_vars(config):
+    res = {}
+    cfg = ns_cfg(config)
+
+    res["build_platform"] = cfg["build_platform"]
+    res["target_platform"] = cfg.get("target_platform", cfg["build_platform"])
+
+    tgp = res["target_platform"]
+
+    if tgp.startswith("win"):
+        prefix = "%PREFIX%"
+    else:
+        prefix = "$PREFIX"
+
+    # this adds PYTHON, R, RSCRIPT ... etc so that they can be used in the
+    # recipe script
+    for lang in ["python", "lua", "r", "rscript", "perl"]:
+        res[lang.upper()] = getattr(config, "_get_" + lang)(prefix, tgp)
+
+    return res
+
+
 def render(recipe_path, config=None):
     # console.print(f"\n[yellow]Rendering {recipe_path}[/yellow]\n")
     # step 1: parse YAML
@@ -139,7 +161,8 @@ def render(recipe_path, config=None):
         ydoc = loader.load(fi)
 
     # step 2: fill out context dict
-    context_dict = ydoc.get("context") or {}
+    context_dict = default_jinja_vars(config)
+    context_dict.update(ydoc.get("context", {}))
     jenv = jinja2.Environment()
     for key, value in context_dict.items():
         if isinstance(value, str):

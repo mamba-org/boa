@@ -15,6 +15,7 @@ from boa.core.test import run_test
 from conda_build.utils import rm_rf
 import conda_build.jinja_context
 from conda.common import toposort
+from conda.base.context import context
 from conda.models.match_spec import MatchSpec
 from conda.gateways.disk.create import mkdir_p
 from conda_build.variants import get_default_variant
@@ -465,12 +466,9 @@ def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
 
 def run_build(args):
     folder = args.recipe_dir or os.path.dirname(args.target)
-    variant = {}
-    if args.target_platform:
-        variant["target_platform"] = args.target_platform
-
+    variant = {"target_platform": args.target_platform or context.subdir}
     cbc, config = get_config(folder, variant, args.variant_config_files)
-    cbc["target_platform"] = [args.target_platform]
+    cbc["target_platform"] = [variant["target_platform"]]
 
     if not os.path.exists(config.output_folder):
         mkdir_p(config.output_folder)
