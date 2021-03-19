@@ -8,9 +8,10 @@ from conda_build.config import get_or_merge_config
 from conda_build.variants import find_config_files, parse_config_file, combine_specs
 from conda_build import __version__ as cb_version
 
-from rich.console import Console
+from boa.core.config import boa_config
 
-console = Console()
+console = boa_config.console
+
 
 cb_split_version = tuple(int(x) for x in cb_version.split("."))
 

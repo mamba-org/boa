@@ -1,15 +1,8 @@
 import argparse
 
-from boa.core.run_build import run_build
-
-from boa.cli import convert
-from boa.cli import transmute
-from boa.cli import validate
+from boa.core.config import init_global_config
 
 from mamba.utils import init_api_context
-from rich.console import Console
-
-console = Console()
 
 banner = r"""
            _
@@ -33,6 +26,7 @@ def main(config=None):
     parent_parser.add_argument("--features", type=str)
     parent_parser.add_argument("--offline", action="store_true")
     parent_parser.add_argument("--target-platform", type=str)
+    parent_parser.add_argument("--json", action="store_true")
 
     variant_parser = argparse.ArgumentParser(add_help=False)
     variant_parser.add_argument(
@@ -99,6 +93,12 @@ def main(config=None):
     command = args.command
 
     init_api_context()
+    init_global_config(args)
+
+    from boa.core.run_build import run_build
+    from boa.cli import convert
+    from boa.cli import transmute
+    from boa.cli import validate
 
     if command == "convert":
         convert.main(args.target)
@@ -112,7 +112,9 @@ def main(config=None):
         transmute.main(args)
         exit()
 
-    console.print(banner)
+    from boa.core.config import boa_config
+
+    boa_config.console.print(banner)
 
     if command == "build" or command == "render":
         run_build(args)

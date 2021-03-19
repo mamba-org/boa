@@ -43,6 +43,7 @@ if sys.platform == "win32":
 
 from boa.core.utils import shell_path, get_sys_vars_stubs
 from boa.core.recipe_handling import copy_recipe
+from boa.core.config import boa_config
 
 from conda_build.build import (
     _write_sh_activation_text,
@@ -63,10 +64,9 @@ from conda_build.build import (
     create_info_files_json_v1,
 )
 
-from rich.console import Console
 from rich.prompt import Confirm
 
-console = Console()
+console = boa_config.console
 
 
 def create_post_scripts(m):

@@ -4,9 +4,9 @@ from boa.core.jinja_support import jinja_functions
 from conda_build.metadata import eval_selector, ns_cfg
 import collections
 
-from rich.console import Console
+from boa.core.config import boa_config
 
-console = Console()
+console = boa_config.console
 
 
 def render_recursive(dict_or_array, context_dict, jenv):

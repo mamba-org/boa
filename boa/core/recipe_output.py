@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass
 from typing import Tuple
 
-from rich.console import Console
+import rich
 from rich.table import Table
 from rich.padding import Padding
 
@@ -22,7 +22,9 @@ from conda.models.channel import Channel as CondaChannel
 from conda.core.package_cache_data import PackageCacheData
 from conda_build.metadata import eval_selector, ns_cfg
 
-console = Console()
+from boa.core.config import boa_config
+
+console = boa_config.console
 
 
 @dataclass
@@ -320,10 +322,49 @@ class Output:
 
         return copied
 
-    def __rich__(self):
-        from rich import box
+    def to_json(self):
+        res = {
+            "name": self.name,
+            "version": self.version,
+            "build_number": self.build_number,
+        }
 
-        table = Table(box=box.MINIMAL_DOUBLE_HEAD)
+        res["differentiating_variant"] = self.differentiating_variant
+        res["variant"] = self.variant
+
+        def specs_to_dict(specs):
+            ret = []
+            for s in specs:
+                attrs = []
+                if s.is_pin:
+                    attrs.append("is_pin")
+                if s.from_run_export:
+                    attrs.append("from_run_export")
+                if s.from_pinnings:
+                    attrs.append("from_pinnings")
+
+                sdict = {
+                    "spec": s.raw,
+                    "name": s.final_name,
+                    "attrs": attrs,
+                    "resolved": {},
+                }
+                if hasattr(s, "final_version"):
+                    sdict["resolved"]["final_version"] = s.final_version
+
+                ret.append(sdict)
+            return ret
+
+        res["requirements"] = {
+            "build": specs_to_dict(self.requirements["build"]),
+            "host": specs_to_dict(self.requirements["host"]),
+            "run": specs_to_dict(self.requirements["run"]),
+        }
+
+        return res
+
+    def __rich__(self):
+        table = Table(box=rich.box.MINIMAL_DOUBLE_HEAD)
         s = f"Output: {self.name} {self.version} BN: {self.build_number}\n"
         if hasattr(self, "differentiating_variant"):
             short_v = " ".join([val for val in self.differentiating_variant])

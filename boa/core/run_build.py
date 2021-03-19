@@ -1,6 +1,7 @@
 import os
 import glob
 import itertools
+import json
 
 from mamba.mamba_api import PrefixData
 
@@ -11,6 +12,7 @@ from boa.core.solver import refresh_solvers
 from boa.core.build import build, download_source
 from boa.core.metadata import MetaData
 from boa.core.test import run_test
+from boa.core.config import boa_config
 
 from conda_build.utils import rm_rf
 import conda_build.jinja_context
@@ -22,10 +24,9 @@ from conda_build.variants import get_default_variant
 from conda_build.utils import ensure_list
 from conda_build.index import update_index
 
-from rich.console import Console
 from rich.table import Table
 
-console = Console()
+console = boa_config.console
 
 
 def find_all_recipes(target, config):
@@ -81,12 +82,12 @@ def find_all_recipes(target, config):
         recursive_add(target)
 
     sorted_recipes = toposort.toposort(sort_recipes)
-    print(sorted_recipes)
+    console.print(sorted_recipes)
 
     return [recipes[x] for x in sorted_recipes]
 
 
-def get_dependency_variants(requirements, conda_build_config, config, features=()):
+def get_dependency_variants(requirements, conda_build_config, config):
     host = requirements.get("host") or []
     build = requirements.get("build") or []
     # run = requirements.get("run") or []
@@ -312,20 +313,16 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
     return final_outputs
 
 
-def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
-
-    if args.features:
-        assert args.features.startswith("[") and args.features.endswith("]")
-        features = [f.strip() for f in args.features[1:-1].split(",")]
-    else:
-        features = []
-
-    selected_features = {}
-    for f in features:
-        if f.startswith("~"):
-            selected_features[f[1:]] = False
-        else:
-            selected_features[f] = True
+def build_recipe(
+    command,
+    recipe_path,
+    cbc,
+    config,
+    selected_features,
+    notest: bool = False,
+    skip_existing: bool = False,
+    interactive: bool = False,
+):
 
     ydoc = render(recipe_path, config=config)
     # We need to assemble the variants for each output
@@ -347,12 +344,12 @@ def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
             o["selected_features"] = selected_features
 
             variants[o["package"]["name"]] = get_dependency_variants(
-                o.get("requirements", {}), cbc, config, features
+                o.get("requirements", {}), cbc, config
             )
     else:
         # we only have one output
         variants[ydoc["package"]["name"]] = get_dependency_variants(
-            ydoc.get("requirements", {}), cbc, config, features
+            ydoc.get("requirements", {}), cbc, config
         )
 
     # this takes in all variants and outputs, builds a dependency tree and returns
@@ -368,10 +365,16 @@ def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
     #   - solv build, add weak run exports to
     # - add run exports from deps!
 
-    if args.command == "render":
-        for o in sorted_outputs:
-            console.print(o)
-        return
+    if command == "render":
+        if boa_config.json:
+            l = [o.to_json() for o in sorted_outputs]
+            print(json.dumps(l, indent=4))
+            # for o in sorted_outputs:
+            # console.print(o.to_json())
+        else:
+            for o in sorted_outputs:
+                console.print(o)
+        return sorted_outputs
 
     # TODO this should be done cleaner
     top_name = ydoc["package"]["name"]
@@ -386,9 +389,9 @@ def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
         return
 
     # Do not download source if we might skip
-    if not args.skip_existing:
+    if not skip_existing:
         console.print("\n[yellow]Downloading source[/yellow]\n")
-        download_source(MetaData(recipe_path, o0), args.interactive)
+        download_source(MetaData(recipe_path, o0), interactive)
         cached_source = o0.sections["source"]
     else:
         cached_source = {}
@@ -407,7 +410,7 @@ def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
         if o.skip():
             continue
 
-        if args.skip_existing:
+        if skip_existing:
             final_name = meta.dist()
             if os.path.exists(
                 os.path.join(
@@ -439,12 +442,12 @@ def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
             )
 
         if cached_source != o.sections["source"]:
-            download_source(meta, args.interactive)
+            download_source(meta, interactive)
             cached_source = o.sections["source"]
 
         console.print(f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n")
 
-        final_outputs = build(meta, None, allow_interactive=args.interactive)
+        final_outputs = build(meta, None, allow_interactive=interactive)
 
         stats = {}
         if final_outputs is not None:
@@ -462,9 +465,32 @@ def build_recipe(args, recipe_path, cbc, config, notest: bool = False):
     for o in sorted_outputs:
         print("\n\n")
         console.print(o)
+    return sorted_outputs
+
+
+def extract_features(feature_string):
+    if feature_string and len(feature_string):
+        assert feature_string.startswith("[") and feature_string.endswith("]")
+        features = [f.strip() for f in feature_string[1:-1].split(",")]
+    else:
+        features = []
+
+    selected_features = {}
+    for f in features:
+        if f.startswith("~"):
+            selected_features[f[1:]] = False
+        else:
+            selected_features[f] = True
+    return selected_features
 
 
 def run_build(args):
+    if args.json:
+        global console
+        console.quiet = True
+
+    selected_features = extract_features(args.features)
+
     folder = args.recipe_dir or os.path.dirname(args.target)
     variant = {"target_platform": args.target_platform or context.subdir}
     cbc, config = get_config(folder, variant, args.variant_config_files)
@@ -482,9 +508,12 @@ def run_build(args):
 
     for recipe in all_recipes:
         build_recipe(
-            args,
+            args.command,
             recipe["recipe_file"],
             cbc,
             config,
+            selected_features=selected_features,
             notest=getattr(args, "notest", False),
+            skip_existing=getattr(args, "skip_existing", False),
+            interactive=getattr(args, "interactive", False),
         )
