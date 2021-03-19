@@ -254,18 +254,74 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
         if static_feature and name.endswith("-static"):
             variant_name = name[: -len("-static")]
 
+        # zip keys need to be contracted
+        zipped_keys = cbc.get("zip_keys", [])
+
         if variants.get(variant_name):
             v = variants[variant_name]
+            import copy
+
+            vzipped = copy.copy(v)
+            zippers = {}
+            for zkeys in zipped_keys:
+                # we check if our variant contains keys that need to be zipped
+                if sum(k in v for k in zkeys) > 1:
+                    filtered_zip_keys = [k for k in v if k in zkeys]
+                    print("Filtered zip keys: ", filtered_zip_keys)
+
+                    zkname = "__zip_" + "_".join(filtered_zip_keys)
+
+                    zklen = None
+                    for zk in filtered_zip_keys:
+                        if zk not in cbc:
+                            raise RuntimeError(
+                                f"Trying to zip keys, but not all zip keys found on conda-build-config {zk}"
+                            )
+
+                        zkl = len(cbc[zk])
+                        if not zklen:
+                            zklen = zkl
+
+                        if zklen and zkl != zklen:
+                            raise RuntimeError(
+                                f"Trying to zip keys, but not all zip keys have the same length {zkeys}"
+                            )
+
+                    vzipped[zkname] = [str(i) for i in range(zklen)]
+                    zippers[zkname] = {zk: cbc[zk] for zk in filtered_zip_keys}
+
+                    for zk in filtered_zip_keys:
+                        del vzipped[zk]
+
             combos = []
             differentiating_keys = []
-            for k in v:
-                if len(v[k]) > 1:
+            for k, vz in vzipped.items():
+                if len(vz) > 1:
                     differentiating_keys.append(k)
-                combos.append([(k, x) for x in v[k]])
+                combos.append([(k, x) for x in vz])
 
             all_combinations = tuple(itertools.product(*combos))
             all_combinations = [dict(x) for x in all_combinations]
+
+            # unzip the zipped keys
+            unzipped_combinations = []
             for c in all_combinations:
+                unz_combo = {}
+                for vc in c:
+                    if vc.startswith("__zip_"):
+                        ziptask = zippers[vc]
+                        zipindex = int(c[vc])
+                        for zippkg in ziptask:
+                            unz_combo[zippkg] = ziptask[zippkg][zipindex]
+                        if vc in differentiating_keys:
+                            differentiating_keys.remove(vc)
+                            differentiating_keys.extend(zippers[vc].keys())
+                    else:
+                        unz_combo[vc] = c[vc]
+
+                unzipped_combinations.append(unz_combo)
+
+            for c in unzipped_combinations:
                 x = output.apply_variant(c, differentiating_keys)
                 final_outputs.append(x)
         else:
@@ -367,10 +423,8 @@ def build_recipe(
 
     if command == "render":
         if boa_config.json:
-            l = [o.to_json() for o in sorted_outputs]
-            print(json.dumps(l, indent=4))
-            # for o in sorted_outputs:
-            # console.print(o.to_json())
+            jlist = [o.to_json() for o in sorted_outputs]
+            print(json.dumps(jlist, indent=4))
         else:
             for o in sorted_outputs:
                 console.print(o)

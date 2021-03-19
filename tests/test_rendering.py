@@ -4,15 +4,16 @@ from boa.core.utils import get_config
 
 import pathlib
 
-tests_path = pathlib.Path(__file__).parent / "recipes-v2"
+tests_path = pathlib.Path(__file__).parent / "variants"
+
 
 def test_extract_features():
     feats = extract_features("[static, ~xz, zlib, bzip2, ~something]")
-    assert(feats["static"] is True)
-    assert(feats["xz"] is False)
-    assert(feats["zlib"] is True)
-    assert(feats["bzip2"] is True)
-    assert(feats["something"] is False)
+    assert feats["static"] is True
+    assert feats["xz"] is False
+    assert feats["zlib"] is True
+    assert feats["bzip2"] is True
+    assert feats["something"] is False
 
     with pytest.raises(AssertionError):
         feats = extract_features("[static, ~xz, zlib, bzip2, ~something")
@@ -21,25 +22,120 @@ def test_extract_features():
         feats = extract_features("static, ~xz, zlib, bzip2, ~something]")
 
     feats = extract_features("")
-    assert(feats == {})
+    assert feats == {}
+
 
 def test_variants():
-    recipe = tests_path / "variant_test" / "recipe.yaml"
-    cbc_file = tests_path / "variant_test" / "conda_build_config.yaml"
+    def get_outputs(cbcfname, recipename="recipe.yaml"):
+        recipe = tests_path / "variant_test" / recipename
+        cbc_file = tests_path / "variant_test" / cbcfname
 
-    variant = {"target_platform": 'linux-64'}
-    cbc, config = get_config(".", variant, [cbc_file])
-    cbc["target_platform"] = [variant["target_platform"]]
+        variant = {"target_platform": "linux-64"}
+        cbc, config = get_config(".", variant, [cbc_file])
+        cbc["target_platform"] = [variant["target_platform"]]
 
-    assert(cbc == {'python': ['3.6', '3.7', '3.8'], 'target_platform': ['linux-64']})
-
-    sorted_outputs = build_recipe("render", recipe,
+        sorted_outputs = build_recipe(
+            "render",
+            recipe,
             cbc,
             config,
-            selected_features={}, notest=True, skip_existing=False, interactive=False)
+            selected_features={},
+            notest=True,
+            skip_existing=False,
+            interactive=False,
+        )
+
+        return cbc, sorted_outputs
+
+    cbc, sorted_outputs = get_outputs("cbc1.yaml")
+    assert cbc == {"python": ["3.6", "3.7", "3.8"], "target_platform": ["linux-64"]}
+
+    expected_variants = ["python 3.6.*", "python 3.7.*", "python 3.8.*"]
 
     for o in sorted_outputs:
-        assert(o.name == 'variant_test')
-        assert(o.version == '0.1.0')
+        assert o.name == "variant_test"
+        assert o.version == "0.1.0"
+        assert str(o.requirements["host"][0]) in expected_variants
+        assert o.requirements["host"][0].from_pinnings is True
 
-        print(o.requirements)
+    cbc, sorted_outputs = get_outputs("cbc2.yaml")
+    assert len(sorted_outputs) == 9
+
+    cbc, sorted_outputs = get_outputs("cbc3.yaml")
+
+    assert len(sorted_outputs) == 3
+
+    expected_variants = [
+        ["python 3.6.*", "pip 1.*"],
+        ["python 3.7.*", "pip 2.*"],
+        ["python 3.8.*", "pip 3.*"],
+    ]
+    got_variants = []
+    for o in sorted_outputs:
+        assert o.name == "variant_test"
+        assert o.version == "0.1.0"
+        got_variants.append([str(x) for x in o.requirements["host"]])
+        assert o.requirements["host"][0].from_pinnings is True
+    assert got_variants == expected_variants
+
+    cbc, sorted_outputs = get_outputs("cbc4.yaml")
+    got_variants = []
+    for o in sorted_outputs:
+        assert o.name == "variant_test"
+        assert o.version == "0.1.0"
+        got_variants.append([str(x) for x in o.requirements["host"]])
+        assert o.requirements["host"][0].from_pinnings is True
+    assert got_variants == expected_variants
+
+    cbc, sorted_outputs = get_outputs("cbc3.yaml", "recipe2.yaml")
+
+    assert len(sorted_outputs) == 3
+
+    expected_variants = [
+        ["python 3.6.*", "pip 1.*", "libxyz"],
+        ["python 3.7.*", "pip 2.*", "libxyz"],
+        ["python 3.8.*", "pip 3.*", "libxyz"],
+    ]
+    got_variants = []
+    for o in sorted_outputs:
+        assert o.name == "variant_test"
+        assert o.version == "0.1.0"
+        got_variants.append([str(x) for x in o.requirements["host"]])
+        assert o.requirements["host"][0].from_pinnings is True
+    assert got_variants == expected_variants
+
+    cbc, sorted_outputs = get_outputs("cbc5.yaml", "recipe2.yaml")
+
+    expected_variants = [
+        ["python 3.6.*", "pip 1.*", "libxyz 5.*"],
+        ["python 3.7.*", "pip 2.*", "libxyz 5.*"],
+        ["python 3.6.*", "pip 1.*", "libxyz 6.*"],
+        ["python 3.7.*", "pip 2.*", "libxyz 6.*"],
+        ["python 3.6.*", "pip 1.*", "libxyz 7.*"],
+        ["python 3.7.*", "pip 2.*", "libxyz 7.*"],
+    ]
+    got_variants = []
+    for o in sorted_outputs:
+        assert o.name == "variant_test"
+        assert o.version == "0.1.0"
+        got_variants.append([str(x) for x in o.requirements["host"]])
+        assert o.requirements["host"][0].from_pinnings is True
+
+    assert got_variants == expected_variants
+
+    with pytest.raises(ValueError):
+        cbc, sorted_outputs = get_outputs("cbc6.yaml", "recipe2.yaml")
+
+    cbc, sorted_outputs = get_outputs("cbc7.yaml", "recipe2.yaml")
+    expected_variants = [
+        ["python 3.6.*", "pip 1.*", "libxyz 5.*"],
+        ["python 3.7.*", "pip 2.*", "libxyz 6.*"],
+    ]
+    got_variants = []
+    for o in sorted_outputs:
+        assert o.name == "variant_test"
+        assert o.version == "0.1.0"
+        got_variants.append([str(x) for x in o.requirements["host"]])
+        assert o.requirements["host"][0].from_pinnings is True
+
+    assert got_variants == expected_variants
