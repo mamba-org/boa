@@ -25,27 +25,31 @@ def test_extract_features():
     assert feats == {}
 
 
-def test_variants():
-    def get_outputs(cbcfname, recipename="recipe.yaml"):
-        recipe = tests_path / "variant_test" / recipename
-        cbc_file = tests_path / "variant_test" / cbcfname
+def get_outputs(
+    cbcfname, recipename="recipe.yaml", folder="variant_test", cmd="render"
+):
+    recipe = tests_path / folder / recipename
+    cbc_file = tests_path / folder / cbcfname
 
-        variant = {"target_platform": "linux-64"}
-        cbc, config = get_config(".", variant, [cbc_file])
-        cbc["target_platform"] = [variant["target_platform"]]
+    variant = {"target_platform": "linux-64"}
+    cbc, config = get_config(".", variant, [cbc_file])
+    cbc["target_platform"] = [variant["target_platform"]]
 
-        sorted_outputs = build_recipe(
-            "render",
-            recipe,
-            cbc,
-            config,
-            selected_features={},
-            notest=True,
-            skip_existing=False,
-            interactive=False,
-        )
+    sorted_outputs = build_recipe(
+        cmd,
+        recipe,
+        cbc,
+        config,
+        selected_features={},
+        notest=True,
+        skip_existing=False,
+        interactive=False,
+    )
 
-        return cbc, sorted_outputs
+    return cbc, sorted_outputs
+
+
+def test_variants_zipping():
 
     cbc, sorted_outputs = get_outputs("cbc1.yaml")
     assert cbc == {"python": ["3.6", "3.7", "3.8"], "target_platform": ["linux-64"]}
@@ -139,3 +143,26 @@ def test_variants():
         assert o.requirements["host"][0].from_pinnings is True
 
     assert got_variants == expected_variants
+
+
+def test_variants():
+    cbc, sorted_outputs = get_outputs("cbc1.yaml", folder="underscores")
+    assert cbc["abseil_cpp"] == ["20200225.2"]
+    assert cbc["arpack"] == ["3.6.3"]
+
+    expected_variants = [
+        "abseil-cpp 20200225.2.*",
+        "arrow-cpp 0.17.*",
+        "boost-cpp 1.72.0.*",
+    ]
+
+    for o in sorted_outputs:
+        assert o.name == "underscores"
+        assert o.version == "0.1.0"
+        print(o.requirements)
+        assert str(o.requirements["host"][0]) in expected_variants
+        assert o.requirements["host"][0].from_pinnings is True
+
+    cbc, sorted_outputs = get_outputs(
+        "cbc2.yaml", "recipe2.yaml", folder="underscores", cmd="full-render"
+    )
