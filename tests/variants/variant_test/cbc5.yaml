@@ -1,0 +1,15 @@
+zip_keys:
+  -
+    - python
+    - pip
+
+python:
+  - 3.6
+  - 3.7
+pip:
+  - 1
+  - 2
+libxyz:
+  - 5
+  - 6
+  - 7

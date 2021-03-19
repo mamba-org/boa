@@ -2,34 +2,34 @@ from ruamel.yaml import YAML
 import jinja2
 from boa.core.jinja_support import jinja_functions
 from conda_build.metadata import eval_selector, ns_cfg
-import collections
+from collections.abc import Mapping, Iterable
 
-from rich.console import Console
+from boa.core.config import boa_config
 
-console = Console()
+console = boa_config.console
 
 
 def render_recursive(dict_or_array, context_dict, jenv):
     # check if it's a dict?
-    if isinstance(dict_or_array, collections.Mapping):
+    if isinstance(dict_or_array, Mapping):
         for key, value in dict_or_array.items():
             if isinstance(value, str):
                 tmpl = jenv.from_string(value)
                 dict_or_array[key] = tmpl.render(context_dict)
-            elif isinstance(value, collections.Mapping):
+            elif isinstance(value, Mapping):
                 render_recursive(dict_or_array[key], context_dict, jenv)
-            elif isinstance(value, collections.Iterable):
+            elif isinstance(value, Iterable):
                 render_recursive(dict_or_array[key], context_dict, jenv)
 
-    elif isinstance(dict_or_array, collections.Iterable):
+    elif isinstance(dict_or_array, Iterable):
         for i in range(len(dict_or_array)):
             value = dict_or_array[i]
             if isinstance(value, str):
                 tmpl = jenv.from_string(value)
                 dict_or_array[i] = tmpl.render(context_dict)
-            elif isinstance(value, collections.Mapping):
+            elif isinstance(value, Mapping):
                 render_recursive(value, context_dict, jenv)
-            elif isinstance(value, collections.Iterable):
+            elif isinstance(value, Iterable):
                 render_recursive(value, context_dict, jenv)
 
 
@@ -37,7 +37,7 @@ def flatten_selectors(ydoc, namespace):
     if isinstance(ydoc, str):
         return ydoc
 
-    if isinstance(ydoc, collections.Mapping):
+    if isinstance(ydoc, Mapping):
         has_sel = any(k.startswith("sel(") for k in ydoc.keys())
         if has_sel:
             for k, v in ydoc.items():
@@ -50,7 +50,7 @@ def flatten_selectors(ydoc, namespace):
         for k, v in ydoc.items():
             ydoc[k] = flatten_selectors(v, namespace)
 
-    elif isinstance(ydoc, collections.Iterable):
+    elif isinstance(ydoc, Iterable):
         to_delete = []
         for idx, el in enumerate(ydoc):
             res = flatten_selectors(el, namespace)

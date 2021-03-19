@@ -1,0 +1,13 @@
+zip_keys:
+  -
+    - python
+    - pip
+
+python:
+  - 3.6
+  - 3.7
+  - 3.8
+pip:
+  - 1
+  - 2
+  - 3
