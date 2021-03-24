@@ -1,0 +1,12 @@
+abseil_cpp:
+  - '20200225.2'
+arb:
+  - 2.17
+arpack:
+  - 3.6.3
+arrow_cpp:
+  - 0.17.0
+boost:
+  - 1.72.0
+boost_cpp:
+  - 1.72.0

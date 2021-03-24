@@ -442,8 +442,10 @@ def build_recipe(
         console.print("All outputs skipped.\n")
         return
 
+    full_render = command == "full-render"
+
     # Do not download source if we might skip
-    if not skip_existing:
+    if not (skip_existing or full_render):
         console.print("\n[yellow]Downloading source[/yellow]\n")
         download_source(MetaData(recipe_path, o0), interactive)
         cached_source = o0.sections["source"]
@@ -461,7 +463,7 @@ def build_recipe(
         meta = MetaData(recipe_path, o)
         o.set_final_build_id(meta)
 
-        if o.skip():
+        if o.skip() or full_render:
             continue
 
         if skip_existing:

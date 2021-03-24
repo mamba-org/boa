@@ -1,0 +1,27 @@
+pin_run_as_build:
+  boost_cpp:
+    max_pin: x.x.x
+  pyarrow:
+    max_pin: x.x.x
+  arrow_cpp:
+    max_pin: x.x.x
+python:
+  - 3.6.* *_cpython
+  - 3.8.* *_cpython
+boost_cpp:
+  - '1.74'
+  - '1.74'
+numpy:
+  - '1.16'
+  - '1.16'
+arrow_cpp:
+  - '2.0.0'
+  - '3.0.0'
+pyarrow:
+  - '2.0.0'
+  - '3.0.0'
+zip_keys:
+  - - arrow_cpp
+    - pyarrow
+    - boost_cpp
+    - numpy
