@@ -378,6 +378,7 @@ def build_recipe(
     notest: bool = False,
     skip_existing: bool = False,
     interactive: bool = False,
+    skip_fast: bool = False,
 ):
 
     ydoc = render(recipe_path, config=config)
@@ -444,6 +445,29 @@ def build_recipe(
 
     full_render = command == "full-render"
 
+    if skip_fast:
+        build_pkgs = []
+
+        archs = [o0.variant["target_platform"], "noarch"]
+        for arch in archs:
+            build_pkgs += [
+                os.path.basename(x.rsplit("-", 1)[0])
+                for x in glob.glob(
+                    os.path.join(o0.config.output_folder, arch, "*.tar.bz2",)
+                )
+            ]
+
+        del_idx = []
+        for i in range(len(sorted_outputs)):
+            if f"{sorted_outputs[i].name}-{sorted_outputs[i].version}" in build_pkgs:
+                del_idx.append(i)
+
+        for idx in del_idx[::-1]:
+            console.print(
+                f"[green]Fast skip of {sorted_outputs[idx].name}-{sorted_outputs[idx].version}"
+            )
+            del sorted_outputs[idx]
+
     # Do not download source if we might skip
     if not (skip_existing or full_render):
         console.print("\n[yellow]Downloading source[/yellow]\n")
@@ -451,6 +475,7 @@ def build_recipe(
         cached_source = o0.sections["source"]
     else:
         cached_source = {}
+
     for o in sorted_outputs:
         console.print(
             f"\n[yellow]Preparing environment for [bold]{o.name}[/bold][/yellow]\n"
@@ -466,8 +491,12 @@ def build_recipe(
         if o.skip() or full_render:
             continue
 
+        final_name = meta.dist()
+
+        # TODO this doesn't work for noarch!
         if skip_existing:
             final_name = meta.dist()
+
             if os.path.exists(
                 os.path.join(
                     o.config.output_folder,
@@ -541,7 +570,7 @@ def extract_features(feature_string):
 
 
 def run_build(args):
-    if args.json:
+    if getattr(args, "json", False):
         global console
         console.quiet = True
 
@@ -570,6 +599,7 @@ def run_build(args):
             config,
             selected_features=selected_features,
             notest=getattr(args, "notest", False),
-            skip_existing=getattr(args, "skip_existing", False),
+            skip_existing=getattr(args, "skip_existing", False) != "default",
             interactive=getattr(args, "interactive", False),
+            skip_fast=getattr(args, "skip_existing", "default") == "fast",
         )

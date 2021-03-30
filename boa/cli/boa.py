@@ -1,3 +1,4 @@
+import sys
 import argparse
 
 from boa.core.config import init_global_config
@@ -57,7 +58,7 @@ def main(config=None):
         help="Use interactive mode if build fails",
     )
     build_parser.add_argument(
-        "--skip-existing", action="store_true", help="Skip building existing packages",
+        "--skip-existing", nargs="?", default="default", const="yes",
     )
     build_parser.add_argument(
         "--no-test",
@@ -118,6 +119,9 @@ def main(config=None):
 
     if command == "build" or command == "render":
         run_build(args)
+
+    if not command:
+        parser.print_help(sys.stdout)
 
 
 if __name__ == "__main__":
