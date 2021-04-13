@@ -8,7 +8,7 @@ class BoaConfig:
     json: bool = False
 
     def __init__(self, args=None):
-        if args and args.json:
+        if args and getattr(args, "json", False):
             self.console.quiet = True
             self.json = True
 
