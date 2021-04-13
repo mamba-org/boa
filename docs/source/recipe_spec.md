@@ -57,7 +57,7 @@ package:
   name: "{{ name }}"
   version: "{{ version }}"
 
-# location to get the source from 
+# location to get the source from
 source:
   url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
   sha256: f3832918bc3c66617f92e35f5d70729187676313caa60c187eb0f28b8fe5e3b5
@@ -213,8 +213,8 @@ boa (conda-build) automatically determines the patch strip level.
 
 Within boa's work directory, you may specify a particular folder to
 place source into. Boa will always drop you into the same folder (build folder/work),
-but it's up to you whether you want your source extracted into that folder, or 
-nested deeper. This feature is particularly useful when dealing with multiple 
+but it's up to you whether you want your source extracted into that folder, or
+nested deeper. This feature is particularly useful when dealing with multiple
 sources, but can apply to recipes with single sources as well.
 
 ```yaml
@@ -319,7 +319,7 @@ build:
 ### Skipping builds
 
 List conditions under which boa should skip the build of this recipe.
-Particularly useful for defining recipes that are platform specific. By default, 
+Particularly useful for defining recipes that are platform specific. By default,
 a build is never skipped.
 
 ```yaml
@@ -336,7 +336,7 @@ Allows you to specify "no architecture" when building a package, thus
 making it compatible with all platforms and architectures. Noarch
 packages can be installed on any platform.
 
-Assigning the noarch key as `generic` tells conda to not try any 
+Assigning the noarch key as `generic` tells conda to not try any
 manipulation of the contents.
 
 ```yaml
@@ -400,7 +400,7 @@ requirements:
 
 ### Host
 
-It represents packages that need to be specific to the target 
+It represents packages that need to be specific to the target
 platform when the target platform is
 not necessarily the same as the native build platform. For example, in
 order for a recipe to be "cross-capable", shared libraries requirements
@@ -435,7 +435,7 @@ The build and host prefixes are always separate
 when both are defined, or when `{{ compiler() }}` Jinja2 functions are
 used. The only time that build and host are merged is when the host
 section is absent, and no `{{ compiler() }}` Jinja2 functions are used
-in meta.yaml. 
+in meta.yaml.
 
 ### Run
 
@@ -768,7 +768,7 @@ source:
   url: https://github.com/mamba-org/{{ name }}/v{{ version }}.tar.gz
 ```
 
-Jinja has built-in support for some common string manipulations. 
+Jinja has built-in support for some common string manipulations.
 
 In boa, complex Jinja is completely disallowed as we try to produce YAML that is valid at all times.
 So you should not use any `{% if ... %}` or similar Jinja constructs that produce invalid yaml.
@@ -794,7 +794,7 @@ Besides the default Jinja2 functionality, additional Jinja functions are
 available during the conda-build process: `pin_compatible`,
 `pin_subpackage`, and `compiler`.
 
-The compiler function takes `c`, `cxx`, `fortran` and other values as argument and 
+The compiler function takes `c`, `cxx`, `fortran` and other values as argument and
 automatically selects the right (cross-)compiler for the target platform.
 
 ```
@@ -812,7 +812,7 @@ Preprocessing selectors
 -----------------------
 
 You can add selectors to any item, and the selector is evaluated in
-a preprocessing stage. If a selector evaluates to `true`, the item is 
+a preprocessing stage. If a selector evaluates to `true`, the item is
 flattened into the parent element. If a selector evaluates to `false`,
 the item is removed.
 
@@ -854,7 +854,7 @@ Experimental features
 This is a very experimental feature of boa and may change or go away completely
 ```
 
-With boa, you can add "build-time" features. That makes building packages from 
+With boa, you can add "build-time" features. That makes building packages from
 source much more flexible and powerful and is a first step to enable a true "source"-distribution on top of conda packages.
 
 ```

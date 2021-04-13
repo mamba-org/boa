@@ -654,5 +654,3 @@ outputs:
       - *.some-extension
       - somefolder/*.some-extension
 ```
-
-
