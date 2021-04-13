@@ -18,13 +18,29 @@ Spec
 
 The boa spec has the following parts:
 
-- `context`: to set up variables that can later be used in Jinja expressions
+- `context`: to set up variables that can later be used in Jinja string interpolation
 - `package`: defines name, version etc. of the top-level package
 - `source`: points to the sources that need to be downloaded in order to build the recipe
 - `build`: defines how to build the recipe and what build number to use
 - `requirements`: defines requirements of the top-level package
 - `test`: defines tests for the top-level package
 - `outputs`: a recipe can have multiple outputs. Each output can and should have a `package`, `requirements` and `test` section
+
+Major differences with conda-build
+----------------------------------
+
+- recipe filename is `recipe.yaml`, not `meta.yaml`
+- outputs have less complicated behavior, keys are same as top-level recipe (e.g. build/script, not just script), same for package/name, not just name)
+- no implicit meta-packages in outputs
+- no full Jinja2 support: no conditional or `{% set ...` support, only string interpolation. Variables can be set in the toplevel "context" which is valid YAML
+- Jinja string interpolation needs to be quoted at the beginning of a string, e.g. `- "{{ version }}"` in order for it to be valid YAML
+- Selectors use a YAML dictionary style (vs. comments in conda-build). E.g. `- sel(osx): somepkg` instead of `- somepkg  # [osx]`
+- Skip instruction uses a list of skip conditions and not the selector syntax from conda-build (e.g. `skip: ["osx", "win and py37"]`)
+
+Quick start (from conda-build)
+------------------------------
+
+You can use `boa convert meta.yaml` to convert an existing recipe from conda-build syntax to boa. The command will output the new recipe to stdout. To quickly save the result, you can use `boa convert meta.yaml > recipe.yaml` and run `boa build .`. Please note that the conversion process is working fine only for "simple" recipes and there will be some needed manual work to convert complex recipes.
 
 Examples
 --------
@@ -38,8 +54,8 @@ context:
 
 # top level package information (name and version)
 package:
-  name: {{ name }}'
-  version: '{{ version }}'
+  name: "{{ name }}"
+  version: "{{ version }}"
 
 # location to get the source from 
 source:
@@ -337,17 +353,17 @@ build:
   noarch: python
 ```
 
-> **warning**
->
-> At the time of this writing, `noarch` packages should not make use of
-> preprocess-selectors: `noarch` packages are built with the
-> directives which evaluate to `true` in the platform it is built on,
-> which probably will result in incorrect/incomplete installation in
-> other platforms.
+```{warning}
+At the time of this writing, `noarch` packages should not make use of
+preprocess-selectors: `noarch` packages are built with the
+directives which evaluate to `true` in the platform it is built on,
+which probably will result in incorrect/incomplete installation in
+other platforms.
+```
 
 ### Include build recipe
 
-The full conda-build recipe and rendered `recipe.yaml` file is included in
+The full boa recipe and rendered `recipe.yaml` file is included in
 the package\_metadata by default. You can disable this with:
 
 ```yaml
@@ -404,12 +420,10 @@ requirements:
     - python
 ```
 
-> **note**
->
-> When both build and host sections are defined, the build section can
-> be thought of as "build tools" - things that run on the native
-> platform, but output results for the target platform. For example, a
-> cross-compiler that runs on linux-64, but targets linux-armv7.
+```{note}
+When both build and host sections are defined, the build section can
+be thought of as "build tools" - things that run on the native platform, but output results for the target platform. For example, a cross-compiler that runs on linux-64, but targets linux-armv7.
+```
 
 The PREFIX environment variable points to the host prefix. With respect
 to activation during builds, both the host and build environments are
@@ -434,7 +448,7 @@ specifications](https://conda.io/projects/conda/en/latest/user-guide/concepts/pk
 requirements:
   run:
     - python
-    - argparse # [py26]
+    - sel(py26): argparse
     - six >=1.8.0
 ```
 
@@ -459,18 +473,18 @@ requirements:
 
 For example, let's say we have an environment that has package "a"
 installed at version 1.0. If we install package "b" that has a
-run\_constrained entry of "a\>1.0", then conda would need to upgrade "a"
+run\_constrained entry of "a\>1.0", then mamba would need to upgrade "a"
 in the environment in order to install "b".
 
 This is especially useful in the context of virtual packages, where the
-run\_constrained dependency is not a package that conda manages, but
+run\_constrained dependency is not a package that mamba manages, but
 rather a [virtual
 package](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-virtual.html)
-that represents a system property that conda can't change. For example,
+that represents a system property that mamba can't change. For example,
 a package on linux may impose a run\_constrained dependency on
 \_\_glibc\>=2.12. This is the version bound consistent with CentOS 6.
 Software built against glibc 2.12 will be compatible with CentOS 6. This
-run\_constrained dependency helps conda tell the user that a given
+run\_constrained dependency helps mamba tell the user that a given
 package can't be installed if their system glibc version is too old.
 
 Test section
@@ -503,8 +517,6 @@ test:
     - some/directory
     - some/directory/pattern*.sh
 ```
-
-This capability was added in conda-build 2.0.
 
 ### Test requirements
 
@@ -552,11 +564,10 @@ import bsdiff4
 The script `run_test.sh`---or `.bat`, `.py`, or `.pl`---is run
 automatically if it is part of the recipe.
 
-> **note**
->
-> Python .py and Perl .pl scripts are valid only as part of Python and
-> Perl packages, respectively.
-
+```{note}
+Python .py and Perl .pl scripts are valid only as part of Python and
+Perl packages, respectively.
+```
 
 Outputs section
 ---------------
@@ -564,7 +575,7 @@ Outputs section
 Explicitly specifies packaging steps. This section supports multiple
 outputs, as well as different package output types. The format is a list
 of mappings. Build strings for subpackages are determined by their
-runtime dependencies. This support was added in conda-build 2.1.0.
+runtime dependencies.
 
 ```yaml
 outputs:
@@ -578,7 +589,7 @@ outputs:
 
 Scripts that create or move files into the build prefix can be any kind
 of script. Known script types need only specify the script name.
-Currently the list of recognized extensions is py, bat, ps1, and sh.
+Currently the list of recognized extensions is `py, bat, ps1`, and `sh`.
 
 ```yaml
 outputs:
@@ -623,50 +634,16 @@ libgcc runtime requirement:
 
 ```yaml
 outputs:
-  - name: gcc
+  - package:
+      name: gcc
     build:
       run_exports:
         - libgcc 2.*
-  - name: libgcc
+  - package:
+      name: libgcc
 ```
 
 See the run\_exports section for additional information.
-
-### Implicit metapackages
-
-When viewing the top-level package as a collection of smaller
-subpackages, it may be convenient to define the top-level package as a
-composition of several subpackages. If you do this and you do not define
-a subpackage name that matches the top-level package/name, conda-build
-creates a metapackage for you. This metapackage has runtime requirements
-drawn from its dependency subpackages, for the sake of accurate build
-strings.
-
-EXAMPLE: In this example, a metapackage for `subpackage-example` will be
-created. It will have runtime dependencies on `subpackage1`,
-`subpackage2`, `some-dep`, and `some-other-dep`.
-
-```yaml
-package:
-  name: subpackage-example
-  version: 1.0
-
-requirements:
-  run:
-    - subpackage1
-    - subpackage2
-
-outputs:
-  - name: subpackage1
-    requirements:
-      - some-dep
-  - name: subpackage2
-    requirements:
-      - some-other-dep
-  - name: subpackage3
-    requirements:
-      - some-totally-exotic-dep
-```
 
 ### Subpackage tests
 
@@ -679,7 +656,8 @@ future.
 
 ```yaml
 outputs:
-  - name: subpackage-name
+  - package:
+      name: subpackage-name
     test:
       script: some-other-script.py
 ```
@@ -690,7 +668,8 @@ script section:
 
 ```yaml
 outputs:
-  - name: subpackage-name
+  - package:
+      name: subpackage-name
     test:
       script: run_test.py
 ```
@@ -866,12 +845,57 @@ source:
       url: http://path/to/python3/unix/source
 ```
 
-Build time features
--------------------
+Experimental features
+---------------------
 
-> *note: this is a very experimental feature of boa*
-> And may change or go away completely
+### Build time features
+
+```{warning}
+This is a very experimental feature of boa and may change or go away completely
+```
 
 With boa, you can add "build-time" features. That makes building packages from 
-source much more flexible and powerful and is a first step to enable a true "source"-distribution
-on top of conda packages.
+source much more flexible and powerful and is a first step to enable a true "source"-distribution on top of conda packages.
+
+```
+name: libarchive
+
+...
+
+features:
+  - name: zlib
+    default: true
+    requirements:
+      host:
+        - zlib
+      run:
+        - zlib
+
+  - name: bzip2
+    default: true
+    requirements:
+      host:
+        - bzip2
+      run:
+        - bzip2
+```
+
+This adds two "features" to the boa recipe. These features can be enabled / disabled when invoking boa:
+
+`boa build . --features [zlib, ~bzip2]`
+
+This would compile libarchive with the zlib compression mechanism enabled, and bzip2 disabled. If a feature is not specified, the default value is used.
+A feature can add additional requirements to the build/host/run section, and adds some environment variables to the build script invokation. In our example, the FEATURE_ZLIB environment variable will be set to `1`. This information can be used in the build script to enable or disable configuration and compilation flags.
+
+For this libarchive recipe, the `./configure` call might look like this:
+
+```
+${SRC_DIR}/configure --prefix=${PREFIX}                                           \
+                     $(feature $FEATURE_ZLIB --with-zlib --without-zlib)          \
+                     $(feature $FEATURE_BZIP2 --with-bz2lib --without-bz2lib) ...
+
+```
+
+In this case we're using a special shell function `feature` to select between the enabled and disabled flag (similar to a ternary operator). The `feature` shell function is automatically added by boa into the shell environment.
+
+One could similary use bash `if / else` to set flags based on the `$FEATURE_...` variable.
