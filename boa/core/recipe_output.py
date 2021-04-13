@@ -290,13 +290,13 @@ class Output:
                 copied.requirements["host"][idx].from_pinnings = True
 
         # todo figure out if we should pin like that in the run reqs as well?
-        for idx, r in enumerate(self.requirements["run"]):
-            vname = r.name.replace("-", "_")
-            if vname in variant:
-                copied.requirements["run"][idx] = CondaBuildSpec(
-                    r.name + " " + variant[vname]
-                )
-                copied.requirements["run"][idx].from_pinnings = True
+        # for idx, r in enumerate(self.requirements["run"]):
+        #     vname = r.name.replace("-", "_")
+        #     if vname in variant:
+        #         copied.requirements["run"][idx] = CondaBuildSpec(
+        #             r.name + " " + variant[vname]
+        #         )
+        #         copied.requirements["run"][idx].from_pinnings = True
 
         # insert compiler_cxx, compiler_c and compiler_fortran
         for idx, r in enumerate(self.requirements["build"]):

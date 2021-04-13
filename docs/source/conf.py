@@ -21,13 +21,13 @@ project = "boa"
 copyright = "2020, QuantStack & boa contributors"  # noqa
 author = "QuantStack & boa contributors"
 
-_version_py = '../../boa/_version.py'
+_version_py = "../../boa/_version.py"
 version_ns = {}
-exec(compile(open(_version_py).read(), _version_py, 'exec'), version_ns)
+exec(compile(open(_version_py).read(), _version_py, "exec"), version_ns)
 # The short X.Y version.
-version = '%i.%i' % version_ns['version_info'][:2]
+version = "%i.%i" % version_ns["version_info"][:2]
 # The full version, including alpha/beta/rc tags.
-release = version_ns['__version__']
+release = version_ns["__version__"]
 
 # -- General configuration ---------------------------------------------------
 

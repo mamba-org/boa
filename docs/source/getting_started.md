@@ -24,13 +24,13 @@ Boa implements two main commands:
 
 ### mambabuild
 
-The `conda mambabuild` command is a "drop-in" replacement for the `conda build` command and uses the same recipes and configuration files as conda-build. The only difference is that it swaps out the package resolver to use `mamba` instead of conda, which makes environment resolution faster, and can help in the debugging of resolution problems as the error messages from mamba are usually easier to understand than the ones from conda. 
+The `conda mambabuild` command is a "drop-in" replacement for the `conda build` command and uses the same recipes and configuration files as conda-build. The only difference is that it swaps out the package resolver to use `mamba` instead of conda, which makes environment resolution faster, and can help in the debugging of resolution problems as the error messages from mamba are usually easier to understand than the ones from conda.
 
 To use `conda mambabuild` just replace your existing command line usage of `conda build ...` with `conda mambabuild ...` (all the same arguments should function properly). For more information on the recipe spec and conda_build_config.yaml usage, please refer to the [conda-build documentation](https://docs.conda.io/projects/conda-build/en/latest/).
 
 ### boa build
 
-The boa package also implements a new recipe spec (described under `spec`). To build a package that follows this new convention, just use 
+The boa package also implements a new recipe spec (described under `spec`). To build a package that follows this new convention, just use
 
 ```
 boa build mypackage
