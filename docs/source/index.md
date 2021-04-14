@@ -8,6 +8,7 @@ Boa is a package build tool for `.conda` packages. As such, it is an alternative
 :caption: "Contents:"
 
 getting_started
+mambabuild
 recipe_spec
 ```
 
