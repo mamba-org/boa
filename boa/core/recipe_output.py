@@ -1,3 +1,6 @@
+# Copyright (C) 2021, QuantStack
+# SPDX-License-Identifier: BSD-3-Clause
+
 from boa.core.solver import get_solver
 import copy
 import re

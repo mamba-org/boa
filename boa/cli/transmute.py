@@ -1,3 +1,6 @@
+# Copyright (C) 2021, QuantStack
+# SPDX-License-Identifier: BSD-3-Clause
+
 from glob import glob
 import os
 from pathlib import Path

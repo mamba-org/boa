@@ -1,3 +1,6 @@
+# Copyright (C) 2021, QuantStack
+# SPDX-License-Identifier: BSD-3-Clause
+
 # convert between recipe.yaml and meta.yaml
 import ruamel
 from ruamel.yaml.representer import RoundTripRepresenter

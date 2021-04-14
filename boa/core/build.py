@@ -1,3 +1,6 @@
+# Copyright (C) 2021, QuantStack
+# SPDX-License-Identifier: BSD-3-Clause
+
 """
 Module that does most of the heavy lifting for the ``conda build`` command.
 """

@@ -1,3 +1,6 @@
+# Copyright (C) 2021, QuantStack
+# SPDX-License-Identifier: BSD-3-Clause
+
 from jsonschema import validate as json_validate
 import json5 as json
 from jsonschema.exceptions import ValidationError
