@@ -330,6 +330,7 @@ class Output:
             "name": self.name,
             "version": self.version,
             "build_number": self.build_number,
+            "source": self.data["source"],
         }
 
         res["differentiating_variant"] = self.differentiating_variant
