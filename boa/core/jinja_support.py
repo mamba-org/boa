@@ -1,3 +1,6 @@
+# Copyright (C) 2021, QuantStack
+# SPDX-License-Identifier: BSD-3-Clause
+
 import os
 from functools import partial
 from conda_build.jinja_context import cdt
