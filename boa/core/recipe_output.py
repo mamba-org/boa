@@ -236,6 +236,7 @@ class Output:
             self.requirements[section] = [
                 CondaBuildSpec(r) for r in (self.requirements.get(section) or [])
             ]
+        self.sections["requirements"] = self.requirements
 
         # handle strong and weak run exports
         run_exports = []
@@ -448,6 +449,10 @@ class Output:
         if self.requirements["run"]:
             add_header("Run", True)
             for r in self.requirements["run"]:
+                spec_format(r)
+        if self.requirements["run_constrained"]:
+            add_header("Run Constraints", True)
+            for r in self.requirements["run_constrained"]:
                 spec_format(r)
         return table
 

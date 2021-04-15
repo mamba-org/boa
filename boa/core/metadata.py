@@ -418,7 +418,7 @@ class MetaData:
         # conda 4.4+ optional dependencies
         constrains = ensure_list(self.get_value("requirements/run_constrained"))
         # filter None values
-        constrains = [v for v in constrains if v]
+        constrains = [str(v) for v in constrains if v]
         if constrains:
             d["constrains"] = constrains
 
