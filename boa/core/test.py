@@ -499,15 +499,13 @@ def run_test(
     transaction = solver.solve(specs, [pkg_cache_path])
 
     downloaded = transaction.fetch_extract_packages(
-        pkg_cache_path, solver.repos + list(solver.local_repos.values()),
+        solver.repos + list(solver.local_repos.values()),
     )
     if not downloaded:
         raise RuntimeError("Did not succeed in downloading packages.")
 
     mkdir_p(metadata.config.test_prefix)
-    transaction.execute(
-        PrefixData(metadata.config.test_prefix), pkg_cache_path,
-    )
+    transaction.execute(PrefixData(metadata.config.test_prefix),)
 
     with utils.path_prepended(metadata.config.test_prefix):
         env = dict(os.environ.copy())
