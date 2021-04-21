@@ -17,13 +17,13 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         python-version: [3.7]
-
     steps:
     - uses: actions/checkout@v2
     - name: install mamba
       uses: mamba-org/provision-with-micromamba@main
       with:
         environment-file: tests/env.yml
+        micromamba-version: latest
     - name: Install boa
       shell: bash -l {0}
       run: |
