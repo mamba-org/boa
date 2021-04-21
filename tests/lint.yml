@@ -1,0 +1,5 @@
+name: lint
+channels: [conda-forge]
+dependencies:
+  - pre-commit
+  - pip
