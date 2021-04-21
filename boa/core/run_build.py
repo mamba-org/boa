@@ -517,7 +517,6 @@ def build_recipe(
             try:
                 o.transactions["build"]["transaction"].execute(
                     PrefixData(o.config.build_prefix),
-                    o.transactions["build"]["pkg_cache"],
                 )
             except Exception:
                 # This currently enables windows-multi-build...
@@ -526,7 +525,7 @@ def build_recipe(
         if "host" in o.transactions:
             mkdir_p(o.config.host_prefix)
             o.transactions["host"]["transaction"].execute(
-                PrefixData(o.config.host_prefix), o.transactions["host"]["pkg_cache"],
+                PrefixData(o.config.host_prefix)
             )
 
         if cached_source != o.sections["source"]:

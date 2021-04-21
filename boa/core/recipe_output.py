@@ -22,7 +22,6 @@ from conda.base.context import context
 from conda_build.config import get_or_merge_config
 from conda_build.utils import apply_pin_expressions
 from conda.models.channel import Channel as CondaChannel
-from conda.core.package_cache_data import PackageCacheData
 from conda_build.metadata import eval_selector, ns_cfg
 
 from boa.core.config import boa_config
@@ -583,7 +582,6 @@ class Output:
             spec_map = {s.final_name: s for s in specs}
             specs = [str(x) for x in specs]
 
-            pkg_cache = PackageCacheData.first_writable().pkgs_dir
             if env in ("host", "run") and not self.config.subdirs_same:
                 subdir = self.config.host_subdir
             else:
@@ -614,7 +612,7 @@ class Output:
             }
 
             downloaded = t.fetch_extract_packages(
-                pkg_cache, solver.repos + list(solver.local_repos.values()),
+                solver.repos + list(solver.local_repos.values()),
             )
             if not downloaded:
                 raise RuntimeError("Did not succeed in downloading packages.")
