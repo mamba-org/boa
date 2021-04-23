@@ -305,7 +305,9 @@ class Output:
         for idx, r in enumerate(self.requirements["build"]):
             if r.name.startswith("COMPILER_"):
                 lang = r.splitted[1].lower()
-                compiler = conda_build.jinja_context.compiler(lang, self.config)
+                default_compiler = conda_build.jinja_context.compiler(lang, self.config)
+                if variant.get(lang + "_compiler"):
+                    compiler = f"{variant[lang + '_compiler']}_{variant['target_platform']}"
                 if variant.get(lang + "_compiler_version"):
                     version = variant[lang + "_compiler_version"]
                     copied.requirements["build"][idx].final = f"{compiler} {version}*"
