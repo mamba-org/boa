@@ -170,6 +170,7 @@ class Output:
         self.version = d["package"]["version"]
         self.build_string = d["package"].get("build_string")
         self.build_number = d["build"].get("number", 0)
+        self.noarch = d["build"].get("noarch", False)
         self.is_first = False
         self.sections = {}
 
@@ -333,6 +334,7 @@ class Output:
             "version": self.version,
             "build_number": self.build_number,
             "source": self.data["source"],
+            "noarch": self.noarch
         }
 
         res["differentiating_variant"] = self.differentiating_variant
@@ -549,21 +551,28 @@ class Output:
 
         if env == "build":
             for rex in collected_run_exports:
-                if "strong" in rex:
-                    for r in rex["strong"]:
+                if not self.noarch:
+                    for r in rex.get("strong", []):
                         append_or_replace("host", r)
                         append_or_replace("run", r)
-                if "weak" in rex:
-                    for r in rex["weak"]:
+                    for r in rex.get("weak", []):
                         append_or_replace("host", r)
+                    for r in rex.get("strong_constrains", []):
+                        append_or_replace("run_constrained", r)
 
         if env == "host":
             for rex in collected_run_exports:
-                if "strong" in rex:
-                    for r in rex["strong"]:
+                if not self.noarch:
+                    for r in rex.get("strong", []):
                         append_or_replace("run", r)
-                if "weak" in rex:
-                    for r in rex["weak"]:
+                    for r in rex.get("weak", []):
+                        append_or_replace("run", r)
+                    for r in rex.get("strong_constrains", []):
+                        append_or_replace("run_constrained", r)
+                    for r in rex.get("weak_constrains", []):
+                        append_or_replace("run_constrained", r)
+                else:
+                    for r in rex.get("noarch", []):
                         append_or_replace("run", r)
 
     def _solve_env(self, env, all_outputs):
