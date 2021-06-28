@@ -382,6 +382,7 @@ def build_recipe(
     skip_existing: bool = False,
     interactive: bool = False,
     skip_fast: bool = False,
+    continue_on_failure: bool = False,
 ):
 
     ydoc = render(recipe_path, config=config)
@@ -534,7 +535,7 @@ def build_recipe(
 
         console.print(f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n")
 
-        final_outputs = build(meta, None, allow_interactive=interactive)
+        final_outputs = build(meta, None, allow_interactive=interactive, continue_on_failure=continue_on_failure)
 
         stats = {}
         if final_outputs is not None:
@@ -604,4 +605,5 @@ def run_build(args):
             skip_existing=getattr(args, "skip_existing", False) != "default",
             interactive=getattr(args, "interactive", False),
             skip_fast=getattr(args, "skip_existing", "default") == "fast",
+            continue_on_failure=getattr(args, "continue_on_failure", False),
         )

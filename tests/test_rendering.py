@@ -44,6 +44,7 @@ def get_outputs(
         notest=True,
         skip_existing=False,
         interactive=False,
+        continue_on_failure=False,
     )
 
     return cbc, sorted_outputs

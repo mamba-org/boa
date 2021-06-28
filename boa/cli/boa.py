@@ -69,6 +69,11 @@ def main(config=None):
         dest="notest",
         help="Do not test the package.",
     )
+    build_parser.add_argument(
+        "--continue-on-failure",
+        action="store_true",
+        help="Continue building remaining recipes if a recipe fails.",
+    )
 
     subparsers.add_parser(
         "build",
