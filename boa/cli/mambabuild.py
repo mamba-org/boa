@@ -24,8 +24,7 @@ solver_map = {}
 
 
 def _get_solver(channel_urls, subdir, output_folder):
-    """ Gets a solver from cache or creates a new one if needed.
-    """
+    """Gets a solver from cache or creates a new one if needed."""
     subdir = normalize_subdir(subdir)
 
     if subdir in solver_map:

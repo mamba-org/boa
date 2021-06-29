@@ -582,7 +582,13 @@ def download_source(m, interactive=False):
         _try_download(m, interactive)
 
 
-def build(m, stats=None, from_interactive=False, allow_interactive=False):
+def build(
+    m,
+    stats=None,
+    from_interactive=False,
+    allow_interactive=False,
+    continue_on_failure=False,
+):
     try:
         if not stats:
             stats = {}
@@ -644,4 +650,4 @@ def build(m, stats=None, from_interactive=False, allow_interactive=False):
             asyncio.run(tui.enter_tui(m))
         else:
             console.print("[red]ERROR: Build failed!")
-            exit(1)
+            raise RuntimeError("Build failed")

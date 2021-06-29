@@ -177,7 +177,7 @@ class MambaSolver:
             pstring = "\n".join(["   " + el for el in pstring.split("\n")])
             error_string += f"\nThe reported errors are:\n{pstring}"
             print(error_string)
-            exit(1)
+            raise RuntimeError("Solver could not find solution.")
 
         if pkg_cache_path is None:
             # use values from conda

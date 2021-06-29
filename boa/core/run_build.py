@@ -382,6 +382,7 @@ def build_recipe(
     skip_existing: bool = False,
     interactive: bool = False,
     skip_fast: bool = False,
+    continue_on_failure: bool = False,
 ):
 
     ydoc = render(recipe_path, config=config)
@@ -479,79 +480,103 @@ def build_recipe(
     else:
         cached_source = {}
 
+    failed_outputs = []
+
     for o in sorted_outputs:
-        console.print(
-            f"\n[yellow]Preparing environment for [bold]{o.name}[/bold][/yellow]\n"
-        )
-        refresh_solvers()
-        o.finalize_solve(sorted_outputs)
+        try:
+            console.print(
+                f"\n[yellow]Preparing environment for [bold]{o.name}[/bold][/yellow]\n"
+            )
+            refresh_solvers()
 
-        o.config._build_id = o0.config.build_id
+            o.finalize_solve(sorted_outputs)
 
-        meta = MetaData(recipe_path, o)
-        o.set_final_build_id(meta)
+            o.config._build_id = o0.config.build_id
 
-        if o.skip() or full_render:
-            continue
+            meta = MetaData(recipe_path, o)
+            o.set_final_build_id(meta)
 
-        final_name = meta.dist()
-
-        # TODO this doesn't work for noarch!
-        if skip_existing:
-            final_name = meta.dist()
-
-            if os.path.exists(
-                os.path.join(
-                    o.config.output_folder,
-                    o.variant["target_platform"],
-                    final_name + ".tar.bz2",
-                )
-            ):
-                console.print(f"\n[green]Skipping existing {final_name}\n")
+            if o.skip() or full_render:
                 continue
 
-        if "build" in o.transactions:
-            if os.path.isdir(o.config.build_prefix):
-                rm_rf(o.config.build_prefix)
-            mkdir_p(o.config.build_prefix)
-            try:
-                o.transactions["build"]["transaction"].execute(
-                    PrefixData(o.config.build_prefix),
-                )
-            except Exception:
-                # This currently enables windows-multi-build...
-                print("Could not instantiate build environment")
+            final_name = meta.dist()
 
-        if "host" in o.transactions:
-            mkdir_p(o.config.host_prefix)
-            o.transactions["host"]["transaction"].execute(
-                PrefixData(o.config.host_prefix)
+            # TODO this doesn't work for noarch!
+            if skip_existing:
+                final_name = meta.dist()
+
+                if os.path.exists(
+                    os.path.join(
+                        o.config.output_folder,
+                        o.variant["target_platform"],
+                        final_name + ".tar.bz2",
+                    )
+                ):
+                    console.print(f"\n[green]Skipping existing {final_name}\n")
+                    continue
+
+            if "build" in o.transactions:
+                if os.path.isdir(o.config.build_prefix):
+                    rm_rf(o.config.build_prefix)
+                mkdir_p(o.config.build_prefix)
+                try:
+                    o.transactions["build"]["transaction"].execute(
+                        PrefixData(o.config.build_prefix),
+                    )
+                except Exception:
+                    # This currently enables windows-multi-build...
+                    print("Could not instantiate build environment")
+
+            if "host" in o.transactions:
+                mkdir_p(o.config.host_prefix)
+                o.transactions["host"]["transaction"].execute(
+                    PrefixData(o.config.host_prefix)
+                )
+
+            if cached_source != o.sections["source"]:
+                download_source(meta, interactive)
+                cached_source = o.sections["source"]
+
+            console.print(
+                f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n"
             )
 
-        if cached_source != o.sections["source"]:
-            download_source(meta, interactive)
-            cached_source = o.sections["source"]
+            final_outputs = build(
+                meta,
+                None,
+                allow_interactive=interactive,
+                continue_on_failure=continue_on_failure,
+            )
 
-        console.print(f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n")
+            stats = {}
+            if final_outputs is not None:
+                for final_out in final_outputs:
+                    if not notest:
+                        run_test(
+                            final_out,
+                            o.config,
+                            stats,
+                            move_broken=False,
+                            provision_only=False,
+                        )
 
-        final_outputs = build(meta, None, allow_interactive=interactive)
-
-        stats = {}
-        if final_outputs is not None:
-            for final_out in final_outputs:
-                if not notest:
-                    run_test(
-                        final_out,
-                        o.config,
-                        stats,
-                        move_broken=False,
-                        provision_only=False,
-                    )
-        # print(stats)
+        except Exception as e:
+            if continue_on_failure:
+                console.print(
+                    f"[yellow]Ignoring raised exception when building {o.name} ({e})"
+                )
+                failed_outputs.append(o)
+                pass
+            else:
+                exit(1)
 
     for o in sorted_outputs:
-        print("\n\n")
-        console.print(o)
+        if o in failed_outputs:
+            console.print(f"[red]Failed output: {o.name}")
+        else:
+            print("\n\n")
+            console.print(o)
+
     return sorted_outputs
 
 
@@ -604,4 +629,5 @@ def run_build(args):
             skip_existing=getattr(args, "skip_existing", False) != "default",
             interactive=getattr(args, "interactive", False),
             skip_fast=getattr(args, "skip_existing", "default") == "fast",
+            continue_on_failure=getattr(args, "continue_on_failure", False),
         )
