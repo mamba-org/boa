@@ -52,9 +52,16 @@ def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
     prefix_data = PrefixData(prefix)
     final_precs = IndexedSet(prefix_data.iter_records())
 
+    def get_url_from_channel(c):
+        if isinstance(c, dict):
+            x = c["url"]
+        else:
+            x = Channel(c).url(with_credentials=False)
+        return split_anaconda_token(remove_auth(x))[0]
+
     lookup_dict = {}
     for _, c in index:
-        lookup_dict[Channel(c).url(with_credentials=False)] = c
+        lookup_dict[get_url_from_channel(c)] = c
 
     assert len(to_unlink) == 0
 
