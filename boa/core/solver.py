@@ -135,15 +135,24 @@ class MambaSolver:
             if not subdir.loaded():
                 continue
 
+            # support new mamba
+            if isinstance(channel, dict):
+                channelstr = channel["url"]
+                channelurl = channel["url"]
+            else:
+                channelstr = str(channel)
+                channelurl = channel.url(with_credentials=True)
+
             cp = subdir.cache_path()
             if cp.endswith(".solv"):
                 os.remove(subdir.cache_path())
                 cp = cp.replace(".solv", ".json")
 
-            self.local_repos[str(channel)] = mamba_api.Repo(
-                self.pool, str(channel), cp, channel.url(with_credentials=True)
+            self.local_repos[channelstr] = mamba_api.Repo(
+                self.pool, channelstr, cp, channelurl
             )
-            self.local_repos[str(channel)].set_priority(start_prio, 0)
+
+            self.local_repos[channelstr].set_priority(start_prio, 0)
             start_prio -= 1
 
     def solve(self, specs, pkg_cache_path=None):
