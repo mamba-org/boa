@@ -15,7 +15,8 @@ from boa.core.config import boa_config
 
 console = boa_config.console
 
-
+if "+" in cb_version:
+    cb_version = cb_version[: cb_version.index("+")]
 cb_split_version = tuple(int(x) for x in cb_version.split("."))
 
 

@@ -16,7 +16,6 @@ from conda.base.context import context
 from conda.plan import get_blank_actions
 from conda.models.dist import Dist
 from conda_build.conda_interface import pkgs_dirs
-from conda.models.channel import Channel
 from conda.core.package_cache_data import PackageCacheData
 
 from mamba import mamba_api
@@ -46,28 +45,33 @@ def get_solver(subdir):
     return solver_cache[subdir], pkg_cache
 
 
+def get_url_from_channel(c):
+    if c.startswith("file://"):
+        # The conda functions (specifically remove_auth) assume the input
+        # is a url; a file uri on windows with a drive letter messes them
+        # up.
+        return c
+    else:
+        return split_anaconda_token(remove_auth(c))[0]
+
+
 def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
     to_link_records = []
 
     prefix_data = PrefixData(prefix)
     final_precs = IndexedSet(prefix_data.iter_records())
 
-    def get_url_from_channel(c):
-        if isinstance(c, dict):
-            x = c["url"]
-        else:
-            x = Channel(c).url(with_credentials=False)
-        return split_anaconda_token(remove_auth(x))[0]
-
     lookup_dict = {}
-    for _, c in index:
-        lookup_dict[get_url_from_channel(c)] = c
+    for _, entry in index:
+        lookup_dict[
+            entry["channel"].platform_url(entry["platform"], with_credentials=False)
+        ] = entry
 
     assert len(to_unlink) == 0
 
     for c, pkg, jsn_s in to_link:
-        sdir = lookup_dict[split_anaconda_token(remove_auth(c))[0]]
-        rec = to_package_record_from_subjson(sdir, pkg, jsn_s)
+        entry = lookup_dict[get_url_from_channel(c)]
+        rec = to_package_record_from_subjson(entry, pkg, jsn_s)
         final_precs.add(rec)
         to_link_records.append(rec)
 
