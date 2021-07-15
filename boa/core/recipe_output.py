@@ -22,6 +22,7 @@ from conda_build.config import get_or_merge_config
 from conda_build.utils import apply_pin_expressions
 from conda.models.channel import Channel as CondaChannel
 from conda_build.metadata import eval_selector, ns_cfg
+from conda_build.jinja_context import native_compiler
 
 from boa.core.config import boa_config
 
@@ -309,6 +310,8 @@ class Output:
                     compiler = (
                         f"{variant[lang + '_compiler']}_{variant['target_platform']}"
                     )
+                else:
+                    compiler = native_compiler(lang, copied.config)
                 if variant.get(lang + "_compiler_version"):
                     version = variant[lang + "_compiler_version"]
                     copied.requirements["build"][idx].final = f"{compiler} {version}*"
