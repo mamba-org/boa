@@ -270,7 +270,6 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
                 # we check if our variant contains keys that need to be zipped
                 if sum(k in v for k in zkeys) > 1:
                     filtered_zip_keys = [k for k in v if k in zkeys]
-                    print("Filtered zip keys: ", filtered_zip_keys)
 
                     zkname = "__zip_" + "_".join(filtered_zip_keys)
 
