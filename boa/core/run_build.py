@@ -519,6 +519,7 @@ def build_recipe(
                     rm_rf(o.config.build_prefix)
                 mkdir_p(o.config.build_prefix)
                 try:
+                    o.transactions["build"]["transaction"].print()
                     o.transactions["build"]["transaction"].execute(
                         PrefixData(o.config.build_prefix),
                     )
@@ -528,6 +529,7 @@ def build_recipe(
 
             if "host" in o.transactions:
                 mkdir_p(o.config.host_prefix)
+                o.transactions["host"]["transaction"].print()
                 o.transactions["host"]["transaction"].execute(
                     PrefixData(o.config.host_prefix)
                 )

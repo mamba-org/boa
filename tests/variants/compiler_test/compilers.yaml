@@ -1,0 +1,12 @@
+c_compiler:
+  - customcompiler
+c_compiler_version:
+  - 11
+cxx_compiler:
+  - cppcompiler
+cxx_compiler_version:
+  - 200
+fortran_compiler:
+  - fortranisstillalive
+fortran_compiler_version:
+  - 2000

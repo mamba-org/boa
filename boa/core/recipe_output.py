@@ -311,7 +311,7 @@ class Output:
                         f"{variant[lang + '_compiler']}_{variant['target_platform']}"
                     )
                 else:
-                    compiler = native_compiler(lang, copied.config)
+                    compiler = f"{native_compiler(lang, copied.config)}_{variant['target_platform']}"
                 if variant.get(lang + "_compiler_version"):
                     version = variant[lang + "_compiler_version"]
                     copied.requirements["build"][idx].final = f"{compiler} {version}*"
