@@ -588,6 +588,7 @@ def build(
     from_interactive=False,
     allow_interactive=False,
     continue_on_failure=False,
+    provision_only=False,
 ):
     try:
         if not stats:
@@ -623,7 +624,10 @@ def build(
             f.write("\n".join(sorted(list(files_before_script))))
             f.write("\n")
 
-        execute_build_script(m, src_dir, env)
+        execute_build_script(m, src_dir, env, provision_only=provision_only)
+
+        if provision_only:
+            return
 
         if m.output.sections["build"].get("intermediate"):
             utils.rm_rf(m.config.host_prefix)

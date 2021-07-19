@@ -543,6 +543,14 @@ def build_recipe(
                 f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n"
             )
 
+            final_outputs = build(
+                meta,
+                None,
+                allow_interactive=interactive,
+                continue_on_failure=continue_on_failure,
+                provision_only=boa_config.debug,
+            )
+
             if boa_config.debug:
                 console.print(f"\n[yellow]Stopping for debugging.\n")
 
@@ -554,13 +562,6 @@ def build_recipe(
                 console.print(f"Try building again with {build_cmd}")
 
                 return
-
-            final_outputs = build(
-                meta,
-                None,
-                allow_interactive=interactive,
-                continue_on_failure=continue_on_failure,
-            )
 
             stats = {}
             if final_outputs is not None:
