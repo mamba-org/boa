@@ -122,11 +122,11 @@ class MambaSolver:
             self.pool, self.channels, self.repos, platform=platform
         )
 
-        if platform == context.subdir:
-            installed_json_f = get_virtual_packages()
-            repo = mamba_api.Repo(self.pool, "installed", installed_json_f.name, "")
-            repo.set_installed()
-            self.repos.append(repo)
+        # if platform == context.subdir:
+        installed_json_f = get_virtual_packages()
+        repo = mamba_api.Repo(self.pool, "installed", installed_json_f.name, "")
+        repo.set_installed()
+        self.repos.append(repo)
 
         self.local_index = []
         self.local_repos = {}

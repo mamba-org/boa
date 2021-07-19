@@ -542,6 +542,9 @@ def build_recipe(
                 f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n"
             )
 
+            if boa_config.debug:
+                print(f"\n[yellow]Stopping for debugging.")
+
             final_outputs = build(
                 meta,
                 None,
