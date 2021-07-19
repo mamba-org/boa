@@ -5,6 +5,7 @@ import os
 import glob
 import itertools
 import json
+import pathlib
 
 from mamba.mamba_api import PrefixData
 
@@ -24,7 +25,7 @@ from conda.base.context import context
 from conda.models.match_spec import MatchSpec
 from conda.gateways.disk.create import mkdir_p
 from conda_build.variants import get_default_variant
-from conda_build.utils import ensure_list
+from conda_build.utils import ensure_list, on_win
 from conda_build.index import update_index
 
 from rich.table import Table
@@ -543,7 +544,16 @@ def build_recipe(
             )
 
             if boa_config.debug:
-                print(f"\n[yellow]Stopping for debugging.")
+                console.print(f"\n[yellow]Stopping for debugging.\n")
+
+                ext = "bat" if on_win else "sh"
+                work_dir = pathlib.Path(meta.config.build_prefix).parent / "work"
+                build_cmd = work_dir / f"conda_build.{ext}"
+
+                console.print(f"Work directory: {work_dir}")
+                console.print(f"Try building again with {build_cmd}")
+
+                return
 
             final_outputs = build(
                 meta,
