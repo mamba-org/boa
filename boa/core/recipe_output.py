@@ -601,7 +601,9 @@ class Output:
             else:
                 subdir = self.config.build_subdir
 
-            solver, pkg_cache = get_solver(subdir)
+            solver, pkg_cache = get_solver(
+                subdir, output_folder=self.config.output_folder
+            )
             t = solver.solve(specs, [pkg_cache])
 
             _, install_pkgs, _ = t.to_conda()

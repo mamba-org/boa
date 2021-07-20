@@ -552,7 +552,7 @@ def build_recipe(
             )
 
             if boa_config.debug:
-                console.print(f"\n[yellow]Stopping for debugging.\n")
+                console.print("\n[yellow]Stopping for debugging.\n")
 
                 ext = "bat" if on_win else "sh"
                 work_dir = pathlib.Path(meta.config.build_prefix).parent / "work"
