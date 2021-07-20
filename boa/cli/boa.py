@@ -31,6 +31,7 @@ def main(config=None):
     parent_parser.add_argument("--offline", action="store_true")
     parent_parser.add_argument("--target-platform", type=str)
     parent_parser.add_argument("--json", action="store_true")
+    parent_parser.add_argument("--debug", action="store_true")
 
     variant_parser = argparse.ArgumentParser(add_help=False)
     variant_parser.add_argument(

@@ -21,6 +21,9 @@ from conda.core.package_cache_data import PackageCacheData
 from mamba import mamba_api
 from mamba.utils import get_index, load_channels, to_package_record_from_subjson
 
+from boa.core.config import boa_config
+
+console = boa_config.console
 
 solver_cache = {}
 
@@ -30,7 +33,7 @@ def refresh_solvers():
         v.replace_channels()
 
 
-def get_solver(subdir):
+def get_solver(subdir, output_folder="local"):
     pkg_cache = PackageCacheData.first_writable().pkgs_dir
     if subdir == "noarch":
         subdir = context.subdir
@@ -40,7 +43,7 @@ def get_solver(subdir):
             os.makedirs(pkg_cache, exist_ok=True)
 
     if not solver_cache.get(subdir):
-        solver_cache[subdir] = MambaSolver([], subdir)
+        solver_cache[subdir] = MambaSolver([], subdir, output_folder)
 
     return solver_cache[subdir], pkg_cache
 
@@ -122,11 +125,11 @@ class MambaSolver:
             self.pool, self.channels, self.repos, platform=platform
         )
 
-        if platform == context.subdir:
-            installed_json_f = get_virtual_packages()
-            repo = mamba_api.Repo(self.pool, "installed", installed_json_f.name, "")
-            repo.set_installed()
-            self.repos.append(repo)
+        # if platform == context.subdir:
+        installed_json_f = get_virtual_packages()
+        repo = mamba_api.Repo(self.pool, "installed", installed_json_f.name, "")
+        repo.set_installed()
+        self.repos.append(repo)
 
         self.local_index = []
         self.local_repos = {}
@@ -134,6 +137,7 @@ class MambaSolver:
         self.replace_channels()
 
     def replace_channels(self):
+        console.print(f"[blue]Reloading output folder: {self.output_folder}")
         self.local_index = get_index(
             (self.output_folder,), platform=self.platform, prepend=False
         )
