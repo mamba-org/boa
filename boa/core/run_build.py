@@ -17,6 +17,7 @@ from boa.core.build import build, download_source
 from boa.core.metadata import MetaData
 from boa.core.test import run_test
 from boa.core.config import boa_config
+from boa.core.validation import validate, ValidationError
 
 from conda_build.utils import rm_rf
 import conda_build.jinja_context
@@ -44,9 +45,19 @@ def find_all_recipes(target, config):
     recipes = {}
     for fn in yamls:
         yml = render(fn, config=config)
+
+        try:
+            validate(yml)
+            console.print("[green]Recipe validation OK[/green]")
+        except ValidationError:
+            console.print(
+                "\n[red]Recipe validation not OK. This is currently [bold]ignored.\n\n"
+            )
+
         pkg_name = yml["package"]["name"]
         recipes[pkg_name] = yml
         recipes[pkg_name]["recipe_file"] = fn
+
         # find all outputs from recipe
         output_names = set([yml["package"]["name"]])
         for output in yml.get("outputs", []):
@@ -86,7 +97,10 @@ def find_all_recipes(target, config):
         recursive_add(target)
 
     sorted_recipes = toposort.toposort(sort_recipes)
-    console.print(sorted_recipes)
+    num_recipes = len(sorted_recipes)
+    console.print(f"Found {num_recipes} recipe{'s'[:num_recipes^1]}")
+    for rec in sorted_recipes:
+        console.print(f" - {rec}")
 
     return [recipes[x] for x in sorted_recipes]
 

@@ -11,7 +11,7 @@ console = Console()
 
 
 def schema_dir():
-    return Path(__file__).parent / ".." / ".." / "schemas"
+    return Path(__file__).parent / ".." / "schemas"
 
 
 def validate(obj):
@@ -20,6 +20,7 @@ def validate(obj):
     try:
         validation_result = json_validate(instance=obj, schema=schema)
     except ValidationError as e:
-        console.print(e, style="red")
-        exit(1)
+        console.print("\n[red]Recipe validation error\n")
+        console.print(e)
+        raise e
     return validation_result
