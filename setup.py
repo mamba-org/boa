@@ -27,7 +27,7 @@ setup(
     name="boa",
     version=__version__,
     author="Wolf Vollprecht",
-    author_email="wolf.vollprecht@quantstack",
+    author_email="wolf.vollprecht@quantstack.net",
     url="https://github.com/mamba-org/boa",
     license="BSD 3-clause",
     classifiers=[],
@@ -41,5 +41,5 @@ setup(
         ]
     },
     install_requires=deps,
-    package_data={"boa": []},
+    package_data={"boa": ["schemas/*.json"]},
 )
