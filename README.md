@@ -19,36 +19,54 @@
 
 # boa, the fast build tool for conda packages
 
-**boa** is very much a work-in-progress right now.
+```
+Note: boa is still a work-in-progress.
+```
+
+**boa** is a package builder for conda packages. </br>
+It largely re-uses the `conda-build` infrastructure, except for some parts. For example the 'solving stage' which, in Boa, is done using `mamba`, the fast `conda`-alternative. Learn more about `mamba` [here](https://github.com/mamba-org/mamba#readme).
+
+We are also working towards a new "meta.yaml" format in the `boa/cli/render.py` source file. Read more about it [here](https://boa-build.readthedocs.io/en/latest/recipe_spec.html). </br>
+The new "meta.yaml" format is still a work-in-progress and might not work as expected.
+
+The discussions about this new `meta.yaml` format take place [here](https://hackmd.io/axI1tQdwQB2pTJKt5XdY5w). We encourage you to participate.
+
+The short-term goal for boa is to parse the new version spec, and produce a `conda_build.MetaData` class in Python that describes how to assemble the final package.
 
 [![asciicast](https://asciinema.org/a/HBduIi9TgdFgS3zV7mB3h0KpN.svg)](https://asciinema.org/a/HBduIi9TgdFgS3zV7mB3h0KpN)
 
-**boa** is a package builder for conda packages. It is re-using a lot of the `conda-build` infrastructure, but replaces some parts. Specifically the solving stage is done using `mamba`, the fast `conda`-alternative (implemented in C++ and based on `libsolv`).
 
-We are also working towards a new "meta.yaml" format in the `boa/cli/render.py` source file.
-This is totally a work-in-progress, and you should not expect it to work or to be stable.
-
-You can find (and participate!) in discussions regarding the new `meta.yaml` format in this hackmd: https://hackmd.io/axI1tQdwQB2pTJKt5XdY5w
-
-The shortterm-goal for boa is to parse the new version spec, and produce a `conda_build.MetaData` class in Python that describes how to to assemble the final package.
-
-We have two small tools included with boa:
+We have these tools included with boa:
 
 ```
-conda mambabuild my_recipe_folder # this is equivalent to running conda build my_recipe_folder, but using mamba as a solver
-boa render my_recipe_folder  # "render" a recipe (note you have to use the non-final v2 syntax, check the recipes folder for examples
-boa build my_recipe_folder  # this is running a "build" of the v2 recipe
+conda mambabuild my_recipe_folder
 ```
+This is equivalent to running `conda build my_recipe_folder` but using mamba as a solver.
+
+```
+boa render my_recipe_folder
+```
+"Render" a recipe. (Note that you must use the non-final v2 syntax. Check the recipes folder for examples.)
+
+```
+boa build my_recipe_folder
+```
+Runs a "build" of the v2 recipe.
 
 ### Dev Installation
 
-You will have to install the dependencies of boa, and then execute pip to install:
-
+Install the boa dependencies:
 ```
 mamba install "conda-build>=3.20" colorama pip ruamel ruamel.yaml rich -c conda-forge
-# now install boa into your prefix with pip
+```
+
+Now install boa:
+```
 pip install -e .
 ```
+### Documentation
+
+The boa documentation can be found [here](https://boa-build.readthedocs.io/en/latest/).
 
 ### License
 
