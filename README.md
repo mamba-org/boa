@@ -57,7 +57,7 @@ Runs a "build" of the v2 recipe.
 
 Install the boa dependencies:
 ```
-mamba install "conda-build>=3.20" colorama pip ruamel ruamel.yaml rich mamba -c conda-forge
+mamba install "conda-build>=3.20" colorama pip ruamel ruamel.yaml rich mamba jsonschema -c conda-forge
 ```
 
 Now install boa:
