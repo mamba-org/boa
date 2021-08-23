@@ -10,13 +10,13 @@ from prompt_toolkit.completion import NestedCompleter, PathCompleter
 from boa.core.build import build
 from boa.tui import patching
 
-try:
-    from inotify_simple import INotify, flags
+# try:
+#     from inotify_simple import INotify, flags
 
-    inotify_available = True
-    inotify = INotify()
-except ImportError:
-    inotify_available = False
+#     inotify_available = True
+#     inotify = INotify()
+# except ImportError:
+inotify_available = False
 
 import asyncio
 import subprocess
@@ -30,7 +30,7 @@ from rich.syntax import Syntax
 from rich.rule import Rule
 
 console = Console()
-watch_flags = flags.MODIFY
+# watch_flags = flags.MODIFY
 
 help_text = """
 Enter a command:
