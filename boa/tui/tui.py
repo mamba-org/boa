@@ -7,6 +7,8 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.completion import NestedCompleter, PathCompleter
 
+from ruamel.yaml import YAML
+
 from boa.core.build import build
 from boa.tui import patching
 
@@ -29,6 +31,14 @@ from glob import glob
 from rich.console import Console
 from rich.syntax import Syntax
 from rich.rule import Rule
+
+yaml = YAML(typ="rt")
+yaml.preserve_quotes = True
+yaml.default_flow_style = False
+yaml.indent(sequence=4, offset=2)
+yaml.width = 1000
+# yaml.Representer = ruamel.yaml.representer.RoundTripRepresenter
+# yaml.Loader = ruamel.yaml.RoundTripLoader
 
 console = Console()
 
@@ -141,10 +151,16 @@ def generate_patch(args):
             with open(out_fn, "w") as fo:
                 fo.write(patch_contents)
             console.print(f"[green]Patch saved under: {out_fn}")
+
+            data = yaml.load(open(build_context.meta_path))
+            if "patches" in data["source"][0]:
+                data["source"][0]["patches"].append(fn)
+            else:
+                data["source"][0]["patches"] = [fn]
+            fp = open(build_context.meta_path, "w")
+            yaml.dump(data, fp)
         else:
             console.print("[red]Please give a patch name as third argument")
-
-    # TODO add modifications to the recipe! (adding patch)
 
 
 cache_editor = None
