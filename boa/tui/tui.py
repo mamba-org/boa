@@ -162,9 +162,6 @@ def generate_patch(args):
         else:
             console.print("[red]Please give a patch name as third argument")
 
-    # TODO add modifications to the recipe! (adding patch)
-
-
 cache_editor = None
 
 
