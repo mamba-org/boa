@@ -212,7 +212,7 @@ def execute_tokens(token):
 async def input_coroutine():
     completer = get_completer()
     while True:
-        with patch_stdout():
+        with patch_stdout(raw=True):
             text = await session.prompt_async(
                 "> ", bottom_toolbar=bottom_toolbar, completer=completer
             )
