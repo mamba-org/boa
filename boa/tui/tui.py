@@ -230,6 +230,7 @@ async def input_coroutine():
             except Exception as e:
                 console.print(e)
 
+
 async def watch_files_coroutine():
     if not watchdog_available:
         return
@@ -237,13 +238,18 @@ async def watch_files_coroutine():
     class Handler(FileSystemEventHandler):
         @staticmethod
         def on_any_event(event):
-            if event.event_type == 'modified' and event.src_path == build_context.meta_path:
+            if (
+                event.event_type == "modified"
+                and event.src_path == build_context.meta_path
+            ):
                 console.print(
                     "\n[green]recipe.yaml changed: rebuild by entering [/green][white]> [italic]build[/italic][/white]\n"
                 )
 
     event_handler = Handler()
-    wd_observer.schedule(event_handler, Path(build_context.meta_path).parent,recursive=False)
+    wd_observer.schedule(
+        event_handler, Path(build_context.meta_path).parent, recursive=False
+    )
     wd_observer.start()
 
     try:
