@@ -162,6 +162,7 @@ def generate_patch(args):
         else:
             console.print("[red]Please give a patch name as third argument")
 
+
 cache_editor = None
 
 
