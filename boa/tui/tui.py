@@ -10,13 +10,14 @@ from prompt_toolkit.completion import NestedCompleter, PathCompleter
 from boa.core.build import build
 from boa.tui import patching
 
-# try:
-#     from inotify_simple import INotify, flags
+try:
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
 
-#     inotify_available = True
-#     inotify = INotify()
-# except ImportError:
-inotify_available = False
+    watchdog_available = True
+    wd_observer = Observer()
+except ImportError:
+    watchdog_available = False
 
 import asyncio
 import subprocess
@@ -30,7 +31,6 @@ from rich.syntax import Syntax
 from rich.rule import Rule
 
 console = Console()
-# watch_flags = flags.MODIFY
 
 help_text = """
 Enter a command:
@@ -230,28 +230,32 @@ async def input_coroutine():
             except Exception as e:
                 console.print(e)
 
-
-def install_watches():
-    recipe = os.path.join(build_context.meta_path)
-    wd = inotify.add_watch(recipe, watch_flags)
-    return {wd: os.path.join(build_context.meta_path)}
-
-
 async def watch_files_coroutine():
-    if not inotify_available:
+    if not watchdog_available:
         return
 
-    wds = install_watches()
-    while True:
-        await asyncio.sleep(0.5)
-        for event in inotify.read(timeout=0):
-            if wds[event.wd] == build_context.meta_path:
+    class Handler(FileSystemEventHandler):
+        @staticmethod
+        def on_any_event(event):
+            if event.event_type == 'modified' and event.src_path == build_context.meta_path:
                 console.print(
                     "\n[green]recipe.yaml changed: rebuild by entering [/green][white]> [italic]build[/italic][/white]\n"
                 )
-            # console.print(event)
-            # for flag in flags.from_mask(event.mask):
-            #     console.print('    ' + str(flag))
+
+    event_handler = Handler()
+    wd_observer.schedule(event_handler, Path(build_context.meta_path).parent,recursive=False)
+    wd_observer.start()
+
+    try:
+        while True:
+            await asyncio.sleep(0.5)
+    except KeyboardInterrupt:
+        wd_observer.stop()
+    wd_observer.join()
+
+    # console.print(event)
+    # for flag in flags.from_mask(event.mask):
+    #     console.print('    ' + str(flag))
 
 
 async def enter_tui(context):
