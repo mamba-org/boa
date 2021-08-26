@@ -42,9 +42,6 @@ yaml.width = 1000
 # yaml.Representer = ruamel.yaml.representer.RoundTripRepresenter
 # yaml.Loader = ruamel.yaml.RoundTripLoader
 
-if boa_config.args_map.interactive:
-    boa_config.args_map.interactive = False
-
 console = Console()
 
 help_text = """
@@ -272,7 +269,8 @@ async def watch_files_coroutine():
     wd_observer.schedule(
         event_handler, Path(build_context.meta_path).parent, recursive=False
     )
-    wd_observer.start()
+    if not wd_observer.is_alive():
+        wd_observer.start()
 
     try:
         while True:
