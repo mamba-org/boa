@@ -9,6 +9,8 @@ from prompt_toolkit.completion import NestedCompleter, PathCompleter
 
 from ruamel.yaml import YAML
 
+from boa.core.run_build import run_build
+from boa.core.config import boa_config
 from boa.core.build import build
 from boa.tui import patching
 
@@ -39,6 +41,9 @@ yaml.indent(sequence=4, offset=2)
 yaml.width = 1000
 # yaml.Representer = ruamel.yaml.representer.RoundTripRepresenter
 # yaml.Loader = ruamel.yaml.RoundTripLoader
+
+if boa_config.args_map.interactive:
+    boa_config.args_map.interactive = False
 
 console = Console()
 
@@ -261,6 +266,7 @@ async def watch_files_coroutine():
                 console.print(
                     "\n[green]recipe.yaml changed: rebuild by entering [/green][white]> [italic]build[/italic][/white]\n"
                 )
+                run_build(boa_config.args_map)
 
     event_handler = Handler()
     wd_observer.schedule(

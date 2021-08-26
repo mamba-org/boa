@@ -10,6 +10,7 @@ class BoaConfig:
     console = Console()
     json: bool = False
     debug: bool = False
+    args_map: dict = {}
 
     def __init__(self, args=None):
         if args and getattr(args, "json", False):
@@ -18,6 +19,9 @@ class BoaConfig:
 
         if args and getattr(args, "debug", False):
             self.debug = args.debug
+
+        if args:
+            self.args_map = args
 
 
 def init_global_config(args=None):
