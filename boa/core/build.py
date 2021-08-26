@@ -651,7 +651,7 @@ def build(
             from boa.tui import tui
             import asyncio
 
-            asyncio.run(tui.enter_tui(m))
+            return asyncio.run(tui.enter_tui(m))
         else:
             console.print("[red]ERROR: Build failed!")
             raise RuntimeError("Build failed")

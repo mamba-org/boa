@@ -19,7 +19,6 @@ try:
     from watchdog.events import FileSystemEventHandler
 
     watchdog_available = True
-    wd_observer = Observer()
 except ImportError:
     watchdog_available = False
 
@@ -253,6 +252,9 @@ async def watch_files_coroutine():
     if not watchdog_available:
         return
 
+    wd_observer = Observer()
+    loop = asyncio.get_event_loop()
+    run_build_event = asyncio.Event()
     class Handler(FileSystemEventHandler):
         @staticmethod
         def on_any_event(event):
@@ -263,33 +265,29 @@ async def watch_files_coroutine():
                 console.print(
                     "\n[green]recipe.yaml changed: rebuild by entering [/green][white]> [italic]build[/italic][/white]\n"
                 )
-                run_build(boa_config.args_map)
+                loop.call_soon_threadsafe(run_build_event.set)
 
     event_handler = Handler()
     wd_observer.schedule(
         event_handler, Path(build_context.meta_path).parent, recursive=False
     )
-    if not wd_observer.is_alive():
-        wd_observer.start()
+    wd_observer.start()
 
     try:
-        while True:
-            await asyncio.sleep(0.5)
-    except KeyboardInterrupt:
+        await run_build_event.wait()
+    except Exception:
+        pass
+    finally:
         wd_observer.stop()
-    wd_observer.join()
+        wd_observer.join()
 
     # console.print(event)
     # for flag in flags.from_mask(event.mask):
     #     console.print('    ' + str(flag))
 
 
-async def enter_tui(context):
-    global build_context
-    build_context = context
-
+async def prompt_coroutine():
     exit_tui = False
-    background_task = asyncio.create_task(watch_files_coroutine())
 
     while not exit_tui:
         try:
@@ -305,8 +303,22 @@ async def enter_tui(context):
         except KeyboardInterrupt:
             print("CTRL+C pressed. Use CTRL-D to exit.")
 
-    background_task.cancel()
     console.print("[yellow]Goodbye![/yellow]")
+
+
+async def enter_tui(context):
+    global build_context
+    build_context = context
+
+    watch_files_task = asyncio.create_task(watch_files_coroutine())
+    prompt_task = asyncio.create_task(prompt_coroutine())
+    done, pending = await asyncio.wait((watch_files_task, prompt_task), return_when=asyncio.FIRST_COMPLETED)
+    for task in pending:
+        task.cancel()
+    if watch_files_task in done:
+        return "rerun"
+    else:
+        return "exit"
 
 
 async def main():
@@ -327,7 +339,7 @@ async def main():
             ),
         }
     )
-    await enter_tui(meta)
+    return await enter_tui(meta)
 
 
 if __name__ == "__main__":

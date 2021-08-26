@@ -1,6 +1,7 @@
 # Copyright (C) 2021, QuantStack
 # SPDX-License-Identifier: BSD-3-Clause
 
+import sys
 import os
 import glob
 import itertools
@@ -557,13 +558,20 @@ def build_recipe(
                 f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n"
             )
 
-            final_outputs = build(
-                meta,
-                None,
-                allow_interactive=interactive,
-                continue_on_failure=continue_on_failure,
-                provision_only=boa_config.debug,
-            )
+            while True:
+                final_outputs = build(
+                    meta,
+                    None,
+                    allow_interactive=interactive,
+                    continue_on_failure=continue_on_failure,
+                    provision_only=boa_config.debug,
+                )
+                if final_outputs == "rerun":
+                    pass
+                elif final_outputs == "exit":
+                    sys.exit()
+                else:
+                    break
 
             if boa_config.debug:
                 console.print("\n[yellow]Stopping for debugging.\n")
