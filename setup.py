@@ -17,7 +17,7 @@ deps = [
     "rich",
     "ruamel.yaml",
     "json5",
-    "watchdog",
+    "watchgod",
     "prompt-toolkit",
     "joblib",
     "beautifulsoup4",

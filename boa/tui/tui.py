@@ -14,13 +14,14 @@ from boa.core.config import boa_config
 from boa.core.build import build
 from boa.tui import patching
 
-try:
-    from watchdog.observers import Observer
-    from watchdog.events import FileSystemEventHandler
+from .exceptions import BoaExitException, BoaRunBuildException
 
-    watchdog_available = True
+try:
+    from watchgod import awatch
+
+    watchgod_available = True
 except ImportError:
-    watchdog_available = False
+    watchgod_available = False
 
 import asyncio
 import subprocess
@@ -52,10 +53,6 @@ Enter a command:
 """
 
 build_context = None
-
-
-class BoaExitException(Exception):
-    pass
 
 
 def print_help():
@@ -249,41 +246,14 @@ async def input_coroutine():
 
 
 async def watch_files_coroutine():
-    if not watchdog_available:
+    if not watchgod_available:
+        await asyncio.Future()
+
+    async for changes in awatch(Path(build_context.meta_path).parent):
+        console.print(
+            "\n[green]recipe.yaml changed: rebuild by entering [/green][white]> [italic]build[/italic][/white]\n"
+        )
         return
-
-    wd_observer = Observer()
-    loop = asyncio.get_event_loop()
-    run_build_event = asyncio.Event()
-    class Handler(FileSystemEventHandler):
-        @staticmethod
-        def on_any_event(event):
-            if (
-                event.event_type == "modified"
-                and event.src_path == build_context.meta_path
-            ):
-                console.print(
-                    "\n[green]recipe.yaml changed: rebuild by entering [/green][white]> [italic]build[/italic][/white]\n"
-                )
-                loop.call_soon_threadsafe(run_build_event.set)
-
-    event_handler = Handler()
-    wd_observer.schedule(
-        event_handler, Path(build_context.meta_path).parent, recursive=False
-    )
-    wd_observer.start()
-
-    try:
-        await run_build_event.wait()
-    except Exception:
-        pass
-    finally:
-        wd_observer.stop()
-        wd_observer.join()
-
-    # console.print(event)
-    # for flag in flags.from_mask(event.mask):
-    #     console.print('    ' + str(flag))
 
 
 async def prompt_coroutine():
@@ -312,7 +282,9 @@ async def enter_tui(context):
 
     watch_files_task = asyncio.create_task(watch_files_coroutine())
     prompt_task = asyncio.create_task(prompt_coroutine())
-    done, pending = await asyncio.wait((watch_files_task, prompt_task), return_when=asyncio.FIRST_COMPLETED)
+    done, pending = await asyncio.wait(
+        (watch_files_task, prompt_task), return_when=asyncio.FIRST_COMPLETED
+    )
     for task in pending:
         task.cancel()
     if watch_files_task in done:

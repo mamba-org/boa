@@ -1,7 +1,6 @@
 # Copyright (C) 2021, QuantStack
 # SPDX-License-Identifier: BSD-3-Clause
 
-import sys
 import os
 import glob
 import itertools
@@ -19,6 +18,7 @@ from boa.core.metadata import MetaData
 from boa.core.test import run_test
 from boa.core.config import boa_config
 from boa.core.validation import validate, ValidationError
+from boa.tui.exceptions import BoaRunBuildException
 
 from conda_build.utils import rm_rf
 import conda_build.jinja_context
@@ -472,7 +472,11 @@ def build_recipe(
             build_pkgs += [
                 os.path.basename(x.rsplit("-", 1)[0])
                 for x in glob.glob(
-                    os.path.join(o0.config.output_folder, arch, "*.tar.bz2",)
+                    os.path.join(
+                        o0.config.output_folder,
+                        arch,
+                        "*.tar.bz2",
+                    )
                 )
             ]
 
@@ -558,20 +562,13 @@ def build_recipe(
                 f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n"
             )
 
-            while True:
-                final_outputs = build(
-                    meta,
-                    None,
-                    allow_interactive=interactive,
-                    continue_on_failure=continue_on_failure,
-                    provision_only=boa_config.debug,
-                )
-                if final_outputs == "rerun":
-                    pass
-                elif final_outputs == "exit":
-                    sys.exit()
-                else:
-                    break
+            final_outputs = build(
+                meta,
+                None,
+                allow_interactive=interactive,
+                continue_on_failure=continue_on_failure,
+                provision_only=boa_config.debug,
+            )
 
             if boa_config.debug:
                 console.print("\n[yellow]Stopping for debugging.\n")
@@ -604,6 +601,8 @@ def build_recipe(
                 )
                 failed_outputs.append(o)
                 pass
+            elif type(e) is BoaRunBuildException:
+                raise e
             else:
                 exit(1)
 
@@ -656,15 +655,23 @@ def run_build(args):
     console.print("\n[yellow]Assembling all recipes and variants[/yellow]\n")
 
     for recipe in all_recipes:
-        build_recipe(
-            args.command,
-            recipe["recipe_file"],
-            cbc,
-            config,
-            selected_features=selected_features,
-            notest=getattr(args, "notest", False),
-            skip_existing=getattr(args, "skip_existing", False) != "default",
-            interactive=getattr(args, "interactive", False),
-            skip_fast=getattr(args, "skip_existing", "default") == "fast",
-            continue_on_failure=getattr(args, "continue_on_failure", False),
-        )
+        while True:
+            try:
+                build_recipe(
+                    args.command,
+                    recipe["recipe_file"],
+                    cbc,
+                    config,
+                    selected_features=selected_features,
+                    notest=getattr(args, "notest", False),
+                    skip_existing=getattr(args, "skip_existing", False) != "default",
+                    interactive=getattr(args, "interactive", False),
+                    skip_fast=getattr(args, "skip_existing", "default") == "fast",
+                    continue_on_failure=getattr(args, "continue_on_failure", False),
+                )
+            except BoaRunBuildException:
+                pass
+            except Exception as e:
+                raise e
+            else:
+                break
