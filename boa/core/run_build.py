@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import os
+import sys
 import glob
 import itertools
 import json
@@ -666,6 +667,16 @@ def run_build(args):
                     continue_on_failure=getattr(args, "continue_on_failure", False),
                 )
             except BoaRunBuildException:
+                while True:
+                    response = input()
+                    if response == "build":
+                        break
+                    elif response == "exit":
+                        sys.exit()
+                    else:
+                        console.print(
+                            "[green]rebuild by entering [/green][white]> [italic]build[/italic][/white]\n"
+                        )
                 pass
             except Exception as e:
                 raise e
