@@ -33,7 +33,7 @@ setup(
     classifiers=[],
     description="The mamba-powered conda package builder",
     long_description=open("README.md").read(),
-    packages=["boa", "boa.cli", "boa.core"],
+    packages=["boa", "boa.cli", "boa.core", "boa.tui"],
     entry_points={
         "console_scripts": [
             "conda-mambabuild = boa.cli.mambabuild:main",
