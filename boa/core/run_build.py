@@ -597,7 +597,7 @@ def build_recipe(
                 )
                 failed_outputs.append(o)
                 pass
-            elif type(e) is BoaRunBuildException:
+            elif isinstance(e, BoaRunBuildException):
                 raise e
             else:
                 exit(1)

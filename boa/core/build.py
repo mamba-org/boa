@@ -653,7 +653,7 @@ def build(
             import asyncio
 
             result = asyncio.run(tui.enter_tui(m))
-            if result == "rerun":
+            if result == "run_build":
                 raise BoaRunBuildException
             elif result == "exit":
                 sys.exit()

@@ -9,10 +9,9 @@ from prompt_toolkit.completion import NestedCompleter, PathCompleter
 
 from ruamel.yaml import YAML
 
-from boa.core.build import build
 from boa.tui import patching
 
-from .exceptions import BoaExitException
+from .exceptions import BoaExitException, BoaRunBuildException
 
 try:
     from watchgod import awatch
@@ -213,7 +212,7 @@ def execute_tokens(token):
         print(out.decode("utf-8", errors="ignore"))
     elif token[0] == "build":
         console.print("[yellow]Running build![/yellow]")
-        build(build_context, from_interactive=True)
+        raise BoaRunBuildException()
     elif token[0] == "exit":
         print("Exiting.")
         raise BoaExitException()
@@ -239,6 +238,8 @@ async def input_coroutine():
                 pass
             except BoaExitException as e:
                 raise e
+            except BoaRunBuildException as e:
+                raise e
             except Exception as e:
                 console.print(e)
 
@@ -251,12 +252,13 @@ async def watch_files_coroutine():
         console.print(
             "\n[green]recipe.yaml changed: rebuild by entering [/green][white]> [italic]build[/italic][/white]\n"
         )
-        return
 
 
 async def prompt_coroutine():
+    result = "exit"
     exit_tui = False
 
+    watch_files_task = asyncio.create_task(watch_files_coroutine())
     while not exit_tui:
         try:
             await input_coroutine()
@@ -268,27 +270,23 @@ async def prompt_coroutine():
                 exit_tui = True
         except BoaExitException:
             exit_tui = True
+        except BoaRunBuildException:
+            exit_tui = True
+            result = "run_build"
         except KeyboardInterrupt:
             print("CTRL+C pressed. Use CTRL-D to exit.")
 
+    watch_files_task.cancel()
     console.print("[yellow]Goodbye![/yellow]")
+
+    return result
 
 
 async def enter_tui(context):
     global build_context
     build_context = context
 
-    watch_files_task = asyncio.create_task(watch_files_coroutine())
-    prompt_task = asyncio.create_task(prompt_coroutine())
-    done, pending = await asyncio.wait(
-        (watch_files_task, prompt_task), return_when=asyncio.FIRST_COMPLETED
-    )
-    for task in pending:
-        task.cancel()
-    if watch_files_task in done:
-        return "rerun"
-    else:
-        return "exit"
+    return await prompt_coroutine()
 
 
 async def main():
