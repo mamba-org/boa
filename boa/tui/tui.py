@@ -9,12 +9,10 @@ from prompt_toolkit.completion import NestedCompleter, PathCompleter
 
 from ruamel.yaml import YAML
 
-from boa.core.run_build import run_build
-from boa.core.config import boa_config
 from boa.core.build import build
 from boa.tui import patching
 
-from .exceptions import BoaExitException, BoaRunBuildException
+from .exceptions import BoaExitException
 
 try:
     from watchgod import awatch
