@@ -25,6 +25,7 @@ import asyncio
 import subprocess
 import os
 import shutil
+import platform
 from pathlib import Path
 from glob import glob
 
@@ -201,12 +202,19 @@ def execute_tokens(token):
 
     elif token[0] == "ls":
         # TODO add autocomplete
+        color_arg = ""
+
+        if platform.system() == "Darwin":
+            color_arg = "-G"
+        elif platform.system() == "Linux":
+            color_arg = "--color=always"
+
         out = subprocess.check_output(
             [
                 "ls",
                 "-l",
                 "-a",
-                "--color=always",
+                color_arg,
                 os.path.join(build_context.config.work_dir, *token[1:]),
             ]
         )
