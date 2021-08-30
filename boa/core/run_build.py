@@ -18,6 +18,7 @@ from boa.core.metadata import MetaData
 from boa.core.test import run_test
 from boa.core.config import boa_config
 from boa.core.validation import validate, ValidationError
+from boa.tui.exceptions import BoaRunBuildException
 
 from conda_build.utils import rm_rf
 import conda_build.jinja_context
@@ -596,6 +597,8 @@ def build_recipe(
                 )
                 failed_outputs.append(o)
                 pass
+            elif type(e) is BoaRunBuildException:
+                raise e
             else:
                 exit(1)
 
@@ -648,15 +651,23 @@ def run_build(args):
     console.print("\n[yellow]Assembling all recipes and variants[/yellow]\n")
 
     for recipe in all_recipes:
-        build_recipe(
-            args.command,
-            recipe["recipe_file"],
-            cbc,
-            config,
-            selected_features=selected_features,
-            notest=getattr(args, "notest", False),
-            skip_existing=getattr(args, "skip_existing", False) != "default",
-            interactive=getattr(args, "interactive", False),
-            skip_fast=getattr(args, "skip_existing", "default") == "fast",
-            continue_on_failure=getattr(args, "continue_on_failure", False),
-        )
+        while True:
+            try:
+                build_recipe(
+                    args.command,
+                    recipe["recipe_file"],
+                    cbc,
+                    config,
+                    selected_features=selected_features,
+                    notest=getattr(args, "notest", False),
+                    skip_existing=getattr(args, "skip_existing", False) != "default",
+                    interactive=getattr(args, "interactive", False),
+                    skip_fast=getattr(args, "skip_existing", "default") == "fast",
+                    continue_on_failure=getattr(args, "continue_on_failure", False),
+                )
+            except BoaRunBuildException:
+                pass
+            except Exception as e:
+                raise e
+            else:
+                break

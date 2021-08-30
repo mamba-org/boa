@@ -47,6 +47,7 @@ if sys.platform == "win32":
 from boa.core.utils import shell_path, get_sys_vars_stubs
 from boa.core.recipe_handling import copy_recipe
 from boa.core.config import boa_config
+from boa.tui.exceptions import BoaRunBuildException
 
 from conda_build.build import (
     _write_sh_activation_text,
@@ -651,7 +652,11 @@ def build(
             from boa.tui import tui
             import asyncio
 
-            asyncio.run(tui.enter_tui(m))
+            result = asyncio.run(tui.enter_tui(m))
+            if result == "rerun":
+                raise BoaRunBuildException
+            elif result == "exit":
+                sys.exit()
         else:
             console.print("[red]ERROR: Build failed!")
             raise RuntimeError("Build failed")
