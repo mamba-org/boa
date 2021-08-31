@@ -489,7 +489,7 @@ def build_recipe(
             del sorted_outputs[idx]
 
     # Do not download source if we might skip
-    if (not (skip_existing or full_render)) and (not rerun_build):
+    if not (skip_existing or full_render) and not rerun_build:
         console.print("\n[yellow]Downloading source[/yellow]\n")
         download_source(MetaData(recipe_path, o0), interactive)
         cached_source = o0.sections["source"]
@@ -551,7 +551,7 @@ def build_recipe(
                     PrefixData(o.config.host_prefix)
                 )
 
-            if cached_source != o.sections["source"] and (not rerun_build):
+            if cached_source != o.sections["source"] and not rerun_build:
                 download_source(meta, interactive)
                 cached_source = o.sections["source"]
 
