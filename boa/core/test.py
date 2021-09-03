@@ -491,9 +491,7 @@ def run_test(
     utils.rm_rf(metadata.config.test_prefix)
 
     if solver is None:
-        solver, pkg_cache_path = get_solver(
-            metadata.config.host_subdir, metadata.config.host_prefix
-        )
+        solver, pkg_cache_path = get_solver(metadata.config.host_subdir)
     else:
         pkg_cache_path = PackageCacheData.first_writable().pkgs_dir
 
