@@ -602,7 +602,7 @@ class Output:
                 subdir = self.config.build_subdir
 
             solver, pkg_cache = get_solver(
-                subdir, output_folder=self.config.output_folder
+                subdir, self.config, output_folder=self.config.output_folder
             )
             t = solver.solve(specs, [pkg_cache])
 
