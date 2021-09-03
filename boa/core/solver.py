@@ -25,12 +25,11 @@ from boa.core.config import boa_config
 
 console = boa_config.console
 
-solver_cache = {}
 solvers = []
 
 
 def refresh_solvers():
-    for _, v in solver_cache.items():
+    for v in solvers:
         v.replace_channels()
 
 
