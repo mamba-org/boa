@@ -26,6 +26,7 @@ from boa.core.config import boa_config
 console = boa_config.console
 
 solver_cache = {}
+solvers = []
 
 
 def refresh_solvers():
@@ -33,7 +34,7 @@ def refresh_solvers():
         v.replace_channels()
 
 
-def get_solver(subdir, config, output_folder="local"):
+def get_solver(subdir, prefix, output_folder="local"):
     pkg_cache = PackageCacheData.first_writable().pkgs_dir
     if subdir == "noarch":
         subdir = context.subdir
@@ -42,10 +43,10 @@ def get_solver(subdir, config, output_folder="local"):
         if not os.path.exists(pkg_cache):
             os.makedirs(pkg_cache, exist_ok=True)
 
-    if not solver_cache.get(subdir):
-        solver_cache[subdir] = MambaSolver([], subdir, config, output_folder)
+    m_solver = MambaSolver([], subdir, prefix, output_folder)
+    solvers.append(m_solver)
 
-    return solver_cache[subdir], pkg_cache
+    return m_solver, pkg_cache
 
 
 def get_url_from_channel(c):
@@ -115,10 +116,10 @@ def get_virtual_packages():
 
 
 class MambaSolver:
-    def __init__(self, channels, platform, config, output_folder=None):
+    def __init__(self, channels, platform, prefix, output_folder=None):
         self.channels = channels
         self.platform = platform
-        self.config = config
+        self.prefix = prefix
         self.output_folder = output_folder or "local"
         self.pool = mamba_api.Pool()
         self.repos = []
@@ -127,9 +128,10 @@ class MambaSolver:
         )
 
         # if platform == context.subdir:
-        prefix_data = mamba_api.PrefixData(self.config.host_prefix)
+        prefix_data = mamba_api.PrefixData(self.prefix)
         vp = mamba_api.get_virtual_packages()
         prefix_data.add_virtual_packages(vp)
+        prefix_data.load()
         repo = mamba_api.Repo(self.pool, prefix_data)
         repo.set_installed()
         self.repos.append(repo)
