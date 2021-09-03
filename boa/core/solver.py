@@ -34,7 +34,7 @@ def refresh_solvers():
         v.replace_channels()
 
 
-def get_solver(subdir, prefix, output_folder="local"):
+def get_solver(subdir, prefix=None, output_folder="local"):
     pkg_cache = PackageCacheData.first_writable().pkgs_dir
     if subdir == "noarch":
         subdir = context.subdir
@@ -116,7 +116,7 @@ def get_virtual_packages():
 
 
 class MambaSolver:
-    def __init__(self, channels, platform, prefix, output_folder=None):
+    def __init__(self, channels, platform, prefix=None, output_folder=None):
         self.channels = channels
         self.platform = platform
         self.prefix = prefix
@@ -128,11 +128,15 @@ class MambaSolver:
         )
 
         # if platform == context.subdir:
-        prefix_data = mamba_api.PrefixData(self.prefix)
-        vp = mamba_api.get_virtual_packages()
-        prefix_data.add_virtual_packages(vp)
-        prefix_data.load()
-        repo = mamba_api.Repo(self.pool, prefix_data)
+        if self.prefix:
+            prefix_data = mamba_api.PrefixData(self.prefix)
+            vp = mamba_api.get_virtual_packages()
+            prefix_data.add_virtual_packages(vp)
+            prefix_data.load()
+            repo = mamba_api.Repo(self.pool, prefix_data)
+        else:
+            installed_json_f = get_virtual_packages()
+            repo = mamba_api.Repo(self.pool, "installed", installed_json_f.name, "")
         repo.set_installed()
         self.repos.append(repo)
 
