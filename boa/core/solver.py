@@ -33,7 +33,7 @@ def refresh_solvers():
         v.replace_channels()
 
 
-def get_solver(subdir, prefix=None, output_folder="local"):
+def get_solver(subdir, output_folder="local"):
     pkg_cache = PackageCacheData.first_writable().pkgs_dir
     if subdir == "noarch":
         subdir = context.subdir
@@ -42,7 +42,7 @@ def get_solver(subdir, prefix=None, output_folder="local"):
         if not os.path.exists(pkg_cache):
             os.makedirs(pkg_cache, exist_ok=True)
 
-    m_solver = MambaSolver([], subdir, prefix, output_folder)
+    m_solver = MambaSolver([], subdir, output_folder)
     solvers.append(m_solver)
 
     return m_solver, pkg_cache
@@ -118,7 +118,6 @@ class MambaSolver:
     def __init__(self, channels, platform, prefix=None, output_folder=None):
         self.channels = channels
         self.platform = platform
-        self.prefix = prefix
         self.output_folder = output_folder or "local"
         self.pool = mamba_api.Pool()
         self.repos = []
@@ -127,15 +126,8 @@ class MambaSolver:
         )
 
         # if platform == context.subdir:
-        if self.prefix:
-            prefix_data = mamba_api.PrefixData(self.prefix)
-            vp = mamba_api.get_virtual_packages()
-            prefix_data.add_virtual_packages(vp)
-            prefix_data.load()
-            repo = mamba_api.Repo(self.pool, prefix_data)
-        else:
-            installed_json_f = get_virtual_packages()
-            repo = mamba_api.Repo(self.pool, "installed", installed_json_f.name, "")
+        installed_json_f = get_virtual_packages()
+        repo = mamba_api.Repo(self.pool, "installed", installed_json_f.name, "")
         repo.set_installed()
         self.repos.append(repo)
 
@@ -143,6 +135,14 @@ class MambaSolver:
         self.local_repos = {}
         # load local repo, too
         self.replace_channels()
+
+    def replace_installed(self, prefix):
+        prefix_data = mamba_api.PrefixData(prefix)
+        vp = mamba_api.get_virtual_packages()
+        prefix_data.add_virtual_packages(vp)
+        prefix_data.load()
+        repo = mamba_api.Repo(self.pool, prefix_data)
+        repo.set_installed()
 
     def replace_channels(self):
         console.print(f"[blue]Reloading output folder: {self.output_folder}")

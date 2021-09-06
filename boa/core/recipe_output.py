@@ -601,22 +601,13 @@ class Output:
             else:
                 subdir = self.config.build_subdir
 
+            solver, pkg_cache = get_solver(
+                subdir, output_folder=self.config.output_folder
+            )
             if env == "host":
-                solver, pkg_cache = get_solver(
-                    subdir,
-                    self.config.host_prefix,
-                    output_folder=self.config.output_folder,
-                )
+                solver.replace_installed(self.config.host_prefix)
             elif env == "build":
-                solver, pkg_cache = get_solver(
-                    subdir,
-                    self.config.build_prefix,
-                    output_folder=self.config.output_folder,
-                )
-            else:
-                solver, pkg_cache = get_solver(
-                    subdir, output_folder=self.config.output_folder
-                )
+                solver.replace_installed(self.config.build_prefix)
             t = solver.solve(specs, [pkg_cache])
 
             _, install_pkgs, _ = t.to_conda()
