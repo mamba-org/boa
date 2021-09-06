@@ -115,7 +115,7 @@ def get_virtual_packages():
 
 
 class MambaSolver:
-    def __init__(self, channels, platform, prefix=None, output_folder=None):
+    def __init__(self, channels, platform, output_folder=None):
         self.channels = channels
         self.platform = platform
         self.output_folder = output_folder or "local"
