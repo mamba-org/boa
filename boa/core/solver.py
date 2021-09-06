@@ -25,11 +25,11 @@ from boa.core.config import boa_config
 
 console = boa_config.console
 
-solvers = []
+solver_cache = {}
 
 
 def refresh_solvers():
-    for v in solvers:
+    for _, v in solver_cache.items():
         v.replace_channels()
 
 
@@ -42,10 +42,10 @@ def get_solver(subdir, output_folder="local"):
         if not os.path.exists(pkg_cache):
             os.makedirs(pkg_cache, exist_ok=True)
 
-    m_solver = MambaSolver([], subdir, output_folder)
-    solvers.append(m_solver)
+    if not solver_cache.get(subdir):
+        solver_cache[subdir] = MambaSolver([], subdir, output_folder)
 
-    return m_solver, pkg_cache
+    return solver_cache[subdir], pkg_cache
 
 
 def get_url_from_channel(c):
