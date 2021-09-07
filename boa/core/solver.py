@@ -216,7 +216,8 @@ class MambaSolver:
 
     def solve_for_action(self, specs, prefix):
         t = self.solve(specs)
-        t.print()
+        if not boa_config.quiet:
+            t.print()
 
         mmb_specs, to_link, to_unlink = t.to_conda()
         specs_to_add = [MatchSpec(m) for m in mmb_specs[0]]
