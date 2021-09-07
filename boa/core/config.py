@@ -10,18 +10,19 @@ class BoaConfig:
     console = Console()
     json: bool = False
     debug: bool = False
-    args_map: dict = {}
+    quiet: bool = False
 
     def __init__(self, args=None):
         if args and getattr(args, "json", False):
             self.console.quiet = True
             self.json = True
 
+        if args and getattr(args, "quiet", False):
+            self.console.quiet = True
+            self.quiet = True
+
         if args and getattr(args, "debug", False):
             self.debug = args.debug
-
-        if args:
-            self.args_map = args
 
 
 def init_global_config(args=None):

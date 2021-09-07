@@ -14,13 +14,23 @@ from conda_build.config import Config, get_channel_urls
 from conda_build.cli.main_build import parse_args
 from conda_build.index import update_index
 
+from conda.base.context import context
+
 from boa.core.solver import MambaSolver
 from boa.core.utils import normalize_subdir
 from mamba.utils import init_api_context
+from boa.core.config import boa_config
 
 only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
 
 solver_map = {}
+
+
+def suppress_stdout():
+    context.quiet = True
+    init_api_context()
+    boa_config.quiet = True
+    boa_config.console.quiet = True
 
 
 def _get_solver(channel_urls, subdir, output_folder):
@@ -114,7 +124,11 @@ def call_conda_build(action, config, **kwargs):
     """
     recipe = config.recipe[0]
 
-    if action == "test":
+    if action == "output":
+        suppress_stdout()
+        result = api.get_output_file_paths(recipe, config=config, **kwargs)
+        print(result)
+    elif action == "test":
         result = api.test(recipe, config=config, **kwargs)
     elif action == "build":
         result = api.build(
@@ -137,6 +151,11 @@ def main():
 
     config = prepare(**args.__dict__)
 
-    action = "test" if args.test else "build"
+    if args.test:
+        action = "test"
+    elif args.output:
+        action = "output"
+    else:
+        action = "build"
 
     call_conda_build(action, config)
