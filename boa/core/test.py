@@ -352,6 +352,23 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
+def test_run_v2(
+    recipe_dir,
+    test_yaml_path,
+):
+    import ruamel.yaml as yaml
+    f = open(test_yaml_path)
+    test_yaml = yaml.safe_load(f)
+    
+    exists = test_yaml["exists"] if "exists" in test_yaml else None
+    files = exists["file"] if exists and "file" in exists else None
+    for each_f in files:
+        file_path = os.path.join(recipe_dir, each_f)
+        try:
+            assert os.path.isfile(file_path)
+        except AssertionError:
+            print(f"{file_path} doesn't exist")
+
 def run_test(
     recipedir_or_package_or_metadata,
     config,
@@ -622,3 +639,8 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
+
+if __name__ == "__main__":
+    recipe_dir = "/Users/madhur/Desktop/QuantStack/boa/try/xtensor-0.23.10-hc021e02_0"
+    test_yaml_path = "/Users/madhur/Desktop/QuantStack/boa/try/test.yaml"
+    test_run_v2(recipe_dir, test_yaml_path)
