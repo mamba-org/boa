@@ -352,22 +352,25 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def test_run_v2(
-    recipe_dir,
-    test_yaml_path,
-):
+def test_run_v2(test_yaml_path,):
+    PREFIX = "/Users/madhur/mambaforge/envs/boa/"
     import ruamel.yaml as yaml
+    from rich.console import Console
+
+    console = Console()
+
     f = open(test_yaml_path)
     test_yaml = yaml.safe_load(f)
-    
+
     exists = test_yaml["exists"] if "exists" in test_yaml else None
     files = exists["file"] if exists and "file" in exists else None
     for each_f in files:
-        file_path = os.path.join(recipe_dir, each_f)
-        try:
-            assert os.path.isfile(file_path)
-        except AssertionError:
-            print(f"{file_path} doesn't exist")
+        file_path = os.path.join(PREFIX, each_f)
+        if os.path.isfile(file_path):
+            console.print(f"[green]\N{check mark} {each_f}[/green]")
+        else:
+            console.print(f"[red]\N{multiplication x} {each_f}[/red]")
+
 
 def run_test(
     recipedir_or_package_or_metadata,
@@ -640,7 +643,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         )
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
+
 if __name__ == "__main__":
-    recipe_dir = "/Users/madhur/Desktop/QuantStack/boa/try/xtensor-0.23.10-hc021e02_0"
     test_yaml_path = "/Users/madhur/Desktop/QuantStack/boa/try/test.yaml"
-    test_run_v2(recipe_dir, test_yaml_path)
+    test_run_v2(test_yaml_path)
