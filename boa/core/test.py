@@ -15,7 +15,7 @@ from mamba.mamba_api import PrefixData
 
 from conda.gateways.disk.create import mkdir_p
 
-from conda_build.utils import CONDA_PACKAGE_EXTENSIONS
+from conda_build.utils import CONDA_PACKAGE_EXTENSIONS, get_site_packages
 from conda_build.build import (
     copy_test_source_files,
     create_info_files,
@@ -352,24 +352,153 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def test_run_v2(test_yaml_path,):
-    PREFIX = "/Users/madhur/mambaforge/envs/boa/"
+def test_run_v2(prefix, yaml_path, py_ver):
+    from glob import glob
     import ruamel.yaml as yaml
     from rich.console import Console
 
     console = Console()
 
-    f = open(test_yaml_path)
-    test_yaml = yaml.safe_load(f)
+    f = open(yaml_path)
+    yaml_contents = yaml.safe_load(f)
 
-    exists = test_yaml["exists"] if "exists" in test_yaml else None
-    files = exists["file"] if exists and "file" in exists else None
-    for each_f in files:
-        file_path = os.path.join(PREFIX, each_f)
-        if os.path.isfile(file_path):
-            console.print(f"[green]\N{check mark} {each_f}[/green]")
-        else:
-            console.print(f"[red]\N{multiplication x} {each_f}[/red]")
+    exists = yaml_contents.get("exists")
+
+    # site-packages
+    site_packages_dir = get_site_packages(prefix, py_ver)
+    site_packages = exists.get("site_packages") if exists else None
+    if site_packages:
+        console.print("[blue]- Checking for site-packages[/blue]")
+        for each_pkg in site_packages:
+            pkg_dir = os.path.join(site_packages_dir, each_pkg)
+            if os.path.isdir(pkg_dir) and os.path.isfile(
+                os.path.join(pkg_dir, "__init__.py")
+            ):
+                console.print(f"[green]\N{check mark} {pkg_dir} (directory)[/green]")
+                console.print(f"[green]\N{check mark} {pkg_dir}/__init__.py[/green]")
+            else:
+                console.print(f"[red]\N{multiplication x} {pkg_dir}[/red]")
+
+    # lib
+    extra_checks = False
+    if sys.platform == "darwin":
+        ext = ".dylib"
+    elif sys.platform == "win32":
+        ext = ".dll"
+        extra_checks = True
+    else:
+        ext = ".so"
+
+    lib_dir = os.path.join(prefix, "lib")
+    bin_dir = os.path.join(prefix, "bin") if extra_checks else None
+
+    lib = exists.get("lib") if exists else None
+    if lib:
+        console.print("[blue]- Checking for lib[/blue]")
+        for each_lib in lib:
+            lib_path = os.path.join(lib_dir, each_lib + ext)
+            bin_path = os.path.join(bin_dir, each_lib + ext) if extra_checks else None
+            lib_path_win = (
+                os.path.join(lib_dir, each_lib + ".lib") if extra_checks else None
+            )
+            if bin_path:
+                if os.path.isfile(bin_path):
+                    console.print(f"[green]\N{check mark} {bin_path}[/green]")
+                else:
+                    console.print(f"[red]\N{multiplication x} {bin_path}[/red]")
+            if lib_path_win:
+                if os.path.isfile(lib_path_win):
+                    console.print(f"[green]\N{check mark} {lib_path_win}[/green]")
+                else:
+                    console.print(f"[red]\N{multiplication x} {lib_path_win}[/red]")
+            if os.path.isfile(lib_path):
+                console.print(f"[green]\N{check mark} {lib_path}[/green]")
+            else:
+                console.print(f"[red]\N{multiplication x} {lib_path}[/red]")
+
+    # include
+    include_dir = os.path.join(prefix, "include")
+    include = exists.get("include") if exists else None
+    if include:
+        console.print("[blue]- Checking for include[/blue]")
+        for each_include in include:
+            include_path = os.path.join(include_dir, each_include)
+            if os.path.isdir(include_path):
+                console.print(
+                    f"[green]\N{check mark} {include_path} (directory)[/green]"
+                )
+            elif os.path.isfile(include_path):
+                console.print(f"[green]\N{check mark} {include_path}[/green]")
+            else:
+                console.print(f"[red]\N{multiplication x} {include_path}[/red]")
+
+    # bin
+    bin_dir = os.path.join(prefix, "bin")
+    bin_paths = exists.get("bin") if exists else None
+    if bin_paths:
+        console.print("[blue]- Checking for bin[/blue]")
+        for each_bin in bin_paths:
+            each_bin_path = os.path.join(bin_dir, each_bin)
+            if os.path.isfile(each_bin_path):
+                console.print(f"[green]\N{check mark} {each_bin_path}[/green]")
+            else:
+                console.print(f"[red]\N{multiplication x} {each_bin_path}[/red]")
+
+    # cmake_find
+    cmake_dir = os.path.join(prefix, "lib", "cmake")
+    cmake_find = exists.get("cmake_find") if exists else None
+    if cmake_find:
+        console.print("[blue]- Checking for cmake[/blue]")
+        for each_f in cmake_find:
+            each_f_path = os.path.join(cmake_dir, each_f)
+            if os.path.isdir(each_f_path) and os.path.isfile(
+                os.path.join(each_f_path, f"{each_f}Config.cmake")
+            ):
+                console.print(
+                    f"[green]\N{check mark} {each_f_path} (directory)[/green]"
+                )
+                console.print(
+                    f"[green]\N{check mark} {each_f_path}/{each_f}Config.cmake[/green]"
+                )
+            else:
+                console.print(f"[red]\N{multiplication x} {each_f_path}[/red]")
+
+    # pkg_config
+    pkg_config_dir = os.path.join(prefix, "lib", "pkgconfig")
+    pkg_config = exists.get("pkg_config") if exists else None
+    if pkg_config:
+        console.print("[blue]- Checking for pkgconfig[/blue]")
+        for each_f in pkg_config:
+            each_f_path = os.path.join(pkg_config_dir, f"{each_f}.pc")
+            if os.path.isfile(each_f_path):
+                console.print(f"[green]\N{check mark} {each_f_path}[/green]")
+            else:
+                console.print(f"[red]\N{multiplication x} {each_f_path}[/red]")
+
+    # file
+    files = exists.get("file") if exists else None
+    if files:
+        console.print("[blue]- Checking for files[/blue]")
+        for each_f in files:
+            file_path = os.path.join(prefix, each_f)
+            if os.path.isdir(file_path):
+                console.print(f"[green]\N{check mark} {file_path} (directory)[/green]")
+            elif os.path.isfile(file_path):
+                console.print(f"[green]\N{check mark} {file_path}[/green]")
+            else:
+                console.print(f"[red]\N{multiplication x} {file_path}[/red]")
+
+    # glob
+    glob_paths = exists.get("glob") if exists else None
+    if glob_paths:
+        console.print("[blue]- Checking for glob[/blue]")
+        for each_f in glob_paths:
+            each_glob_path = os.path.join(prefix, each_f)
+            if glob(each_glob_path):
+                for each_gp in glob(each_glob_path):
+                    console.print(f"[green]\N{check mark} {each_gp}[/green]")
+            else:
+                console.print(f"[red]\N{multiplication x} {each_glob_path}[/red]")
 
 
 def run_test(
@@ -645,5 +774,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
 
 
 if __name__ == "__main__":
-    test_yaml_path = "/Users/madhur/Desktop/QuantStack/boa/try/test.yaml"
-    test_run_v2(test_yaml_path)
+    prefix = "/Users/madhur/mambaforge/envs/boa/"
+    yaml_path = "/Users/madhur/Desktop/QuantStack/boa/try/test.yaml"
+    py_ver = "3.7"
+    test_run_v2(prefix, yaml_path, py_ver)
