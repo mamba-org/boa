@@ -9,6 +9,8 @@ import subprocess
 import sys
 from conda.core.package_cache_data import PackageCacheData
 import ruamel
+import tempfile
+from pathlib import Path
 from os.path import isdir, join
 from boa.core.solver import get_solver
 from mamba.mamba_api import PrefixData
@@ -438,23 +440,24 @@ def test_exists(prefix, exists):
                 console.print(f"[red]\N{multiplication x} {each_bin_path}[/red]")
 
     # cmake_find
-    cmake_dir = os.path.join(prefix, "lib", "cmake")
     cmake_find = exists.get("cmake_find") if exists else None
     if cmake_find:
         console.print("[blue]- Checking for cmake[/blue]")
         for each_f in cmake_find:
-            each_f_path = os.path.join(cmake_dir, each_f)
-            if os.path.isdir(each_f_path) and os.path.isfile(
-                os.path.join(each_f_path, f"{each_f}Config.cmake")
-            ):
-                console.print(
-                    f"[green]\N{check mark} {each_f_path} (directory)[/green]"
-                )
-                console.print(
-                    f"[green]\N{check mark} {each_f_path}/{each_f}Config.cmake[/green]"
-                )
-            else:
-                console.print(f"[red]\N{multiplication x} {each_f_path}[/red]")
+            cmake_content = [
+                "project(boatest)\n",
+                "\n",
+                f"find_package({each_f} REQUIRED)\n",
+            ]
+            with tempfile.TemporaryDirectory() as tempdir:
+                tempdir_path = str(Path(tempdir))
+                ftemp = open(os.path.join(tempdir_path, "CMakeLists.txt"), "w")
+                ftemp.writelines(cmake_content)
+                cmake_check = subprocess.run(["cmake", "."], cwd=tempdir_path)
+                if cmake_check.returncode == 0:
+                    console.print(f"[green]\N{check mark} {each_f}[/green]")
+                else:
+                    console.print(f"[red]\N{multiplication x} {each_f}[/red]")
 
     # pkg_config
     pkg_config = exists.get("pkg_config") if exists else None
