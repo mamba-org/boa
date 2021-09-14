@@ -461,13 +461,14 @@ def test_exists(prefix, exists):
     if pkg_config:
         p_env = os.environ.copy()
         p_env["CONDA_PREFIX"] = prefix
+        pkg_config_cmd = os.path.join(prefix, "bin", "pkg-config")
         console.print("[blue]- Checking for pkgconfig[/blue]")
         for each_f in pkg_config:
             pkg_config_exists = subprocess.run(
-                ["pkg-config", each_f, "--exists"], env=p_env
+                [pkg_config_cmd, each_f, "--exists"], env=p_env
             )
             pkg_config_validate = subprocess.run(
-                ["pkg-config", each_f, "--validate"], env=p_env
+                [pkg_config_cmd, each_f, "--validate"], env=p_env
             )
             if (
                 pkg_config_exists.returncode == 0
