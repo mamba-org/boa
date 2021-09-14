@@ -40,6 +40,10 @@ from boa.core.utils import shell_path
 from boa.core.recipe_output import Output
 from boa.core.metadata import MetaData
 
+from glob import glob
+from rich.console import Console
+
+console = Console()
 log = logging.getLogger("boa")
 
 
@@ -352,20 +356,9 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def test_run_v2(prefix, yaml_path, py_ver):
-    from glob import glob
-    import ruamel.yaml as yaml
-    from rich.console import Console
-
-    console = Console()
-
-    f = open(yaml_path)
-    yaml_contents = yaml.safe_load(f)
-
-    exists = yaml_contents.get("exists")
-
+def test_exists(prefix, exists):
     # site-packages
-    site_packages_dir = get_site_packages(prefix, py_ver)
+    site_packages_dir = get_site_packages(prefix, "3.7")
     site_packages = exists.get("site_packages") if exists else None
     if site_packages:
         console.print("[blue]- Checking for site-packages[/blue]")
@@ -464,16 +457,25 @@ def test_run_v2(prefix, yaml_path, py_ver):
                 console.print(f"[red]\N{multiplication x} {each_f_path}[/red]")
 
     # pkg_config
-    pkg_config_dir = os.path.join(prefix, "lib", "pkgconfig")
     pkg_config = exists.get("pkg_config") if exists else None
     if pkg_config:
+        p_env = os.environ.copy()
+        p_env["CONDA_PREFIX"] = prefix
         console.print("[blue]- Checking for pkgconfig[/blue]")
         for each_f in pkg_config:
-            each_f_path = os.path.join(pkg_config_dir, f"{each_f}.pc")
-            if os.path.isfile(each_f_path):
-                console.print(f"[green]\N{check mark} {each_f_path}[/green]")
+            pkg_config_exists = subprocess.run(
+                ["pkg-config", each_f, "--exists"], env=p_env
+            )
+            pkg_config_validate = subprocess.run(
+                ["pkg-config", each_f, "--validate"], env=p_env
+            )
+            if (
+                pkg_config_exists.returncode == 0
+                and pkg_config_validate.returncode == 0
+            ):
+                console.print(f"[green]\N{check mark} {each_f}[/green]")
             else:
-                console.print(f"[red]\N{multiplication x} {each_f_path}[/red]")
+                console.print(f"[red]\N{multiplication x} {each_f}[/red]")
 
     # file
     files = exists.get("file") if exists else None
@@ -730,6 +732,7 @@ def run_test(
             #     stats[
             #         stats_key(metadata, "test_{}".format(metadata.name()))
             #     ] = test_stats
+            test_exists(metadata.config.test_prefix, exists_metadata)
             if os.path.exists(join(metadata.config.test_dir, "TEST_FAILED")):
                 raise subprocess.CalledProcessError(-1, "")
             print("TEST END:", test_package_name)
@@ -779,10 +782,3 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
-
-
-if __name__ == "__main__":
-    prefix = "/Users/madhur/mambaforge/envs/boa/"
-    yaml_path = "/Users/madhur/Desktop/QuantStack/boa/try/test.yaml"
-    py_ver = "3.7"
-    test_run_v2(prefix, yaml_path, py_ver)
