@@ -358,91 +358,92 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def test_exists(prefix, exists):
-    # site-packages
-    site_packages_dir = get_site_packages(prefix, "3.7")
-    site_packages = exists.get("site_packages") if exists else None
-    if site_packages:
-        console.print("[blue]- Checking for site-packages[/blue]")
-        for each_pkg in site_packages:
-            pkg_dir = os.path.join(site_packages_dir, each_pkg)
-            if os.path.isdir(pkg_dir) and os.path.isfile(
-                os.path.join(pkg_dir, "__init__.py")
-            ):
-                console.print(f"[green]\N{check mark} {pkg_dir} (directory)[/green]")
-                console.print(f"[green]\N{check mark} {pkg_dir}/__init__.py[/green]")
-            else:
-                console.print(f"[red]\N{multiplication x} {pkg_dir}[/red]")
-
-    # lib
-    extra_checks = False
+def determine_ext_and_win_check():
+    win_check = False
     if sys.platform == "darwin":
         ext = ".dylib"
     elif sys.platform == "win32":
         ext = ".dll"
-        extra_checks = True
+        win_check = True
     else:
         ext = ".so"
+    return ext, win_check
 
-    lib_dir = os.path.join(prefix, "lib")
-    bin_dir = os.path.join(prefix, "bin") if extra_checks else None
 
-    lib = exists.get("lib") if exists else None
+def check_file_existence(f_path, check_parent_dir=False):
+    if check_parent_dir and os.path.isdir(Path(f_path).parent):
+        console.print(
+            f"[green]\N{check mark} {Path(f_path).parent} (directory)[/green]"
+        )
+    if os.path.isdir(f_path):
+        console.print(f"[green]\N{check mark} {f_path} (directory)[/green]")
+        return True
+    elif os.path.isfile(f_path):
+        console.print(f"[green]\N{check mark} {f_path}[/green]")
+        return True
+    else:
+        console.print(f"[red]\N{multiplication x} {f_path}[/red]")
+        return False
+
+
+def check_site_packages(site_packages_dir, site_packages):
+    test_site_packages = True
+    if site_packages:
+        console.print("[blue]- Checking for site-packages[/blue]")
+        for each_pkg in site_packages:
+            pkg_dir_init = os.path.join(site_packages_dir, each_pkg, "__init__.py")
+            test_init = check_file_existence(pkg_dir_init, check_parent_dir=True)
+            test_site_packages = test_site_packages and test_init
+    return test_site_packages
+
+
+def check_lib(lib_dir, bin_dir, lib):
+    ext, win_check = determine_ext_and_win_check()
+    test_lib = True
     if lib:
         console.print("[blue]- Checking for lib[/blue]")
         for each_lib in lib:
             lib_path = os.path.join(lib_dir, each_lib + ext)
-            bin_path = os.path.join(bin_dir, each_lib + ext) if extra_checks else None
-            lib_path_win = (
-                os.path.join(lib_dir, each_lib + ".lib") if extra_checks else None
-            )
-            if bin_path:
-                if os.path.isfile(bin_path):
-                    console.print(f"[green]\N{check mark} {bin_path}[/green]")
-                else:
-                    console.print(f"[red]\N{multiplication x} {bin_path}[/red]")
-            if lib_path_win:
-                if os.path.isfile(lib_path_win):
-                    console.print(f"[green]\N{check mark} {lib_path_win}[/green]")
-                else:
-                    console.print(f"[red]\N{multiplication x} {lib_path_win}[/red]")
-            if os.path.isfile(lib_path):
-                console.print(f"[green]\N{check mark} {lib_path}[/green]")
-            else:
-                console.print(f"[red]\N{multiplication x} {lib_path}[/red]")
+            test_lib_path = check_file_existence(lib_path)
+            test_lib = test_lib and test_lib_path
+            if win_check:
+                bin_path = os.path.join(bin_dir, each_lib + ext)
+                test_bin_path = check_file_existence(bin_path)
 
-    # include
-    include_dir = os.path.join(prefix, "include")
-    include = exists.get("include") if exists else None
+                lib_path_win = os.path.join(lib_dir, each_lib + ".lib")
+                test_path_win = check_file_existence(lib_path_win)
+
+                test_lib = test_lib and test_bin_path and test_path_win
+    return test_lib
+
+
+def check_include(include_dir, include):
+    test_include = True
     if include:
         console.print("[blue]- Checking for include[/blue]")
         for each_include in include:
             include_path = os.path.join(include_dir, each_include)
-            if os.path.isdir(include_path):
-                console.print(
-                    f"[green]\N{check mark} {include_path} (directory)[/green]"
-                )
-            elif os.path.isfile(include_path):
-                console.print(f"[green]\N{check mark} {include_path}[/green]")
-            else:
-                console.print(f"[red]\N{multiplication x} {include_path}[/red]")
+            test_each_include = check_file_existence(include_path)
+            test_include = test_include and test_each_include
+    return test_include
 
-    # bin
-    bin_dir = os.path.join(prefix, "bin")
-    bin_paths = exists.get("bin") if exists else None
+
+def check_bin(bin_dir, bin_paths):
+    test_bin = True
     if bin_paths:
         console.print("[blue]- Checking for bin[/blue]")
         for each_bin in bin_paths:
             each_bin_path = os.path.join(bin_dir, each_bin)
-            if os.path.isfile(each_bin_path):
-                console.print(f"[green]\N{check mark} {each_bin_path}[/green]")
-            else:
-                console.print(f"[red]\N{multiplication x} {each_bin_path}[/red]")
+            test_each_bin_path = check_file_existence(each_bin_path)
+            test_bin = test_bin and test_each_bin_path
+    return test_bin
 
-    # cmake_find
-    cmake_find = exists.get("cmake_find") if exists else None
+
+def check_cmake(prefix, cmake_find):
+    test_cmake = True
     if cmake_find:
         console.print("[blue]- Checking for cmake[/blue]")
+        cmake_cmd = os.path.join(prefix, "bin", "cmake")
         for each_f in cmake_find:
             cmake_content = [
                 "project(boatest)\n",
@@ -453,14 +454,17 @@ def test_exists(prefix, exists):
                 tempdir_path = str(Path(tempdir))
                 ftemp = open(os.path.join(tempdir_path, "CMakeLists.txt"), "w")
                 ftemp.writelines(cmake_content)
-                cmake_check = subprocess.run(["cmake", "."], cwd=tempdir_path)
+                cmake_check = subprocess.run([cmake_cmd, "."], cwd=tempdir_path)
                 if cmake_check.returncode == 0:
                     console.print(f"[green]\N{check mark} {each_f}[/green]")
                 else:
                     console.print(f"[red]\N{multiplication x} {each_f}[/red]")
+                    test_cmake = False
+    return test_cmake
 
-    # pkg_config
-    pkg_config = exists.get("pkg_config") if exists else None
+
+def check_pkg_config(prefix, pkg_config):
+    test_pkg_config = True
     if pkg_config:
         p_env = os.environ.copy()
         p_env["CONDA_PREFIX"] = prefix
@@ -480,22 +484,23 @@ def test_exists(prefix, exists):
                 console.print(f"[green]\N{check mark} {each_f}[/green]")
             else:
                 console.print(f"[red]\N{multiplication x} {each_f}[/red]")
+                test_pkg_config = False
+    return test_pkg_config
 
-    # file
-    files = exists.get("file") if exists else None
+
+def check_files(prefix, files):
+    test_files = True
     if files:
         console.print("[blue]- Checking for files[/blue]")
         for each_f in files:
             file_path = os.path.join(prefix, each_f)
-            if os.path.isdir(file_path):
-                console.print(f"[green]\N{check mark} {file_path} (directory)[/green]")
-            elif os.path.isfile(file_path):
-                console.print(f"[green]\N{check mark} {file_path}[/green]")
-            else:
-                console.print(f"[red]\N{multiplication x} {file_path}[/red]")
+            test_file_path = check_file_existence(file_path)
+            test_files = test_files and test_file_path
+    return test_files
 
-    # glob
-    glob_paths = exists.get("glob") if exists else None
+
+def check_glob(prefix, glob_paths):
+    test_glob = True
     if glob_paths:
         console.print("[blue]- Checking for glob[/blue]")
         for each_f in glob_paths:
@@ -505,6 +510,63 @@ def test_exists(prefix, exists):
                     console.print(f"[green]\N{check mark} {each_gp}[/green]")
             else:
                 console.print(f"[red]\N{multiplication x} {each_glob_path}[/red]")
+                test_glob = False
+    return test_glob
+
+
+def test_exists(prefix, exists):
+    if not exists:
+        return True
+
+    # site-packages
+    site_packages_dir = get_site_packages(prefix, "3.7")
+    site_packages = exists.get("site_packages")
+    sp_check = check_site_packages(site_packages_dir, site_packages)
+
+    # lib
+    lib_dir = os.path.join(prefix, "lib")
+    bin_dir = os.path.join(prefix, "bin")
+    lib = exists.get("lib")
+    lib_check = check_lib(lib_dir, bin_dir, lib)
+
+    # include
+    include_dir = os.path.join(prefix, "include")
+    include = exists.get("include")
+    include_check = check_include(include_dir, include)
+
+    # bin
+    bin_paths = exists.get("bin")
+    bin_check = check_bin(bin_dir, bin_paths)
+
+    # cmake_find
+    cmake_find = exists.get("cmake_find")
+    cmake_check = check_cmake(prefix, cmake_find)
+
+    # pkg_config
+    pkg_config = exists.get("pkg_config")
+    pkg_config_check = check_pkg_config(prefix, pkg_config)
+
+    # file
+    files = exists.get("file")
+    files_check = check_files(prefix, files)
+
+    # glob
+    glob_paths = exists.get("glob")
+    glob_check = check_glob(prefix, glob_paths)
+
+    if (
+        sp_check
+        and lib_check
+        and include_check
+        and bin_check
+        and cmake_check
+        and pkg_config_check
+        and files_check
+        and glob_check
+    ):
+        return True
+    else:
+        return False
 
 
 def run_test(
@@ -736,7 +798,11 @@ def run_test(
             #     stats[
             #         stats_key(metadata, "test_{}".format(metadata.name()))
             #     ] = test_stats
-            test_exists(metadata.config.test_prefix, exists_metadata)
+            check_exists_section = test_exists(
+                metadata.config.test_prefix, exists_metadata
+            )
+            if not check_exists_section:
+                raise Exception("existence tests fail")
             if os.path.exists(join(metadata.config.test_dir, "TEST_FAILED")):
                 raise subprocess.CalledProcessError(-1, "")
             print("TEST END:", test_package_name)
