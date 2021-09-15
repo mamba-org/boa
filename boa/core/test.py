@@ -370,30 +370,34 @@ def determine_ext_and_win_check():
     return ext, win_check
 
 
-def check_file_existence(f_path, check_parent_dir=False):
-    if check_parent_dir and os.path.isdir(Path(f_path).parent):
-        console.print(
-            f"[green]\N{check mark} {Path(f_path).parent} (directory)[/green]"
-        )
-    if os.path.isdir(f_path):
-        console.print(f"[green]\N{check mark} {f_path} (directory)[/green]")
-        return True
-    elif os.path.isfile(f_path):
-        console.print(f"[green]\N{check mark} {f_path}[/green]")
-        return True
-    else:
-        console.print(f"[red]\N{multiplication x} {f_path}[/red]")
-        return False
+def check_file_existence(f_paths, check_parent_dir=False):
+    all_exist = True
+    for each_f in f_paths:
+        if check_parent_dir and os.path.isdir(Path(each_f).parent):
+            console.print(
+                f"[green]\N{check mark} {Path(each_f).parent} (directory)[/green]"
+            )
+        if os.path.isdir(each_f):
+            console.print(f"[green]\N{check mark} {each_f} (directory)[/green]")
+            all_exist = all_exist and True
+        elif os.path.isfile(each_f):
+            console.print(f"[green]\N{check mark} {each_f}[/green]")
+            all_exist = all_exist and True
+        else:
+            console.print(f"[red]\N{multiplication x} {each_f}[/red]")
+            all_exist = all_exist and False
+    return all_exist
 
 
 def check_site_packages(site_packages_dir, site_packages):
     test_site_packages = True
     if site_packages:
         console.print("[blue]- Checking for site-packages[/blue]")
-        for each_pkg in site_packages:
-            pkg_dir_init = os.path.join(site_packages_dir, each_pkg, "__init__.py")
-            test_init = check_file_existence(pkg_dir_init, check_parent_dir=True)
-            test_site_packages = test_site_packages and test_init
+        sp_files = [
+            os.path.join(site_packages_dir, each_pkg, "__init__.py")
+            for each_pkg in site_packages
+        ]
+        test_site_packages = check_file_existence(sp_files, check_parent_dir=True)
     return test_site_packages
 
 
@@ -402,18 +406,18 @@ def check_lib(lib_dir, bin_dir, lib):
     test_lib = True
     if lib:
         console.print("[blue]- Checking for lib[/blue]")
-        for each_lib in lib:
-            lib_path = os.path.join(lib_dir, each_lib + ext)
-            test_lib_path = check_file_existence(lib_path)
-            test_lib = test_lib and test_lib_path
-            if win_check:
-                bin_path = os.path.join(bin_dir, each_lib + ext)
-                test_bin_path = check_file_existence(bin_path)
+        lib_files = [os.path.join(lib_dir, each_lib + ext) for each_lib in lib]
+        bin_files = [os.path.join(bin_dir, each_lib + ext) for each_lib in lib]
+        lib_win_files = [os.path.join(lib_dir, each_lib + ".lib") for each_lib in lib]
 
-                lib_path_win = os.path.join(lib_dir, each_lib + ".lib")
-                test_path_win = check_file_existence(lib_path_win)
+        test_lib_files = check_file_existence(lib_files)
 
-                test_lib = test_lib and test_bin_path and test_path_win
+        if win_check:
+            test_bin_files = check_file_existence(bin_files)
+            test_lib_win_files = check_file_existence(lib_win_files)
+
+            test_lib = test_lib and test_bin_files and test_lib_win_files
+        test_lib = test_lib and test_lib_files
     return test_lib
 
 
@@ -421,10 +425,8 @@ def check_include(include_dir, include):
     test_include = True
     if include:
         console.print("[blue]- Checking for include[/blue]")
-        for each_include in include:
-            include_path = os.path.join(include_dir, each_include)
-            test_each_include = check_file_existence(include_path)
-            test_include = test_include and test_each_include
+        include_files = [os.path.join(include_dir, fname) for fname in include]
+        test_include = check_file_existence(include_files)
     return test_include
 
 
@@ -432,10 +434,8 @@ def check_bin(bin_dir, bin_paths):
     test_bin = True
     if bin_paths:
         console.print("[blue]- Checking for bin[/blue]")
-        for each_bin in bin_paths:
-            each_bin_path = os.path.join(bin_dir, each_bin)
-            test_each_bin_path = check_file_existence(each_bin_path)
-            test_bin = test_bin and test_each_bin_path
+        bin_files = [os.path.join(bin_dir, fname) for fname in bin_paths]
+        test_bin = check_file_existence(bin_files)
     return test_bin
 
 
@@ -454,7 +454,12 @@ def check_cmake(prefix, cmake_find):
                 tempdir_path = str(Path(tempdir))
                 ftemp = open(os.path.join(tempdir_path, "CMakeLists.txt"), "w")
                 ftemp.writelines(cmake_content)
-                cmake_check = subprocess.run([cmake_cmd, "."], cwd=tempdir_path)
+                cmake_check = subprocess.run(
+                    [cmake_cmd, "."],
+                    cwd=tempdir_path,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
                 if cmake_check.returncode == 0:
                     console.print(f"[green]\N{check mark} {each_f}[/green]")
                 else:
@@ -492,10 +497,8 @@ def check_files(prefix, files):
     test_files = True
     if files:
         console.print("[blue]- Checking for files[/blue]")
-        for each_f in files:
-            file_path = os.path.join(prefix, each_f)
-            test_file_path = check_file_existence(file_path)
-            test_files = test_files and test_file_path
+        files_list = [os.path.join(prefix, each_f) for each_f in files]
+        test_files = check_file_existence(files_list)
     return test_files
 
 
