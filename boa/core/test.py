@@ -517,14 +517,16 @@ def check_glob(prefix, glob_paths):
     return test_glob
 
 
-def test_exists(prefix, exists):
+def test_exists(prefix, exists, py_ver):
     if not exists:
         return True
 
     # site-packages
-    site_packages_dir = get_site_packages(prefix, "3.7")
-    site_packages = exists.get("site_packages")
-    sp_check = check_site_packages(site_packages_dir, site_packages)
+    sp_check = True
+    if py_ver:
+        site_packages_dir = get_site_packages(prefix, py_ver)
+        site_packages = exists.get("site_packages")
+        sp_check = check_site_packages(site_packages_dir, site_packages)
 
     # lib
     lib_dir = os.path.join(prefix, "lib")
@@ -801,8 +803,9 @@ def run_test(
             #     stats[
             #         stats_key(metadata, "test_{}".format(metadata.name()))
             #     ] = test_stats
+            py_ver = transaction.find_python_version()
             check_exists_section = test_exists(
-                metadata.config.test_prefix, exists_metadata
+                metadata.config.test_prefix, exists_metadata, py_ver
             )
             if not check_exists_section:
                 raise Exception("existence tests fail")
