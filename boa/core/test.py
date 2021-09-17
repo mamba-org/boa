@@ -406,17 +406,22 @@ def check_lib(lib_dir, bin_dir, lib):
     test_lib = True
     if lib:
         console.print("[blue]- Checking for lib[/blue]")
-        lib_files = [os.path.join(lib_dir, each_lib + ext) for each_lib in lib]
-        bin_files = [os.path.join(bin_dir, each_lib + ext) for each_lib in lib]
-        lib_win_files = [os.path.join(lib_dir, each_lib + ".lib") for each_lib in lib]
-
-        test_lib_files = check_file_existence(lib_files)
+        lib_files = [os.path.join(lib_dir, "lib" + each_lib + ext) for each_lib in lib]
 
         if win_check:
+            lib_files = [os.path.join(lib_dir, each_lib + ext) for each_lib in lib]
+            bin_files = [os.path.join(bin_dir, each_lib + ext) for each_lib in lib]
+            lib_win_files = [
+                os.path.join(lib_dir, each_lib + ".lib") for each_lib in lib
+            ]
+
             test_bin_files = check_file_existence(bin_files)
             test_lib_win_files = check_file_existence(lib_win_files)
 
             test_lib = test_lib and test_bin_files and test_lib_win_files
+
+        test_lib_files = check_file_existence(lib_files)
+
         test_lib = test_lib and test_lib_files
     return test_lib
 
