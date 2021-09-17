@@ -379,13 +379,11 @@ def check_file_existence(f_paths, check_parent_dir=False):
             )
         if os.path.isdir(each_f):
             console.print(f"[green]\N{check mark} {each_f} (directory)[/green]")
-            all_exist = all_exist and True
         elif os.path.isfile(each_f):
             console.print(f"[green]\N{check mark} {each_f}[/green]")
-            all_exist = all_exist and True
         else:
             console.print(f"[red]\N{multiplication x} {each_f}[/red]")
-            all_exist = all_exist and False
+            all_exist = False
     return all_exist
 
 
