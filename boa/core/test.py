@@ -358,11 +358,11 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def determine_ext_and_win_check():
+def determine_ext_and_win_check(target_platform):
     win_check = False
-    if sys.platform == "darwin":
+    if target_platform.startswith("osx"):
         ext = ".dylib"
-    elif sys.platform == "win32":
+    elif target_platform.startswith("win"):
         ext = ".dll"
         win_check = True
     else:
@@ -399,8 +399,8 @@ def check_site_packages(site_packages_dir, site_packages):
     return test_site_packages
 
 
-def check_lib(lib_dir, bin_dir, lib):
-    ext, win_check = determine_ext_and_win_check()
+def check_lib(lib_dir, bin_dir, lib, target_platform):
+    ext, win_check = determine_ext_and_win_check(target_platform)
     test_lib = True
     if lib:
         console.print("[blue]- Checking for lib[/blue]")
@@ -520,7 +520,7 @@ def check_glob(prefix, glob_paths):
     return test_glob
 
 
-def test_exists(prefix, exists, py_ver):
+def test_exists(prefix, exists, py_ver, target_platform):
     if not exists:
         return True
 
@@ -535,7 +535,10 @@ def test_exists(prefix, exists, py_ver):
     lib_dir = os.path.join(prefix, "lib")
     bin_dir = os.path.join(prefix, "bin")
     lib = exists.get("lib")
-    lib_check = check_lib(lib_dir, bin_dir, lib)
+    if target_platform == "noarch" and lib:
+        raise Exception("lib checks cannot be used with a noarch package")
+    else:
+        lib_check = check_lib(lib_dir, bin_dir, lib, target_platform)
 
     # include
     include_dir = os.path.join(prefix, "include")
@@ -808,7 +811,10 @@ def run_test(
             #     ] = test_stats
             py_ver = transaction.find_python_version()
             check_exists_section = test_exists(
-                metadata.config.test_prefix, exists_metadata, py_ver
+                metadata.config.test_prefix,
+                exists_metadata,
+                py_ver,
+                metadata.config.variant["target_platform"],
             )
             if not check_exists_section:
                 raise Exception("existence tests fail")
