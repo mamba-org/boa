@@ -604,6 +604,10 @@ class Output:
             solver, pkg_cache = get_solver(
                 subdir, output_folder=self.config.output_folder
             )
+            if env == "host":
+                solver.replace_installed(self.config.host_prefix)
+            elif env == "build":
+                solver.replace_installed(self.config.build_prefix)
             t = solver.solve(specs, [pkg_cache])
 
             _, install_pkgs, _ = t.to_conda()

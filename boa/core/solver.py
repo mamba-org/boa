@@ -136,6 +136,14 @@ class MambaSolver:
         # load local repo, too
         self.replace_channels()
 
+    def replace_installed(self, prefix):
+        prefix_data = mamba_api.PrefixData(prefix)
+        vp = mamba_api.get_virtual_packages()
+        prefix_data.add_virtual_packages(vp)
+        prefix_data.load()
+        repo = mamba_api.Repo(self.pool, prefix_data)
+        repo.set_installed()
+
     def replace_channels(self):
         console.print(f"[blue]Reloading output folder: {self.output_folder}")
         self.local_index = get_index(
