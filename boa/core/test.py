@@ -831,6 +831,10 @@ def run_test(
         )
         raise
 
+    except Exception as e:
+        console.print_exception()
+        raise e
+
     if config.need_cleanup and config.recipe_dir is not None and not provision_only:
         utils.rm_rf(config.recipe_dir)
 
