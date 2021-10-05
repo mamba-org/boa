@@ -30,18 +30,19 @@
       "type": "array",
       "description": "The package name and version.",
       "additionalProperties": false,
-      "items": [
-        {
+      "items": {
           "type": "object",
           "properties": {
             "url": {"type": "string"},
             "sha256": {"type": "string"},
             "md5": {"type": "string"},
             "sha1": {"type": "string"},
-            "patches": {"type": "array", "items": {"type": "string"}}
-          }
+            "patches": {"type": "array", "items": {"type": "string"}},
+            "folder": {"type": "string"},
+            "git_rev": {"type": "string"},
+            "git_url": {"type": "string"}
         }
-      ]
+      }
     },
     "outputs": {
       "type": "array",

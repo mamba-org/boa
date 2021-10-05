@@ -3,7 +3,7 @@
 
 from jsonschema import validate as json_validate
 import json5 as json
-from jsonschema.exceptions import ValidationError
+from jsonschema.exceptions import ValidationError, SchemaError
 from pathlib import Path
 from rich.console import Console
 
@@ -21,6 +21,10 @@ def validate(obj):
         validation_result = json_validate(instance=obj, schema=schema)
     except ValidationError as e:
         console.print("\n[red]Recipe validation error\n")
+        console.print(e)
+        raise e
+    except SchemaError as e:
+        console.print("\n[red]Recipe schema validation error\n")
         console.print(e)
         raise e
     return validation_result
