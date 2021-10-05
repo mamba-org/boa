@@ -17,7 +17,7 @@ from boa.core.build import build, download_source
 from boa.core.metadata import MetaData
 from boa.core.test import run_test
 from boa.core.config import boa_config
-from boa.core.validation import validate, ValidationError
+from boa.core.validation import validate, ValidationError, SchemaError
 from boa.tui.exceptions import BoaRunBuildException
 
 from conda_build.utils import rm_rf
@@ -51,6 +51,10 @@ def find_all_recipes(target, config):
             validate(yml)
             console.print("[green]Recipe validation OK[/green]")
         except ValidationError:
+            console.print(
+                "\n[red]Recipe validation not OK. This is currently [bold]ignored.\n\n"
+            )
+        except SchemaError:
             console.print(
                 "\n[red]Recipe validation not OK. This is currently [bold]ignored.\n\n"
             )

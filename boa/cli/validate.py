@@ -1,7 +1,7 @@
 # Copyright (C) 2021, QuantStack
 # SPDX-License-Identifier: BSD-3-Clause
 
-from boa.core.validation import validate, ValidationError
+from boa.core.validation import validate, ValidationError, SchemaError
 from boa.core.render import render
 from boa.core.utils import get_config
 
@@ -19,4 +19,6 @@ def main(recipe):
         if result is None:
             console.print("[green]Validation OK[/green]")
     except ValidationError:
+        exit(1)
+    except SchemaError:
         exit(1)
