@@ -69,10 +69,13 @@ def mamba_get_install_actions(
     for idx, s in enumerate(_specs):
         if s.version:
             vspec = str(s.version)
-            if re.match(only_dot_or_digit_re, vspec) and vspec.count(".") <= 1:
+            if re.match(only_dot_or_digit_re, vspec):
                 n = s.conda_build_form()
                 sn = n.split()
-                sn[1] = vspec + ".*"
+                if vspec.count(".") <= 1:
+                    sn[1] = vspec + ".*"
+                else:
+                    sn[1] = vspec + "*"
                 _specs[idx] = MatchSpec(" ".join(sn))
 
     _specs = [s.conda_build_form() for s in _specs]
