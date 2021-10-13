@@ -18,6 +18,7 @@ from conda.models.dist import Dist
 from conda_build.conda_interface import pkgs_dirs
 from conda.core.package_cache_data import PackageCacheData
 
+import mamba
 from mamba import mamba_api
 from mamba.utils import get_index, load_channels, to_package_record_from_subjson
 
@@ -26,6 +27,8 @@ from boa.core.config import boa_config
 console = boa_config.console
 
 solver_cache = {}
+
+MAMBA_17_UP = mamba.version_info >= (0, 17, 0)
 
 
 def refresh_solvers():
@@ -219,7 +222,11 @@ class MambaSolver:
             writeable_dir = pkg_cache_path[0]
 
         package_cache = mamba_api.MultiPackageCache(pkg_cache_path)
-        t = mamba_api.Transaction(api_solver, package_cache, writeable_dir)
+        if MAMBA_17_UP:
+            t = mamba_api.Transaction(api_solver, package_cache)
+        else:
+            t = mamba_api.Transaction(api_solver, package_cache, writeable_dir)
+
         return t
 
     def solve_for_action(self, specs, prefix):
