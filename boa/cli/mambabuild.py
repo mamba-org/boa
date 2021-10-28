@@ -97,6 +97,9 @@ def prepare(**kwargs):
     config = Config(**kwargs)
     config.channel_urls = get_channel_urls(kwargs)
 
+    if config.quiet:
+        suppress_stdout()
+
     init_api_context()
 
     config.output_folder = os.path.abspath(config.output_folder)
