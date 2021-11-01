@@ -29,7 +29,7 @@ solver_map = {}
 
 
 def parse_problems(problems):
-    dashed_specs = []       # e.g. package-1.2.3-h5487548_0
+    dashed_specs = []  # e.g. package-1.2.3-h5487548_0
     conda_build_specs = []  # e.g. package 1.2.8.*
 
     for line in problems.splitlines():
@@ -73,6 +73,7 @@ def suppress_stdout():
     boa_config.quiet = True
     boa_config.console.quiet = True
 
+
 def _get_solver(channel_urls, subdir, output_folder):
     """Gets a solver from cache or creates a new one if needed."""
     subdir = normalize_subdir(subdir)
@@ -86,7 +87,9 @@ def _get_solver(channel_urls, subdir, output_folder):
 
     return solver
 
+
 counter = dict()
+
 
 def mamba_get_install_actions(
     prefix,
@@ -204,6 +207,7 @@ def call_conda_build(action, config, **kwargs):
 
 
 def main():
+    boa_config.is_mambabuild = True
     _, args = parse_args(sys.argv[1:])
 
     config = prepare(**args.__dict__)

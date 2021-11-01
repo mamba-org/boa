@@ -232,7 +232,7 @@ class MambaSolver:
 
     def solve_for_action(self, specs, prefix):
         t = self.solve(specs)
-        if not boa_config.quiet:
+        if not boa_config.quiet and not boa_config.is_mambabuild:
             t.print()
 
         mmb_specs, to_link, to_unlink = t.to_conda()
