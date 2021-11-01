@@ -11,6 +11,7 @@ class BoaConfig:
     json: bool = False
     debug: bool = False
     quiet: bool = False
+    is_mambabuild = False
 
     def __init__(self, args=None):
         if args and getattr(args, "json", False):

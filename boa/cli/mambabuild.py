@@ -13,6 +13,7 @@ from conda_build import api
 from conda_build.config import Config, get_channel_urls
 from conda_build.cli.main_build import parse_args
 from conda_build.index import update_index
+from conda_build.exceptions import DependencyNeedsBuildingError
 
 from conda.base.context import context
 
@@ -24,6 +25,45 @@ from boa.core.config import boa_config
 only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
 
 solver_map = {}
+
+
+def parse_problems(problems):
+    dashed_specs = []  # e.g. package-1.2.3-h5487548_0
+    conda_build_specs = []  # e.g. package 1.2.8.*
+
+    for line in problems.splitlines():
+        line = line.strip()
+        words = line.split()
+        if not line.startswith("- "):
+            continue
+        if "none of the providers can be installed" in line:
+            assert words[1] == "package"
+            assert words[3] == "requires"
+            dashed_specs.append(words[2])
+            end = words.index("but")
+            conda_build_specs.append(words[4:end])
+        elif "- nothing provides" in line and "needed by" in line:
+            dashed_specs.append(words[-1])
+        elif "- nothing provides" in line:
+            if "requested" in line:
+                conda_build_specs.append(words[5:])
+            else:
+                conda_build_specs.append(words[4:])
+
+    conflicts = {}
+    for conflict in dashed_specs:
+        name, version, build = conflict.rsplit("-", 2)
+        conflicts[name] = MatchSpec(name=name, version=version, build=build)
+
+    for conflict in conda_build_specs:
+        kwargs = {"name": conflict[0]}
+        if len(conflict) >= 2:
+            kwargs["version"] = conflict[1].rstrip(",")
+        if len(conflict) == 3:
+            kwargs["build"] = conflict[2].rstrip(",")
+        conflicts[kwargs["name"]] = MatchSpec(**kwargs)
+
+    return set(conflicts.values())
 
 
 def suppress_stdout():
@@ -45,6 +85,9 @@ def _get_solver(channel_urls, subdir, output_folder):
         solver_map[subdir] = solver
 
     return solver
+
+
+counter = dict()
 
 
 def mamba_get_install_actions(
@@ -79,8 +122,18 @@ def mamba_get_install_actions(
                 _specs[idx] = MatchSpec(" ".join(sn))
 
     _specs = [s.conda_build_form() for s in _specs]
+    try:
+        solution = solver.solve_for_action(_specs, prefix)
+    except RuntimeError as e:
+        conflict_packages = parse_problems(str(e))
 
-    solution = solver.solve_for_action(_specs, prefix)
+        # we need to throw this exception for conda-build so it continues to search
+        # the build tree
+        err = DependencyNeedsBuildingError(packages=conflict_packages)
+        err.matchspecs = conflict_packages
+        err.subdir = subdir
+        raise err
+
     return solution
 
 
@@ -131,6 +184,7 @@ def call_conda_build(action, config, **kwargs):
         suppress_stdout()
         result = api.get_output_file_paths(recipe, config=config, **kwargs)
         print(result)
+        print(result, file=sys.stderr)
     elif action == "test":
         result = api.test(recipe, config=config, **kwargs)
     elif action == "build":
@@ -150,6 +204,7 @@ def call_conda_build(action, config, **kwargs):
 
 
 def main():
+    boa_config.is_mambabuild = True
     _, args = parse_args(sys.argv[1:])
 
     config = prepare(**args.__dict__)

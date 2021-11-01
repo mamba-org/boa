@@ -1,0 +1,25 @@
+{% set name = "stackvana-core" %}
+{% set version = "0.2021.43" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+build:
+  number: 0
+
+outputs:
+  - name: stackvana-core-impl
+    version: {{ version }}
+    build:
+      script:
+        - echo "BUILDING IMPL" >> $PREFIX/stackvana-core-impl   # [unix]
+        - echo "BUILDING IMPL" >> %PREFIX%/stackvana-core-impl  # [win]
+  - name: stackvana-core
+    version: {{ version }}
+    run_exports:
+      - {{ pin_subpackage('stackvana-core-impl', exact=True) }}
+
+    requirements:
+      run:
+        - thispackagedoesnotexist >=100000000

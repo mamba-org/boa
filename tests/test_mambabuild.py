@@ -1,5 +1,6 @@
+import pytest
 import pathlib
-from subprocess import check_call
+from subprocess import check_call, CalledProcessError
 
 
 def test_build_recipes():
@@ -7,8 +8,15 @@ def test_build_recipes():
 
     recipes = [str(x) for x in recipes_dir.iterdir() if x.is_dir()]
 
+    expected_fail_recipes = ["baddeps"]
     for recipe in recipes:
-        check_call(["conda", "mambabuild", recipe])
+        recipe_name = pathlib.Path(recipe).name
+        print(f"Running {recipe_name}")
+        if recipe_name in expected_fail_recipes:
+            with pytest.raises(CalledProcessError):
+                check_call(["conda", "mambabuild", recipe])
+        else:
+            check_call(["conda", "mambabuild", recipe])
 
 
 def test_build_notest():

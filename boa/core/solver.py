@@ -209,10 +209,11 @@ class MambaSolver:
             for c in self.channels:
                 error_string += f" - {c}\n"
             pstring = api_solver.problems_to_str()
-            pstring = "\n".join(["   " + el for el in pstring.split("\n")])
+
+            pstring = "\n".join(["- " + el for el in pstring.split("\n")])
             error_string += f"\nThe reported errors are:\n{pstring}"
             print(error_string)
-            raise RuntimeError("Solver could not find solution.")
+            raise RuntimeError("Solver could not find solution." + error_string)
 
         if pkg_cache_path is None:
             # use values from conda
@@ -231,7 +232,7 @@ class MambaSolver:
 
     def solve_for_action(self, specs, prefix):
         t = self.solve(specs)
-        if not boa_config.quiet:
+        if not boa_config.quiet and not boa_config.is_mambabuild:
             t.print()
 
         mmb_specs, to_link, to_unlink = t.to_conda()
