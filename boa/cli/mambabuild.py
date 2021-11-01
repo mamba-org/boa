@@ -8,7 +8,6 @@ import re
 from conda.models.match_spec import MatchSpec
 from conda.gateways.disk.create import mkdir_p
 
-from conda.exceptions import NoPackagesFoundError
 import conda_build.environ
 from conda_build import api
 from conda_build.config import Config, get_channel_urls
