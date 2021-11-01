@@ -10,7 +10,9 @@ def test_build_recipes():
 
     expected_fail_recipes = ["baddeps"]
     for recipe in recipes:
-        if recipe.rsplit("/", 1)[-1] in expected_fail_recipes:
+        recipe_name = pathlib.Path(recipe).name
+        print(f"Running {recipe_name}")
+        if recipe_name in expected_fail_recipes:
             with pytest.raises(CalledProcessError):
                 check_call(["conda", "mambabuild", recipe])
         else:
