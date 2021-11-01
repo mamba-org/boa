@@ -13,7 +13,8 @@ outputs:
     version: {{ version }}
     build:
       script:
-        - echo "BUILDING IMPL" >> $PREFIX/stackvana-core-impl
+        - echo "BUILDING IMPL" >> $PREFIX/stackvana-core-impl   # [unix]
+        - echo "BUILDING IMPL" >> %PREFIX%/stackvana-core-impl  # [win]
   - name: stackvana-core
     version: {{ version }}
     run_exports:
