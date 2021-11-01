@@ -87,9 +87,6 @@ def _get_solver(channel_urls, subdir, output_folder):
     return solver
 
 
-counter = dict()
-
-
 def mamba_get_install_actions(
     prefix,
     specs,
@@ -184,7 +181,6 @@ def call_conda_build(action, config, **kwargs):
         suppress_stdout()
         result = api.get_output_file_paths(recipe, config=config, **kwargs)
         print(result)
-        print(result, file=sys.stderr)
     elif action == "test":
         result = api.test(recipe, config=config, **kwargs)
     elif action == "build":
