@@ -128,15 +128,13 @@ def mamba_get_install_actions(
     except RuntimeError as e:
         conflict_packages = parse_problems(str(e))
 
-        if hash(specs) in counter:
-            counter[hash(specs)] += 1
-        else:
-            counter[hash(specs)] = 1
+        # we need to throw this exception for conda-build so it continues to search
+        # the build tree
+        err = DependencyNeedsBuildingError(packages=conflict_packages)
+        err.matchspecs = conflict_packages
+        err.subdir = subdir
+        raise err
 
-        if counter[hash(specs)] > 10:
-            raise NoPackagesFoundError(bad_deps=[[c] for c in conflict_packages])
-
-        raise DependencyNeedsBuildingError(packages=conflict_packages)
     return solution
 
 
