@@ -454,9 +454,11 @@ function feature()
 
 def execute_build_script(m, src_dir, env, provision_only=False):
 
-    script = utils.ensure_list(m.get_value("build/script", None))
-    if script:
-        script = "\n".join(script)
+    script_list = utils.ensure_list(m.get_value("build/script", None))
+    if script_list:
+        script = "\n".join(script_list)
+    else:
+        script = None
 
     if not m.output.is_first and not script:
         console.print("No build script found and not top-level build")
@@ -466,9 +468,17 @@ def execute_build_script(m, src_dir, env, provision_only=False):
         build_stats = {}
         if utils.on_win:
             build_file = join(m.path, "bld.bat")
-            if isfile(build_file) or script:
-                if isinstance(script, str) and script.endswith(".bat"):
-                    build_file = os.path.join(m.path, script)
+            if script and len(script_list) == 1 and script.endswith(".bat"):
+                # if script is just a single `.bat` file use that
+                build_file = join(m.path, script)
+            elif script:
+                # if we got a list of commands, use script
+                build_file = join(src_dir, "bld.bat")
+                import codecs
+
+                with codecs.getwriter("utf-8")(open(build_file, "wb")) as bf:
+                    bf.write(script)
+
             windows.build(
                 m, build_file, stats=build_stats, provision_only=provision_only
             )
