@@ -1,6 +1,6 @@
 context:
-  version: 7.6.5
-  sha256: 00974f7cb4d5f8d494c19810fedb9fa9b64bffd3cda7c2be23c133a1ad3c99c5
+  version: 7.3.0
+  sha256: 3ce93db970a94f06f38121da70757cdbcce884ecd14f79a4dd9bc49a47e0f33b
 
 package:
   name: ipywidgets
@@ -11,7 +11,6 @@ source:
   sha256: '{{ sha256 }}'
 
 build:
-  noarch: python
   number: 0
   script: '{{ PYTHON }} -m pip install . -vv'
 
