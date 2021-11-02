@@ -1,14 +1,30 @@
 import pathlib
 from subprocess import check_call
+import pytest
+import sys
 
 
-def test_build_recipes():
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="TODO new-style recipes noarch on Windows"
+)
+def test_build_grayskull():
     recipes_dir = pathlib.Path(__file__).parent / "recipes-v2"
 
     recipes = [str(x) for x in recipes_dir.iterdir() if x.is_dir()]
 
     for recipe in recipes:
-        check_call(["boa", "build", recipe])
+        if "grayskull" in recipe:
+            check_call(["boa", "build", recipe])
+
+
+def test_build_ipywidgets():
+    recipes_dir = pathlib.Path(__file__).parent / "recipes-v2"
+
+    recipes = [str(x) for x in recipes_dir.iterdir() if x.is_dir()]
+
+    for recipe in recipes:
+        if "ipywidgets" in recipe:
+            check_call(["boa", "build", recipe])
 
 
 def test_build_notest():
