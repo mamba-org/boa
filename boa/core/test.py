@@ -446,11 +446,15 @@ def check_bin(bin_dir, bin_paths):
     return test_bin
 
 
-def check_cmake(prefix, cmake_find):
+def check_cmake(prefix, cmake_find, target_platform):
+    _, win_check = determine_ext_and_win_check(target_platform)
     test_cmake = True
     if cmake_find:
         console.print("[blue]- Checking for cmake[/blue]")
-        cmake_cmd = os.path.join(prefix, "bin", "cmake")
+        if win_check:
+            cmake_cmd = os.path.join(prefix, "Library", "bin", "cmake.exe")
+        else:
+            cmake_cmd = os.path.join(prefix, "bin", "cmake")
         for each_f in cmake_find:
             cmake_content = [
                 "project(boatest)\n",
@@ -479,12 +483,16 @@ def check_cmake(prefix, cmake_find):
     return test_cmake
 
 
-def check_pkg_config(prefix, pkg_config):
+def check_pkg_config(prefix, pkg_config, target_platform):
+    _, win_check = determine_ext_and_win_check(target_platform)
     test_pkg_config = True
     if pkg_config:
         p_env = os.environ.copy()
         p_env["CONDA_PREFIX"] = prefix
-        pkg_config_cmd = os.path.join(prefix, "bin", "pkg-config")
+        if win_check:
+            pkg_config_cmd = os.path.join(prefix, "Library", "bin", "pkg-config.exe")
+        else:
+            pkg_config_cmd = os.path.join(prefix, "bin", "pkg-config")
         console.print("[blue]- Checking for pkgconfig[/blue]")
         for each_f in pkg_config:
             pkg_config_exists = subprocess.run(
@@ -565,11 +573,11 @@ def test_exists(prefix, exists, py_ver, target_platform):
 
     # cmake_find
     cmake_find = exists.get("cmake_find")
-    cmake_check = check_cmake(prefix, cmake_find)
+    cmake_check = check_cmake(prefix, cmake_find, target_platform)
 
     # pkg_config
     pkg_config = exists.get("pkg_config")
-    pkg_config_check = check_pkg_config(prefix, pkg_config)
+    pkg_config_check = check_pkg_config(prefix, pkg_config, target_platform)
 
     # file
     files = exists.get("file")
