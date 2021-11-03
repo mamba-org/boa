@@ -465,6 +465,7 @@ def check_cmake(prefix, cmake_find, target_platform):
                 tempdir_path = str(Path(tempdir))
                 ftemp = open(os.path.join(tempdir_path, "CMakeLists.txt"), "w")
                 ftemp.writelines(cmake_content)
+                ftemp.close()
                 cmake_check = subprocess.run(
                     [cmake_cmd, "."],
                     cwd=tempdir_path,
