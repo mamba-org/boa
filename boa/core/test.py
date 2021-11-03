@@ -370,6 +370,13 @@ def determine_ext_and_win_check(target_platform):
     return ext, win_check
 
 
+def determine_win_check():
+    if sys.platform.startswith("win"):
+        return True
+    else:
+        return False
+
+
 def check_file_existence(f_paths, check_parent_dir=False):
     all_exist = True
     for each_f in f_paths:
@@ -446,8 +453,8 @@ def check_bin(bin_dir, bin_paths):
     return test_bin
 
 
-def check_cmake(prefix, cmake_find, target_platform):
-    _, win_check = determine_ext_and_win_check(target_platform)
+def check_cmake(prefix, cmake_find):
+    win_check = determine_win_check()
     test_cmake = True
     if cmake_find:
         console.print("[blue]- Checking for cmake[/blue]")
@@ -492,8 +499,8 @@ def check_cmake(prefix, cmake_find, target_platform):
     return test_cmake
 
 
-def check_pkg_config(prefix, pkg_config, target_platform):
-    _, win_check = determine_ext_and_win_check(target_platform)
+def check_pkg_config(prefix, pkg_config):
+    win_check = determine_win_check()
     test_pkg_config = True
     if pkg_config:
         p_env = os.environ.copy()
@@ -582,11 +589,11 @@ def test_exists(prefix, exists, py_ver, target_platform):
 
     # cmake_find
     cmake_find = exists.get("cmake_find")
-    cmake_check = check_cmake(prefix, cmake_find, target_platform)
+    cmake_check = check_cmake(prefix, cmake_find)
 
     # pkg_config
     pkg_config = exists.get("pkg_config")
-    pkg_config_check = check_pkg_config(prefix, pkg_config, target_platform)
+    pkg_config_check = check_pkg_config(prefix, pkg_config)
 
     # file
     files = exists.get("file")
