@@ -465,12 +465,21 @@ def check_cmake(prefix, cmake_find, target_platform):
                 tempdir_path = str(Path(tempdir))
                 with open(os.path.join(tempdir_path, "CMakeLists.txt"), "w") as ftemp:
                     ftemp.writelines(cmake_content)
-                cmake_check = subprocess.run(
-                    [cmake_cmd, "."],
-                    cwd=tempdir_path,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
+                if win_check:
+                    with open(os.devnull, "w") as tempnull:
+                        cmake_check = subprocess.run(
+                            [cmake_cmd, "."],
+                            cwd=tempdir_path,
+                            stdout=tempnull,
+                            stderr=tempnull,
+                        )
+                else:
+                    cmake_check = subprocess.run(
+                        [cmake_cmd, "."],
+                        cwd=tempdir_path,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
                 if cmake_check.returncode == 0:
                     console.print(
                         f"[green]\N{check mark} {each_f}[/green]".encode("utf-8")
