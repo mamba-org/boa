@@ -444,11 +444,14 @@ def check_include(include_dir, include):
     return test_include
 
 
-def check_bin(bin_dir, bin_paths):
+def check_bin(bin_dir, bin_paths, target_platform):
     test_bin = True
     if bin_paths:
         console.print("[blue]- Checking for bin[/blue]")
-        bin_files = [os.path.join(bin_dir, fname) for fname in bin_paths]
+        if target_platform.startswith("win"):
+            bin_files = [os.path.join(bin_dir, f"{fname}.exe") for fname in bin_paths]
+        else:
+            bin_files = [os.path.join(bin_dir, fname) for fname in bin_paths]
         test_bin = check_file_existence(bin_files)
     return test_bin
 
@@ -593,7 +596,7 @@ def test_exists(prefix, exists, py_ver, target_platform):
 
     # bin
     bin_paths = exists.get("bin")
-    bin_check = check_bin(bin_dir, bin_paths)
+    bin_check = check_bin(bin_dir, bin_paths, target_platform)
 
     # cmake_find
     cmake_find = exists.get("cmake_find")
