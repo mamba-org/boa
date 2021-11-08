@@ -8,7 +8,7 @@ def test_build_recipes():
     recipes = [str(x) for x in recipes_dir.iterdir() if x.is_dir()]
 
     for recipe in recipes:
-        if "xtensor" in recipe:
+        if "grayskull" in recipe:
             check_call(["boa", "build", recipe])
 
 
