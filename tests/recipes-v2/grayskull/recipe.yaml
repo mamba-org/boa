@@ -53,26 +53,10 @@ outputs:
       requires:
         - pip
       exists:
-        include:
-          - curl
-          - openssl
-          - expat.h
-          - kadm5/admin.h
+        site_packages:
+          - grayskull
         bin:
           - grayskull
-          - nghttpd
-        cmake_find:
-          - c-ares
-          - libssh2
-        pkg_config:
-          - ncurses
-          - sqlite3
-          - libcrypto
-        file:
-          - libexec/git-core/git
-          - sbin/kprop
-        glob:
-          - doc/**/Copyright.txt
 
   - package:
       name: greyskull
