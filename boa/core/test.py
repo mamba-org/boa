@@ -448,7 +448,9 @@ def check_bin(bin_dir, bin_paths, target_platform):
     test_bin = True
     if bin_paths:
         console.print("[blue]- Checking for bin[/blue]")
-        if target_platform.startswith("win"):
+        if target_platform.startswith("win") or (
+            target_platform == "noarch" and sys.platform.startswith("win")
+        ):
             bin_files = [os.path.join(bin_dir, f"{fname}.exe") for fname in bin_paths]
         else:
             bin_files = [os.path.join(bin_dir, fname) for fname in bin_paths]
