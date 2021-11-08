@@ -570,8 +570,13 @@ def test_exists(prefix, exists, py_ver, target_platform):
         sp_check = check_site_packages(site_packages_dir, site_packages)
 
     # lib
-    lib_dir = os.path.join(prefix, "lib")
-    bin_dir = os.path.join(prefix, "bin")
+    if target_platform.startswith("win"):
+        lib_dir = os.path.join(prefix, "Library", "lib")
+        bin_dir = os.path.join(prefix, "Library", "bin")
+    else:
+        lib_dir = os.path.join(prefix, "lib")
+        bin_dir = os.path.join(prefix, "bin")
+
     lib = exists.get("lib")
     if target_platform == "noarch" and lib:
         raise Exception("lib checks cannot be used with a noarch package")
@@ -579,7 +584,10 @@ def test_exists(prefix, exists, py_ver, target_platform):
         lib_check = check_lib(lib_dir, bin_dir, lib, target_platform)
 
     # include
-    include_dir = os.path.join(prefix, "include")
+    if target_platform.startswith("win"):
+        include_dir = os.path.join(prefix, "Library", "include")
+    else:
+        include_dir = os.path.join(prefix, "include")
     include = exists.get("include")
     include_check = check_include(include_dir, include)
 
