@@ -52,6 +52,11 @@ outputs:
         - greyskull --help
       requires:
         - pip
+      exists:
+        site_packages:
+          - grayskull
+        bin:
+          - grayskull
 
   - package:
       name: greyskull
