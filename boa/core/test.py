@@ -575,11 +575,12 @@ def test_exists(prefix, exists, py_ver, target_platform):
         sp_check = check_site_packages(site_packages_dir, site_packages)
 
     # lib
-    if target_platform.startswith("win") or (
-        target_platform == "noarch" and sys.platform.startswith("win")
-    ):
+    if target_platform.startswith("win"):
         lib_dir = os.path.join(prefix, "Library", "lib")
         bin_dir = os.path.join(prefix, "Library", "bin")
+    elif target_platform == "noarch" and sys.platform.startswith("win"):
+        lib_dir = os.path.join(prefix, "Library", "lib")
+        bin_dir = os.path.join(prefix, "Scripts")
     else:
         lib_dir = os.path.join(prefix, "lib")
         bin_dir = os.path.join(prefix, "bin")
