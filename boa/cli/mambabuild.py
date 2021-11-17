@@ -180,7 +180,7 @@ def call_conda_build(action, config, **kwargs):
     if action == "output":
         suppress_stdout()
         result = api.get_output_file_paths(recipe, config=config, **kwargs)
-        print('\n'.join(sorted(result)))
+        print("\n".join(sorted(result)))
     elif action == "test":
         result = api.test(recipe, config=config, **kwargs)
     elif action == "build":
