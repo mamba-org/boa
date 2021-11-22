@@ -18,8 +18,8 @@ from conda.models.dist import Dist
 from conda_build.conda_interface import pkgs_dirs
 from conda.core.package_cache_data import PackageCacheData
 
+import libmambapy
 import mamba
-from mamba import mamba_api
 from mamba.utils import get_index, load_channels, to_package_record_from_subjson
 
 from boa.core.config import boa_config
@@ -122,7 +122,7 @@ class MambaSolver:
         self.channels = channels
         self.platform = platform
         self.output_folder = output_folder or "local"
-        self.pool = mamba_api.Pool()
+        self.pool = libmambapy.Pool()
         self.repos = []
         self.index = load_channels(
             self.pool, self.channels, self.repos, platform=platform
@@ -130,7 +130,7 @@ class MambaSolver:
 
         # if platform == context.subdir:
         installed_json_f = get_virtual_packages()
-        repo = mamba_api.Repo(self.pool, "installed", installed_json_f.name, "")
+        repo = libmambapy.Repo(self.pool, "installed", installed_json_f.name, "")
         repo.set_installed()
         self.repos.append(repo)
 
@@ -140,11 +140,11 @@ class MambaSolver:
         self.replace_channels()
 
     def replace_installed(self, prefix):
-        prefix_data = mamba_api.PrefixData(prefix)
-        vp = mamba_api.get_virtual_packages()
+        prefix_data = libmambapy.PrefixData(prefix)
+        vp = libmambapy.get_virtual_packages()
         prefix_data.add_virtual_packages(vp)
         prefix_data.load()
-        repo = mamba_api.Repo(self.pool, prefix_data)
+        repo = libmambapy.Repo(self.pool, prefix_data)
         repo.set_installed()
 
     def replace_channels(self):
@@ -174,7 +174,7 @@ class MambaSolver:
                 os.remove(subdir.cache_path())
                 cp = cp.replace(".solv", ".json")
 
-            self.local_repos[channelstr] = mamba_api.Repo(
+            self.local_repos[channelstr] = libmambapy.Repo(
                 self.pool, channelstr, cp, channelurl
             )
 
@@ -194,11 +194,11 @@ class MambaSolver:
         solvable : bool
             True if the set of specs has a solution, False otherwise.
         """
-        solver_options = [(mamba_api.SOLVER_FLAG_ALLOW_DOWNGRADE, 1)]
-        api_solver = mamba_api.Solver(self.pool, solver_options)
+        solver_options = [(libmambapy.SOLVER_FLAG_ALLOW_DOWNGRADE, 1)]
+        api_solver = libmambapy.Solver(self.pool, solver_options)
         _specs = specs
 
-        api_solver.add_jobs(_specs, mamba_api.SOLVER_INSTALL)
+        api_solver.add_jobs(_specs, libmambapy.SOLVER_INSTALL)
         success = api_solver.solve()
 
         if not success:
@@ -222,11 +222,11 @@ class MambaSolver:
         else:
             writeable_dir = pkg_cache_path[0]
 
-        package_cache = mamba_api.MultiPackageCache(pkg_cache_path)
+        package_cache = libmambapy.MultiPackageCache(pkg_cache_path)
         if MAMBA_17_UP:
-            t = mamba_api.Transaction(api_solver, package_cache)
+            t = libmambapy.Transaction(api_solver, package_cache)
         else:
-            t = mamba_api.Transaction(api_solver, package_cache, writeable_dir)
+            t = libmambapy.Transaction(api_solver, package_cache, writeable_dir)
 
         return t
 
