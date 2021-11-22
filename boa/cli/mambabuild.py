@@ -126,7 +126,7 @@ def mamba_get_install_actions(
 
         # we need to throw this exception for conda-build so it continues to search
         # the build tree
-        err = DependencyNeedsBuildingError(packages=conflict_packages)
+        err = DependencyNeedsBuildingError(packages=[str(x) for x in conflict_packages])
         err.matchspecs = conflict_packages
         err.subdir = subdir
         raise err
