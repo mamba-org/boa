@@ -1,0 +1,28 @@
+{% set name = "ocp" %}
+{% set version = "7.5.2beta" %}
+{% set occt_version = "=7.5.2" %}
+
+package:
+  name: {{ name }}-split
+  version: {{ version }}
+
+build:
+  number: 0
+
+outputs:
+  - name: ocp-devel
+    build:
+      script:
+        - echo "BUILDING IMPL" >> $PREFIX/stackvana-core-impl   # [unix]
+        - echo "BUILDING IMPL" >> %PREFIX%/stackvana-core-impl  # [win]
+
+  - name: ocp
+    build:
+      script:
+        - echo "BUILDING IMPL" >> $PREFIX/ocp   # [unix]
+        - echo "BUILDING IMPL" >> %PREFIX%/ocp  # [win]
+    requirements:
+      host:
+        - "{{ pin_subpackage('ocp-devel', exact=True) }}"
+      run:
+        - "{{ pin_subpackage('ocp-devel', exact=True) }}"
