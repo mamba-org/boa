@@ -13,8 +13,8 @@ class Package(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    name: Optional[str] = Field(None, description='The package name')
-    version: Optional[str] = Field(None, description='The package version')
+    name: Optional[str] = Field(None, description="The package name")
+    version: Optional[str] = Field(None, description="The package version")
 
 
 class SourceItem(BaseModel):
@@ -34,9 +34,9 @@ class Build(BaseModel):
     run_exports: Optional[Dict[str, Any]] = None
     skip: Optional[List[str]] = None
     noarch: Optional[str] = None
-    pre_link: Optional[str] = Field(None, alias='pre-link')
-    post_link: Optional[str] = Field(None, alias='post-link')
-    pre_unlink: Optional[str] = Field(None, alias='pre-unlink')
+    pre_link: Optional[str] = Field(None, alias="pre-link")
+    post_link: Optional[str] = Field(None, alias="post-link")
+    pre_unlink: Optional[str] = Field(None, alias="pre-unlink")
     ignore_run_exports: Optional[List[str]] = None
     ignore_run_exports_from: Optional[List[str]] = None
 
@@ -56,24 +56,24 @@ class Requirements(BaseModel):
 class Test(BaseModel):
     files: Optional[List[str]] = Field(
         None,
-        description='Test files that are copied from the recipe into the temporary test directory and are needed during testing.',
+        description="Test files that are copied from the recipe into the temporary test directory and are needed during testing.",
     )
     source_files: Optional[List[str]] = Field(
         None,
-        description='Test files that are copied from the source work directory into the temporary test directory and are needed during testing.',
+        description="Test files that are copied from the source work directory into the temporary test directory and are needed during testing.",
     )
     requires: Optional[List[str]] = Field(
         None,
-        description='In addition to the runtime requirements, you can specify requirements needed during testing.',
+        description="In addition to the runtime requirements, you can specify requirements needed during testing.",
     )
-    imports: Optional[List[str]] = Field(None, description='Test importing modules.')
+    imports: Optional[List[str]] = Field(None, description="Test importing modules.")
     commands: Optional[List[str]] = Field(
-        None, description='The test commands to execute.'
+        None, description="The test commands to execute."
     )
 
 
 class Output(BaseModel):
-    package: Package1 = Field(..., description='The package name.')
+    package: Package1 = Field(..., description="The package name.")
     build: Optional[Dict[str, Any]] = None
     requirements: Optional[Requirements] = None
     test: Optional[Test] = None
@@ -83,12 +83,12 @@ class BoaRecipeV1(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    context: Optional[Dict[str, Any]] = Field(None, description='The recipe context.')
+    context: Optional[Dict[str, Any]] = Field(None, description="The recipe context.")
     package: Optional[Package] = Field(
-        None, description='The package name and version.'
+        None, description="The package name and version."
     )
     source: Optional[List[SourceItem]] = Field(
-        None, description='The package name and version.'
+        None, description="The package name and version."
     )
     outputs: Optional[List[Output]] = None
     features: Optional[List] = None
