@@ -13,7 +13,6 @@ __version__ = version_ns["__version__"]
 deps = [
     "jinja2",
     "setuptools",
-    "mamba",
     "rich",
     "ruamel.yaml",
     "json5",
