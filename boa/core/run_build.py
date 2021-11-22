@@ -7,7 +7,7 @@ import itertools
 import json
 import pathlib
 
-from mamba.mamba_api import PrefixData
+from libmambapy import PrefixData
 
 from boa.core.render import render
 from boa.core.utils import get_config, get_sys_vars_stubs

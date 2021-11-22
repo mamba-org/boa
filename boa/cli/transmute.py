@@ -5,7 +5,7 @@ from glob import glob
 import os
 from pathlib import Path
 from math import log
-from mamba.mamba_api import transmute as mamba_transmute
+from libmambapy import transmute as mamba_transmute
 from joblib import Parallel, delayed
 
 from rich.console import Console
@@ -55,11 +55,7 @@ def transmute_task(f, args):
 
 
 def main(args):
-    # from mamba.mamba_api import Context
-    # api_ctx = Context()
-    # api_ctx.set_verbosity(1)
-
-    # from mamba.mamba_api import Context
+    # from libmambapy import Context
     # api_ctx = Context()
     # api_ctx.set_verbosity(1)
 

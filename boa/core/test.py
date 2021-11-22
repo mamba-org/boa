@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 from os.path import isdir, join
 from boa.core.solver import get_solver
-from mamba.mamba_api import PrefixData
+from libmambapy import PrefixData
 
 from conda.gateways.disk.create import mkdir_p
 
