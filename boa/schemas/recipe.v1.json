@@ -1,169 +1,238 @@
-/*
-  initial, non complete spec...
-*/
 {
-  "$id": "https://mamba.pm/boa/recipe.v1.schema.json",
-  "title": "Boa Recipe V1",
+  "title": "BoaRecipeV1",
   "type": "object",
-  "additionalProperties": false,
   "properties": {
     "context": {
-      "type": "object",
-      "description": "The recipe context."
+      "title": "Context",
+      "description": "The recipe context.",
+      "type": "object"
     },
     "package": {
-      "type": "object",
+      "title": "Package",
       "description": "The package name and version.",
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The package name"
-        },
-        "version": {
-          "type": "string",
-          "description": "The package version"
+      "allOf": [
+        {
+          "$ref": "#/definitions/Package"
         }
-      }
+      ]
     },
     "source": {
-      "type": "array",
+      "title": "Source",
       "description": "The package name and version.",
-      "additionalProperties": false,
+      "type": "array",
       "items": {
-          "type": "object",
-          "properties": {
-            "url": {"type": "string"},
-            "sha256": {"type": "string"},
-            "md5": {"type": "string"},
-            "sha1": {"type": "string"},
-            "patches": {"type": "array", "items": {"type": "string"}},
-            "folder": {"type": "string"},
-            "git_rev": {"type": "string"},
-            "git_url": {"type": "string"}
-        }
+        "$ref": "#/definitions/SourceItem"
       }
     },
     "outputs": {
+      "title": "Outputs",
       "type": "array",
-      "items": { "$ref": "#/definitions/output" }
+      "items": {
+        "$ref": "#/definitions/Output"
+      }
     },
     "features": {
-      "type": "array"
+      "title": "Features",
+      "type": "array",
+      "items": {}
     },
     "extra": {
+      "title": "Extra",
       "type": "object"
     },
     "build": {
+      "title": "Build",
       "type": "object"
     },
     "about": {
+      "title": "About",
       "type": "object"
     }
   },
+  "additionalProperties": false,
   "definitions": {
-    "build": {
+    "Package": {
+      "title": "Package",
       "type": "object",
-      "required": ["number"],
-      // 'build/script': list,
-      // 'build/script_env': list,
-      // 'build/run_exports': list,
-      // 'build/track_features': list,
-      // 'build/osx_is_app': bool,
-      // 'build/preserve_egg_dir': bool,
-      // 'build/binary_relocation': bool,
-      // 'build/noarch': text_type,
-      // 'build/noarch_python': bool,
-      // 'build/detect_binary_files_with_prefix': bool,
-      // 'build/skip': bool,
-      // 'build/skip_compile_pyc': list,
-      // 'build/preferred_env': text_type,
-      // 'build/preferred_env_executable_paths': list,
-      // 'build/ignore_run_exports': list,
-      // 'build/ignore_run_exports_from': list,
-      // 'build/requires_features': dict,
-      // 'build/provides_features': dict,
-      // 'build/pre-link': text_type,
-      // 'build/post-link': text_type,
-      // 'build/pre-unlink': text_type,
-      // 'build/string': text_type,
-      // 'build/pin_depends': text_type,
-      // 'build/force_use_keys': list,
-      // 'build/force_ignore_keys': list,
-      // 'build/merge_build_host': bool,
-      // 'build/msvc_compiler': text_type,
       "properties": {
-        "number": {"type": "integer", "minimum": 0},
-        "string": {"type": "string"},
-        "run_exports": {"type": "object"},
-        "skip": {"type": "array", "items": {"type": "string"}},
-        "noarch": {"type": "string"},
-        "pre-link": {"type": "string"},
-        "post-link": {"type": "string"},
-        "pre-unlink": {"type": "string"},
-        "ignore_run_exports": {"type": "array", "items": {"type": "string"}},
-        "ignore_run_exports_from": {"type": "array", "items": {"type": "string"}},
-      }
+        "name": {
+          "title": "Name",
+          "description": "The package name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "description": "The package version",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
     },
-    "output": {
+    "SourceItem": {
+      "title": "SourceItem",
       "type": "object",
-      "required": [ "package" ],
       "properties": {
-        "package": {
-          "type": "object",
-          "description": "The package name.",
-          "required": [ "name" ],
-          "properties": {
-            "name": {"type": "string"},
-            "version": {"type": "string"},
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "md5": {
+          "title": "Md5",
+          "type": "string"
+        },
+        "sha1": {
+          "title": "Sha1",
+          "type": "string"
+        },
+        "patches": {
+          "title": "Patches",
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         },
+        "folder": {
+          "title": "Folder",
+          "type": "string"
+        },
+        "git_rev": {
+          "title": "Git Rev",
+          "type": "string"
+        },
+        "git_url": {
+          "title": "Git Url",
+          "type": "string"
+        }
+      }
+    },
+    "Package1": {
+      "title": "Package1",
+      "type": "object",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "Requirements": {
+      "title": "Requirements",
+      "type": "object",
+      "properties": {
         "build": {
-          "type": "object",
-        },
-        "requirements": {
-          "type": "object",
-          "properties": {
-            "build": {"type": "array", "items": {"type": "string"}},
-            "host": {"type": "array", "items": {"type": "string"}},
-            "run": {"type": "array", "items": {"type": "string"}},
-            "run_constrained": {"type": "array", "items": {"type": "string"}},
+          "title": "Build",
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         },
-        "test": { "$ref": "#/definitions/test" }
+        "host": {
+          "title": "Host",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "run": {
+          "title": "Run",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "run_constrained": {
+          "title": "Run Constrained",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
-    "test": {
+    "Test": {
+      "title": "Test",
       "type": "object",
-      "required": [],
       "properties": {
         "files": {
-          "type": "array",
+          "title": "Files",
           "description": "Test files that are copied from the recipe into the temporary test directory and are needed during testing.",
-          "items": {"type": "string"}
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "source_files": {
-          "type": "array",
+          "title": "Source Files",
           "description": "Test files that are copied from the source work directory into the temporary test directory and are needed during testing.",
-          "items": {"type": "string"}
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "requires": {
-          "type": "array",
+          "title": "Requires",
           "description": "In addition to the runtime requirements, you can specify requirements needed during testing.",
-          "items": {"type": "string"}
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "imports": {
-          "type": "array",
+          "title": "Imports",
           "description": "Test importing modules.",
-          "items": {"type": "string"}
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "commands": {
-          "type": "array",
+          "title": "Commands",
           "description": "The test commands to execute.",
-          "items": {"type": "string"}
-        },
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
+    },
+    "Output": {
+      "title": "Output",
+      "type": "object",
+      "properties": {
+        "package": {
+          "title": "Package",
+          "description": "The package name.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Package1"
+            }
+          ]
+        },
+        "build": {
+          "title": "Build",
+          "type": "object"
+        },
+        "requirements": {
+          "$ref": "#/definitions/Requirements"
+        },
+        "test": {
+          "$ref": "#/definitions/Test"
+        }
+      },
+      "required": [
+        "package"
+      ]
     }
-
   }
 }
