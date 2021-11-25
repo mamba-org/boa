@@ -13,8 +13,8 @@ class Package(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    name: Optional[str] = Field(None, description="The package name")
-    version: Optional[str] = Field(None, description="The package version")
+    name: str = Field(description="The package name")
+    version: str = Field(description="The package version")
 
 
 class SourceItem(BaseModel):
@@ -39,11 +39,6 @@ class Build(BaseModel):
     pre_unlink: Optional[str] = Field(None, alias="pre-unlink")
     ignore_run_exports: Optional[List[str]] = None
     ignore_run_exports_from: Optional[List[str]] = None
-
-
-class Package1(BaseModel):
-    name: str
-    version: Optional[str] = None
 
 
 class Requirements(BaseModel):
@@ -73,7 +68,7 @@ class Test(BaseModel):
 
 
 class Output(BaseModel):
-    package: Package1 = Field(..., description="The package name.")
+    package: Package = Field(..., description="The package name and version")
     build: Optional[Dict[str, Any]] = None
     requirements: Optional[Requirements] = None
     test: Optional[Test] = None
