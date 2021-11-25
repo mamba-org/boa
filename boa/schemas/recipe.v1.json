@@ -66,6 +66,10 @@
           "type": "string"
         }
       },
+      "required": [
+        "name",
+        "version"
+      ],
       "additionalProperties": false
     },
     "SourceItem": {
@@ -108,23 +112,6 @@
           "type": "string"
         }
       }
-    },
-    "Package1": {
-      "title": "Package1",
-      "type": "object",
-      "properties": {
-        "name": {
-          "title": "Name",
-          "type": "string"
-        },
-        "version": {
-          "title": "Version",
-          "type": "string"
-        }
-      },
-      "required": [
-        "name"
-      ]
     },
     "Requirements": {
       "title": "Requirements",
@@ -212,10 +199,10 @@
       "properties": {
         "package": {
           "title": "Package",
-          "description": "The package name.",
+          "description": "The package name and version",
           "allOf": [
             {
-              "$ref": "#/definitions/Package1"
+              "$ref": "#/definitions/Package"
             }
           ]
         },
