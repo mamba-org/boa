@@ -1,0 +1,146 @@
+{
+  "title": "Model",
+  "type": "object",
+  "properties": {
+    "channels": {
+      "title": "Channels",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "conda_build_version": {
+      "title": "Conda Build Version",
+      "type": "string"
+    },
+    "conda_private": {
+      "title": "Conda Private",
+      "type": "boolean"
+    },
+    "conda_version": {
+      "title": "Conda Version",
+      "type": "string"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "dev_url": {
+      "title": "Dev Url",
+      "type": "string"
+    },
+    "doc_url": {
+      "title": "Doc Url",
+      "type": "string"
+    },
+    "env_vars": {
+      "$ref": "#/definitions/EnvVars"
+    },
+    "extra": {
+      "$ref": "#/definitions/Extra"
+    },
+    "home": {
+      "title": "Home",
+      "type": "string"
+    },
+    "identifiers": {
+      "title": "Identifiers",
+      "type": "array",
+      "items": {}
+    },
+    "keywords": {
+      "title": "Keywords",
+      "type": "array",
+      "items": {}
+    },
+    "license": {
+      "title": "License",
+      "type": "string"
+    },
+    "license_family": {
+      "title": "License Family",
+      "type": "string"
+    },
+    "license_file": {
+      "title": "License File",
+      "type": "string"
+    },
+    "root_pkgs": {
+      "title": "Root Pkgs",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "summary": {
+      "title": "Summary",
+      "type": "string"
+    },
+    "tags": {
+      "title": "Tags",
+      "type": "array",
+      "items": {}
+    }
+  },
+  "required": [
+    "channels",
+    "conda_build_version",
+    "conda_private",
+    "conda_version",
+    "description",
+    "dev_url",
+    "doc_url",
+    "env_vars",
+    "extra",
+    "home",
+    "identifiers",
+    "keywords",
+    "license",
+    "license_family",
+    "license_file",
+    "root_pkgs",
+    "summary",
+    "tags"
+  ],
+  "definitions": {
+    "EnvVars": {
+      "title": "EnvVars",
+      "type": "object",
+      "properties": {
+        "CIO_TEST": {
+          "title": "Cio Test",
+          "type": "string"
+        }
+      },
+      "required": [
+        "CIO_TEST"
+      ]
+    },
+    "Extra": {
+      "title": "Extra",
+      "type": "object",
+      "properties": {
+        "copy_test_source_files": {
+          "title": "Copy Test Source Files",
+          "type": "boolean"
+        },
+        "final": {
+          "title": "Final",
+          "type": "boolean"
+        },
+        "recipe-maintainers": {
+          "title": "Recipe-Maintainers",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "copy_test_source_files",
+        "final",
+        "recipe-maintainers"
+      ]
+    }
+  }
+}
