@@ -28,3 +28,7 @@ class Model(BaseModel):
     root_pkgs: List[str]
     summary: str
     tags: List[str]
+
+
+if __name__ == "__main__":
+    print(Model.schema_json(indent=2))

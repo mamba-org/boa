@@ -21,3 +21,7 @@ class Path(BaseModel):
 class Model(BaseModel):
     paths: List[Path]
     paths_version: int
+
+
+if __name__ == "__main__":
+    print(Model.schema_json(indent=2))

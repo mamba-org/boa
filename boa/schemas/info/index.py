@@ -22,3 +22,7 @@ class Model(BaseModel):
     subdir: str
     timestamp: int
     version: str
+
+
+if __name__ == "__main__":
+    print(Model.schema_json(indent=2))
