@@ -9,16 +9,6 @@ from typing import List
 from pydantic import BaseModel, Field
 
 
-class EnvVars(BaseModel):
-    CIO_TEST: str
-
-
-class Extra(BaseModel):
-    copy_test_source_files: bool
-    final: bool
-    recipe_maintainers: List[str] = Field(..., alias="recipe-maintainers")
-
-
 class Model(BaseModel):
     channels: List[str]
     conda_build_version: str
@@ -27,14 +17,14 @@ class Model(BaseModel):
     description: str
     dev_url: str
     doc_url: str
-    env_vars: EnvVars
-    extra: Extra
+    env_vars: dict
+    extra: dict
     home: str
-    identifiers: List
-    keywords: List
+    identifiers: List[str]
+    keywords: List[str]
     license_: str = Field(alias="license")
     license_family: str
     license_file: str
     root_pkgs: List[str]
     summary: str
-    tags: List
+    tags: List[str]

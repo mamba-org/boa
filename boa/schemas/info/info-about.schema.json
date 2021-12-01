@@ -34,10 +34,12 @@
       "type": "string"
     },
     "env_vars": {
-      "$ref": "#/definitions/EnvVars"
+      "title": "Env Vars",
+      "type": "object"
     },
     "extra": {
-      "$ref": "#/definitions/Extra"
+      "title": "Extra",
+      "type": "object"
     },
     "home": {
       "title": "Home",
@@ -46,12 +48,16 @@
     "identifiers": {
       "title": "Identifiers",
       "type": "array",
-      "items": {}
+      "items": {
+        "type": "string"
+      }
     },
     "keywords": {
       "title": "Keywords",
       "type": "array",
-      "items": {}
+      "items": {
+        "type": "string"
+      }
     },
     "license": {
       "title": "License",
@@ -79,7 +85,9 @@
     "tags": {
       "title": "Tags",
       "type": "array",
-      "items": {}
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
@@ -101,46 +109,5 @@
     "root_pkgs",
     "summary",
     "tags"
-  ],
-  "definitions": {
-    "EnvVars": {
-      "title": "EnvVars",
-      "type": "object",
-      "properties": {
-        "CIO_TEST": {
-          "title": "Cio Test",
-          "type": "string"
-        }
-      },
-      "required": [
-        "CIO_TEST"
-      ]
-    },
-    "Extra": {
-      "title": "Extra",
-      "type": "object",
-      "properties": {
-        "copy_test_source_files": {
-          "title": "Copy Test Source Files",
-          "type": "boolean"
-        },
-        "final": {
-          "title": "Final",
-          "type": "boolean"
-        },
-        "recipe-maintainers": {
-          "title": "Recipe-Maintainers",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "copy_test_source_files",
-        "final",
-        "recipe-maintainers"
-      ]
-    }
-  }
+  ]
 }
