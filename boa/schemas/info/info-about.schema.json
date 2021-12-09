@@ -1,0 +1,113 @@
+{
+  "title": "Model",
+  "type": "object",
+  "properties": {
+    "channels": {
+      "title": "Channels",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "conda_build_version": {
+      "title": "Conda Build Version",
+      "type": "string"
+    },
+    "conda_private": {
+      "title": "Conda Private",
+      "type": "boolean"
+    },
+    "conda_version": {
+      "title": "Conda Version",
+      "type": "string"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string"
+    },
+    "dev_url": {
+      "title": "Dev Url",
+      "type": "string"
+    },
+    "doc_url": {
+      "title": "Doc Url",
+      "type": "string"
+    },
+    "env_vars": {
+      "title": "Env Vars",
+      "type": "object"
+    },
+    "extra": {
+      "title": "Extra",
+      "type": "object"
+    },
+    "home": {
+      "title": "Home",
+      "type": "string"
+    },
+    "identifiers": {
+      "title": "Identifiers",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "keywords": {
+      "title": "Keywords",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "license": {
+      "title": "License",
+      "type": "string"
+    },
+    "license_family": {
+      "title": "License Family",
+      "type": "string"
+    },
+    "license_file": {
+      "title": "License File",
+      "type": "string"
+    },
+    "root_pkgs": {
+      "title": "Root Pkgs",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "summary": {
+      "title": "Summary",
+      "type": "string"
+    },
+    "tags": {
+      "title": "Tags",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "channels",
+    "conda_build_version",
+    "conda_private",
+    "conda_version",
+    "description",
+    "dev_url",
+    "doc_url",
+    "env_vars",
+    "extra",
+    "home",
+    "identifiers",
+    "keywords",
+    "license",
+    "license_family",
+    "license_file",
+    "root_pkgs",
+    "summary",
+    "tags"
+  ]
+}

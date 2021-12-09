@@ -1,0 +1,74 @@
+{
+  "title": "Model",
+  "type": "object",
+  "properties": {
+    "arch": {
+      "title": "Arch",
+      "type": "string"
+    },
+    "build": {
+      "title": "Build",
+      "type": "string"
+    },
+    "build_number": {
+      "title": "Build Number",
+      "type": "integer"
+    },
+    "constrains": {
+      "title": "Constrains",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "depends": {
+      "title": "Depends",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "license": {
+      "title": "License",
+      "type": "string"
+    },
+    "license_family": {
+      "title": "License Family",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "platform": {
+      "title": "Platform",
+      "type": "string"
+    },
+    "subdir": {
+      "title": "Subdir",
+      "type": "string"
+    },
+    "timestamp": {
+      "title": "Timestamp",
+      "type": "integer"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "arch",
+    "build",
+    "build_number",
+    "constrains",
+    "depends",
+    "license",
+    "license_family",
+    "name",
+    "platform",
+    "subdir",
+    "timestamp",
+    "version"
+  ]
+}

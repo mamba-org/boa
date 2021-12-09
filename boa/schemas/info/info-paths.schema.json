@@ -1,0 +1,54 @@
+{
+  "title": "Model",
+  "type": "object",
+  "properties": {
+    "paths": {
+      "title": "Paths",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Path"
+      }
+    },
+    "paths_version": {
+      "title": "Paths Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "paths",
+    "paths_version"
+  ],
+  "definitions": {
+    "Path": {
+      "title": "Path",
+      "type": "object",
+      "properties": {
+        "path_type": {
+          "title": "Path Type",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "size_in_bytes": {
+          "title": "Size In Bytes",
+          "type": "integer"
+        },
+        "file_mode": {
+          "title": "File Mode",
+          "type": "string"
+        },
+        "prefix_placeholder": {
+          "title": "Prefix Placeholder",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path_type",
+        "sha256",
+        "size_in_bytes"
+      ]
+    }
+  }
+}

@@ -90,3 +90,7 @@ class BoaRecipeV1(BaseModel):
     extra: Optional[Dict[str, Any]] = None
     build: Optional[Dict[str, Any]] = None
     about: Optional[Dict[str, Any]] = None
+
+
+if __name__ == "__main__":
+    print(BoaRecipeV1.schema_json(indent=2))
