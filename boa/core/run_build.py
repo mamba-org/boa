@@ -8,6 +8,7 @@ import json
 import pathlib
 
 from libmambapy import PrefixData
+from libmambapy import Context as MambaContext
 
 from boa.core.render import render
 from boa.core.utils import get_config, get_sys_vars_stubs
@@ -538,8 +539,9 @@ def build_recipe(
             if "build" in o.transactions:
                 if os.path.isdir(o.config.build_prefix):
                     rm_rf(o.config.build_prefix)
-                mkdir_p(o.config.build_prefix)
+                mkdir_p(os.path.join(o.config.build_prefix, "conda-meta"))
                 try:
+                    MambaContext().target_prefix = o.config.build_prefix
                     o.transactions["build"]["transaction"].print()
                     o.transactions["build"]["transaction"].execute(
                         PrefixData(o.config.build_prefix),
@@ -549,7 +551,8 @@ def build_recipe(
                     print("Could not instantiate build environment")
 
             if "host" in o.transactions:
-                mkdir_p(o.config.host_prefix)
+                mkdir_p(os.path.join(o.config.host_prefix, "conda-meta"))
+                MambaContext().target_prefix = o.config.host_prefix
                 o.transactions["host"]["transaction"].print()
                 o.transactions["host"]["transaction"].execute(
                     PrefixData(o.config.host_prefix)

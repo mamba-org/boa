@@ -14,6 +14,7 @@ from pathlib import Path
 from os.path import isdir, join
 from boa.core.solver import get_solver
 from libmambapy import PrefixData
+from libmambapy import Context as MambaContext
 
 from conda.gateways.disk.create import mkdir_p
 
@@ -788,6 +789,7 @@ def run_test(
         pkg_cache_path = PackageCacheData.first_writable().pkgs_dir
 
     solver.replace_channels()
+    MambaContext().target_prefix = metadata.config.test_prefix
     transaction = solver.solve(specs, [pkg_cache_path])
 
     downloaded = transaction.fetch_extract_packages(
@@ -796,7 +798,7 @@ def run_test(
     if not downloaded:
         raise RuntimeError("Did not succeed in downloading packages.")
 
-    mkdir_p(metadata.config.test_prefix)
+    mkdir_p(os.path.join(metadata.config.test_prefix, "conda-meta"))
     transaction.execute(PrefixData(metadata.config.test_prefix),)
 
     with utils.path_prepended(metadata.config.test_prefix):
