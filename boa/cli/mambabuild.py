@@ -182,7 +182,23 @@ def call_conda_build(action, config, **kwargs):
         result = api.get_output_file_paths(recipe, config=config, **kwargs)
         print("\n".join(sorted(result)))
     elif action == "test":
-        result = api.test(recipe, config=config, **kwargs)
+        failed_recipes = []
+        recipes = [item for sublist in [glob(os.path.abspath(recipe)) if '*' in recipe else [recipe] for recipe in config.recipe] for item in sublist]
+        for recipe in recipes:
+            try:
+                result = api.test(recipe, config=config, **kwargs)
+            except:
+                failed_recipes.append(recipe)
+                continue
+        if failed_recipes:
+            print("Failed recipes:")
+            for recipe in failed_recipes:
+                print("  - %s" % recipe)
+            sys.exit(len(failed_recipes))
+        else:
+            print("All tests passed")
+        result = []
+        
     elif action == "build":
         result = api.build(
             recipe,
