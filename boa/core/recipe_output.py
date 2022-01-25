@@ -547,7 +547,7 @@ class Output:
             name = spec.name
             spec.from_run_export = True
             for idx, r in enumerate(self.requirements[env]):
-                if r.final_name == name:
+                if r.final_name == name and r.is_simple:
                     self.requirements[env][idx] = spec
                     return
             self.requirements[env].append(spec)
