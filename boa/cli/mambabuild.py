@@ -4,6 +4,7 @@
 import os
 import sys
 import re
+from glob import glob
 
 from conda.models.match_spec import MatchSpec
 from conda.gateways.disk.create import mkdir_p
@@ -183,11 +184,18 @@ def call_conda_build(action, config, **kwargs):
         print("\n".join(sorted(result)))
     elif action == "test":
         failed_recipes = []
-        recipes = [item for sublist in [glob(os.path.abspath(recipe)) if '*' in recipe else [recipe] for recipe in config.recipe] for item in sublist]
+        recipes = [
+            item
+            for sublist in [
+                glob(os.path.abspath(recipe)) if "*" in recipe else [recipe]
+                for recipe in config.recipe
+            ]
+            for item in sublist
+        ]
         for recipe in recipes:
             try:
                 result = api.test(recipe, config=config, **kwargs)
-            except:
+            except Exception:
                 failed_recipes.append(recipe)
                 continue
         if failed_recipes:
@@ -198,7 +206,7 @@ def call_conda_build(action, config, **kwargs):
         else:
             print("All tests passed")
         result = []
-        
+
     elif action == "build":
         result = api.build(
             recipe,
