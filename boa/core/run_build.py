@@ -510,9 +510,9 @@ def build_recipe(
             )
             refresh_solvers()
 
-            o.finalize_solve(sorted_outputs)
-
             o.config._build_id = o0.config.build_id
+
+            o.finalize_solve(sorted_outputs)
 
             meta = MetaData(recipe_path, o)
             o.set_final_build_id(meta)
