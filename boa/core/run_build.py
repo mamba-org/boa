@@ -405,7 +405,7 @@ def build_recipe(
     continue_on_failure: bool = False,
     rerun_build: bool = False,
 ):
-
+    print("in build_recipe")
     ydoc = render(recipe_path, config=config)
     # We need to assemble the variants for each output
     variants = {}
@@ -608,6 +608,7 @@ def build_recipe(
             elif isinstance(e, BoaRunBuildException):
                 raise e
             else:
+                raise e
                 exit(1)
 
     for o in sorted_outputs:
@@ -654,6 +655,7 @@ def run_build(args):
     console.print(f"Updating build index: {(config.output_folder)}\n")
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
+
     all_recipes = find_all_recipes(args.target, config)  # [noqa]
 
     console.print("\n[yellow]Assembling all recipes and variants[/yellow]\n")
@@ -679,6 +681,7 @@ def run_build(args):
             except BoaRunBuildException:
                 rerun_build = True
             except Exception as e:
+                print(e)
                 raise e
             else:
                 break

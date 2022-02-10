@@ -46,6 +46,7 @@ def get_solver(subdir, output_folder="local"):
             os.makedirs(pkg_cache, exist_ok=True)
 
     if not solver_cache.get(subdir):
+        print("GET SOLVER")
         solver_cache[subdir] = MambaSolver([], subdir, output_folder)
 
     return solver_cache[subdir], pkg_cache
