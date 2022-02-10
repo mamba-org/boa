@@ -9,6 +9,7 @@ from __future__ import absolute_import, division, print_function
 import fnmatch
 import io
 import os
+import glob
 from os.path import isdir, isfile, join
 import shutil
 import sys
@@ -235,9 +236,70 @@ def select_files(files, include_files, exclude_files):
     return final_files
 
 
-def bundle_conda(metadata, initial_files, env, files_selector=None):
+def hack_emscripten_generated_js(metadata, filename):
 
+    # the dir where "filename" file lives in (TODO: fixme)
+    file_base_dir = metadata.config.host_prefix
+    # os.path.join(os.path.dirname(metadata.config.work_dir),"_build_env")
+    full_filename = os.path.join(file_base_dir, filename)
+
+
+    # we only consider files with a ".js or no suffix"
+    path = pathlib.Path(filename)
+    suffix = path.suffix
+    basename = path.stem
+
+    # files to search
+    wasm_filename = f'{basename}.wasm'
+    worker_filename =f'{basename}.worker.js'
+
+    # console.print(f"\n[orange] looking for {wasm_filename} [/orange]\n")
+
+
+    added_files = []
+    if suffix == ".js" or suffix == "":
+
+
+        with open(full_filename) as f:
+            try:
+                content = f.read()
+                if wasm_filename in content:
+                    console.print(f"\n[red] checking {filename} is referencing WASM [/red]\n")
+                    # search the whole work dir for that file...
+        
+                    # pathname = os.path.join(metadata.config.work_dir + f"/**/{wasm_filename}")
+
+                    # find wasm file and worker
+                    n_found = 0
+                    for root, subFolders, files in os.walk(metadata.config.work_dir, followlinks=False):
+                        for file in files:
+                            if file == wasm_filename:
+                                console.print(f"\n[red] FOUND WASM [/red]\n")
+                                shutil.copy2(src=os.path.join(root,file), 
+                                    dst=os.path.join(metadata.config.host_prefix,'bin',file))
+                                added_files.append(f'bin/{file}')
+                                n_found += 1
+                            if file == worker_filename:
+                                console.print(f"\n[red] FOUND WORKER [/red]\n")
+                                shutil.copy2(src=os.path.join(root,file), 
+                                    dst=os.path.join(metadata.config.host_prefix,'bin',file))
+                                added_files.append(f'bin/{file}')
+                                n_found += 1
+                        if n_found == 2:
+                            break
+
+
+
+
+            except UnicodeDecodeError:
+                return added_files
+    return added_files
+
+def bundle_conda(metadata, initial_files, env, files_selector=None):
+    console.print(f"\n[green]initial_files {initial_files}[/green]\n")
     files = post_process_files(metadata, initial_files)
+    console.print(f"\n[green]files {initial_files}[/green]\n")
+
 
     # first filter is so that info_files does not pick up ignored files
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
@@ -245,6 +307,20 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
         files = select_files(
             files, files_selector.get("include"), files_selector.get("exclude")
         )
+
+    extra_files = []
+    # todo add emscripten selector
+    # check for binary files
+    for f in sorted(files):
+    
+        if(f.startswith("bin/")):
+            added_files = hack_emscripten_generated_js(metadata, f)
+            for f in added_files:
+                console.print(f"[red] added missing file  {f} [/red]\n")
+            extra_files += added_files
+    files = sorted(files + extra_files)
+
+
 
     console.print(f"\n[yellow]Adding files for {metadata.name()}[/yellow]\n")
     if files:
@@ -278,6 +354,8 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
         files = select_files(files, include_files, files_selector.get("exclude"))
 
     basename = metadata.dist()
+    print(f"{ metadata.config.work_dir=}")
+    print(f"{basename=} { metadata.config.host_prefix=}")
     tmp_archives = []
     final_outputs = []
     ext = ".tar.bz2"
@@ -631,6 +709,8 @@ def build(
         utils.rm_rf(m.config.info_dir)
         files_before_script = utils.prefix_files(prefix=m.config.host_prefix)
 
+        print("files_before_script",files_before_script)
+
         with open(join(m.config.build_folder, "prefix_files.txt"), "w") as f:
             f.write("\n".join(sorted(list(files_before_script))))
             f.write("\n")
@@ -644,9 +724,11 @@ def build(
             utils.rm_rf(m.config.host_prefix)
             return
 
+        print(f'\n\n{m.output.sections["files"]=}')
         final_outputs = bundle_conda(
             m, files_before_script, env, m.output.sections["files"]
         )
+        print("final_outputs",final_outputs)
         return final_outputs
     except subprocess.CalledProcessError:
         ext = "bat" if utils.on_win else "sh"
