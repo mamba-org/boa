@@ -792,9 +792,7 @@ def run_test(
     MambaContext().target_prefix = metadata.config.test_prefix
     transaction = solver.solve(specs, [pkg_cache_path])
 
-    downloaded = transaction.fetch_extract_packages(
-        solver.repos + list(solver.local_repos.values()),
-    )
+    downloaded = transaction.fetch_extract_packages()
     if not downloaded:
         raise RuntimeError("Did not succeed in downloading packages.")
 
