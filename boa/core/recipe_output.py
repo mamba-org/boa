@@ -633,9 +633,7 @@ class Output:
                 "pkg_cache": pkg_cache,
             }
 
-            downloaded = t.fetch_extract_packages(
-                solver.repos + list(solver.local_repos.values()),
-            )
+            downloaded = t.fetch_extract_packages()
             if not downloaded:
                 raise RuntimeError("Did not succeed in downloading packages.")
 

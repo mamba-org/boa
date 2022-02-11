@@ -608,6 +608,7 @@ def build_recipe(
             elif isinstance(e, BoaRunBuildException):
                 raise e
             else:
+                console.print_exception(show_locals=False)
                 exit(1)
 
     for o in sorted_outputs:
