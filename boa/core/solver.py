@@ -220,14 +220,9 @@ class MambaSolver:
             pkg_cache_path = pkgs_dirs
 
         package_cache = libmambapy.MultiPackageCache(pkg_cache_path)
-        if MAMBA_17_UP:
-            t = libmambapy.Transaction(
-                api_solver, package_cache, self.repos + list(self.local_repos.values())
-            )
-        else:
-            t = libmambapy.Transaction(api_solver, package_cache,)
-
-        return t
+        return libmambapy.Transaction(
+            api_solver, package_cache, self.repos + list(self.local_repos.values())
+        )
 
     def solve_for_action(self, specs, prefix):
         t = self.solve(specs)
