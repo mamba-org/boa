@@ -98,14 +98,15 @@ def _copy_output_recipe(m, dest_dir):
 
 
 def output_yaml(metadata, filename=None, suppress_outputs=False):
-    local_metadata = metadata.copy()
+    local_metadata = metadata.rendered_meta().copy()
     if (
         suppress_outputs
-        and local_metadata.is_output
-        and "outputs" in local_metadata.meta
+        and metadata.is_output
+        and "outputs" in local_metadata
     ):
-        del local_metadata.meta["outputs"]
-    output = yaml.dump((local_metadata.meta), default_flow_style=False, indent=4)
+        del local_metadata["outputs"]
+
+    output = yaml.dump((local_metadata), default_flow_style=False, indent=4)
     if filename:
         if any(sep in filename for sep in ("\\", "/")):
             mkdir_p(os.path.dirname(filename))

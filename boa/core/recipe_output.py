@@ -63,6 +63,17 @@ class CondaBuildSpec:
     def final_name(self):
         return self.final.split(" ")[0]
 
+    @property
+    def final_pin(self):
+        if hasattr(self, 'final_version'):
+            return f"{self.final_name} {self.final_version[0]} {self.final_version[1]}"
+        else:
+            return self.final
+
+    @property
+    def final_triplet(self):
+        return f"{self.final_name}-{self.final_version[0]}-{self.final_version[1]}"
+
     def loosen_spec(self):
         if self.is_compiler or self.is_pin:
             return
@@ -515,10 +526,9 @@ class Output:
                 continue
             if s.name in self.sections["build"].get("ignore_run_exports", []):
                 continue
+
             if hasattr(s, "final_version"):
-                final_triple = (
-                    f"{s.final_name}-{s.final_version[0]}-{s.final_version[1]}"
-                )
+                final_triplet = s.final_triplet
             else:
                 console.print(f"[red]{s} has no final version")
                 continue
@@ -532,7 +542,7 @@ class Output:
                 collected_run_exports.append(s.run_exports_info)
             else:
                 path = Path(pkg_cache).joinpath(
-                    final_triple, "info", "run_exports.json",
+                    final_triplet, "info", "run_exports.json",
                 )
                 if path.exists():
                     with open(path) as fi:
@@ -582,6 +592,7 @@ class Output:
         if self.requirements.get(env):
             console.print(f"Finalizing [yellow]{env}[/yellow] for {self.name}")
             specs = self.requirements[env]
+
             for s in specs:
                 if s.is_pin:
                     s.eval_pin_subpackage(all_outputs)
