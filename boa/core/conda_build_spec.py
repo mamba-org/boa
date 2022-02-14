@@ -104,6 +104,17 @@ class CondaBuildSpec:
     def final_name(self):
         return self.final.split(" ")[0]
 
+    @property
+    def final_pin(self):
+        if hasattr(self, "final_version"):
+            return f"{self.final_name} {self.final_version[0]} {self.final_version[1]}"
+        else:
+            return self.final
+
+    @property
+    def final_triplet(self):
+        return f"{self.final_name}-{self.final_version[0]}-{self.final_version[1]}"
+
     def loosen_spec(self):
         if self.is_compiler or self.is_pin:
             return
