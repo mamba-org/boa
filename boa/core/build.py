@@ -521,7 +521,10 @@ function feature()
         bf.write("    source {}\n".format(env_file))
         bf.write("fi\n")
 
-        if isfile(build_file):
+        if build_file and isfile(build_file) and build_file.endswith(".py"):
+            pyexe = sys.executable
+            bf.write(f"{pyexe} $BUILD_PREFIX/bitfurnace/runner.py {build_file}")
+        elif build_file and isfile(build_file):
             bf.write(open(build_file).read())
         elif script:
             bf.write(script)
@@ -561,7 +564,11 @@ def execute_build_script(m, src_dir, env, provision_only=False):
                 m, build_file, stats=build_stats, provision_only=provision_only
             )
         else:
-            build_file = join(m.path, "build.sh")
+            build_file = ""
+            if isfile(join(m.path, "build.sh")):
+                build_file = join(m.path, "build.sh")
+            elif isfile(join(m.path, "build.py")):
+                build_file = join(m.path, "build.py")
             # if isfile(build_file) and script:
             #     raise CondaBuildException(
             #         "Found a build.sh script and a build/script section "
@@ -569,8 +576,10 @@ def execute_build_script(m, src_dir, env, provision_only=False):
             #         "or remove the build/script section in meta.yaml."
             #     )
             # There is no sense in trying to run an empty build script.
-            if isfile(build_file) or script:
-                if isinstance(script, str) and script.endswith(".sh"):
+            if build_file or script:
+                if isinstance(script, str) and (
+                    script.endswith(".sh") or script.endswith(".py")
+                ):
                     build_file = os.path.join(m.path, script)
 
                 work_file, _ = write_build_scripts(m, script, build_file)

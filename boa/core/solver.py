@@ -219,17 +219,11 @@ class MambaSolver:
         if pkg_cache_path is None:
             # use values from conda
             pkg_cache_path = pkgs_dirs
-            writeable_dir = PackageCacheData.first_writable().pkgs_dir
-        else:
-            writeable_dir = pkg_cache_path[0]
 
         package_cache = libmambapy.MultiPackageCache(pkg_cache_path)
-        if MAMBA_17_UP:
-            t = libmambapy.Transaction(api_solver, package_cache)
-        else:
-            t = libmambapy.Transaction(api_solver, package_cache, writeable_dir)
-
-        return t
+        return libmambapy.Transaction(
+            api_solver, package_cache, self.repos + list(self.local_repos.values())
+        )
 
     def solve_for_action(self, specs, prefix):
         t = self.solve(specs)
