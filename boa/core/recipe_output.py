@@ -25,9 +25,9 @@ from conda_build.jinja_context import native_compiler
 
 from libmambapy import Context as MambaContext
 from boa.core.config import boa_config
-from boa.core.features import extract_features
 
 console = boa_config.console
+
 
 @dataclass
 class CondaBuildSpec:
@@ -56,7 +56,7 @@ class CondaBuildSpec:
 
         if not (self.is_pin or self.is_pin_compatible or self.is_compiler):
             for idx, x in enumerate(self.splitted):
-                if x.startswith('['):
+                if x.startswith("["):
                     self.features = [f.strip() for f in x[1:-1].split(",")]
                     self.splitted = self.splitted[:idx]
                     break
@@ -73,7 +73,7 @@ class CondaBuildSpec:
 
     @property
     def final_pin(self):
-        if hasattr(self, 'final_version'):
+        if hasattr(self, "final_version"):
             return f"{self.final_name} {self.final_version[0]} {self.final_version[1]}"
         else:
             return self.final
@@ -178,19 +178,25 @@ class CondaBuildSpec:
             return
 
         for f in self.features:
-            if f[0] == '&' and f[1:] in feature_map[f[1:]] and feature_map[f[1:]]['activated']:
+            if (
+                f[0] == "&"
+                and f[1:] in feature_map[f[1:]]
+                and feature_map[f[1:]]["activated"]
+            ):
                 active_features.append(f[1:])
-            elif f[0] != '&':
+            elif f[0] != "&":
                 active_features.append(f)
 
         # special handling with `static` feature
-        if 'static' in active_features:
-            self.name += '-static'
-            active_features.remove('static')
+        if "static" in active_features:
+            self.name += "-static"
+            active_features.remove("static")
 
         if len(active_features):
             active_features = sorted(active_features)
-            feature_string = "*" + ''.join([f"+{feat}*" for f in active_features]) + "*"
+            feature_string = (
+                "*" + "".join([f"+{feat}*" for feat in active_features]) + "*"
+            )
             version = "*"
             if len(self.splitted) >= 2:
                 version = self.splitted[1]
@@ -201,6 +207,7 @@ class CondaBuildSpec:
                 version = self.splitted[1]
 
         self.final = f"{self.name} {version} {feature_string}".strip()
+
 
 class Output:
     def __init__(

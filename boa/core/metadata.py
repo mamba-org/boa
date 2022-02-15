@@ -159,10 +159,8 @@ class MetaData:
 
     def rendered_meta(self):
         res = self.meta.copy()
-        for typ in res.get('requirements', tuple()):
-            res['requirements'][typ] = [
-                x.final_pin for x in self.get_dependencies(typ)
-            ]
+        for typ in res.get("requirements", tuple()):
+            res["requirements"][typ] = [x.final_pin for x in self.get_dependencies(typ)]
 
         return res
 

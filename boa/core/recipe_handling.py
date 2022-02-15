@@ -99,11 +99,7 @@ def _copy_output_recipe(m, dest_dir):
 
 def output_yaml(metadata, filename=None, suppress_outputs=False):
     local_metadata = metadata.rendered_meta().copy()
-    if (
-        suppress_outputs
-        and metadata.is_output
-        and "outputs" in local_metadata
-    ):
+    if suppress_outputs and metadata.is_output and "outputs" in local_metadata:
         del local_metadata["outputs"]
 
     output = yaml.dump((local_metadata), default_flow_style=False, indent=4)
