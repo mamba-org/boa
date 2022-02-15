@@ -157,6 +157,13 @@ class MetaData:
         else:
             return section.get(key, default)
 
+    def rendered_meta(self):
+        res = self.meta.copy()
+        for typ in res.get("requirements", tuple()):
+            res["requirements"][typ] = [x.final_pin for x in self.get_dependencies(typ)]
+
+        return res
+
     @property
     def source_provided(self):
         return not bool(self.meta.get("source")) or (

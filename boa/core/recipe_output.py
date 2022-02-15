@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, List
 
 import rich
 from rich.table import Table
@@ -39,7 +39,7 @@ class CondaBuildSpec:
     is_compiler: bool = False
     is_transitive_dependency: bool = False
     channel: str = ""
-    # final: String
+    features: List[str] = None
 
     from_run_export: bool = False
     from_pinnings: bool = False
@@ -48,10 +48,18 @@ class CondaBuildSpec:
         self.raw = ms
         self.splitted = ms.split()
         self.name = self.splitted[0]
+
         if len(self.splitted) > 1:
             self.is_pin = self.splitted[1].startswith("PIN_")
             self.is_pin_compatible = self.splitted[1].startswith("PIN_COMPATIBLE")
             self.is_compiler = self.splitted[0].startswith("COMPILER_")
+
+        if not (self.is_pin or self.is_pin_compatible or self.is_compiler):
+            for idx, x in enumerate(self.splitted):
+                if x.startswith("["):
+                    self.features = [f.strip() for f in x[1:-1].split(",")]
+                    self.splitted = self.splitted[:idx]
+                    break
 
         self.is_simple = len(self.splitted) == 1
         self.final = self.raw
@@ -62,6 +70,17 @@ class CondaBuildSpec:
     @property
     def final_name(self):
         return self.final.split(" ")[0]
+
+    @property
+    def final_pin(self):
+        if hasattr(self, "final_version"):
+            return f"{self.final_name} {self.final_version[0]} {self.final_version[1]}"
+        else:
+            return self.final
+
+    @property
+    def final_triplet(self):
+        return f"{self.final_name}-{self.final_version[0]}-{self.final_version[1]}"
 
     def loosen_spec(self):
         if self.is_compiler or self.is_pin:
@@ -152,6 +171,42 @@ class CondaBuildSpec:
             if compatibility is not None
             else self.name
         )
+
+    def eval_features(self, feature_map):
+        active_features = []
+        if not self.features:
+            return
+
+        for f in self.features:
+            if (
+                f[0] == "&"
+                and f[1:] in feature_map[f[1:]]
+                and feature_map[f[1:]]["activated"]
+            ):
+                active_features.append(f[1:])
+            elif f[0] != "&":
+                active_features.append(f)
+
+        # special handling with `static` feature
+        if "static" in active_features:
+            self.name += "-static"
+            active_features.remove("static")
+
+        if len(active_features):
+            active_features = sorted(active_features)
+            feature_string = (
+                "*" + "".join([f"+{feat}*" for feat in active_features]) + "*"
+            )
+            version = "*"
+            if len(self.splitted) >= 2:
+                version = self.splitted[1]
+        else:
+            feature_string = ""
+            version = ""
+            if len(self.splitted) >= 2:
+                version = self.splitted[1]
+
+        self.final = f"{self.name} {version} {feature_string}".strip()
 
 
 class Output:
@@ -515,10 +570,9 @@ class Output:
                 continue
             if s.name in self.sections["build"].get("ignore_run_exports", []):
                 continue
+
             if hasattr(s, "final_version"):
-                final_triple = (
-                    f"{s.final_name}-{s.final_version[0]}-{s.final_version[1]}"
-                )
+                final_triplet = s.final_triplet
             else:
                 console.print(f"[red]{s} has no final version")
                 continue
@@ -532,7 +586,7 @@ class Output:
                 collected_run_exports.append(s.run_exports_info)
             else:
                 path = Path(pkg_cache).joinpath(
-                    final_triple, "info", "run_exports.json",
+                    final_triplet, "info", "run_exports.json",
                 )
                 if path.exists():
                     with open(path) as fi:
@@ -582,6 +636,7 @@ class Output:
         if self.requirements.get(env):
             console.print(f"Finalizing [yellow]{env}[/yellow] for {self.name}")
             specs = self.requirements[env]
+
             for s in specs:
                 if s.is_pin:
                     s.eval_pin_subpackage(all_outputs)
@@ -589,7 +644,8 @@ class Output:
                     s.eval_pin_compatible(
                         self.requirements["build"], self.requirements["host"]
                     )
-
+                if s.features:
+                    s.eval_features(self.feature_map)
             # save finalized requirements in data for usage in metadata
             self.data["requirements"][env] = [s.final for s in self.requirements[env]]
 
