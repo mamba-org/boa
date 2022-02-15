@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, List
 
 import rich
 from rich.table import Table
@@ -25,9 +25,9 @@ from conda_build.jinja_context import native_compiler
 
 from libmambapy import Context as MambaContext
 from boa.core.config import boa_config
+from boa.core.features import extract_features
 
 console = boa_config.console
-
 
 @dataclass
 class CondaBuildSpec:
@@ -39,7 +39,7 @@ class CondaBuildSpec:
     is_compiler: bool = False
     is_transitive_dependency: bool = False
     channel: str = ""
-    # final: String
+    features: List[str] = None
 
     from_run_export: bool = False
     from_pinnings: bool = False
@@ -48,10 +48,18 @@ class CondaBuildSpec:
         self.raw = ms
         self.splitted = ms.split()
         self.name = self.splitted[0]
+
         if len(self.splitted) > 1:
             self.is_pin = self.splitted[1].startswith("PIN_")
             self.is_pin_compatible = self.splitted[1].startswith("PIN_COMPATIBLE")
             self.is_compiler = self.splitted[0].startswith("COMPILER_")
+
+        if not (self.is_pin or self.is_pin_compatible or self.is_compiler):
+            for idx, x in enumerate(self.splitted):
+                if x.startswith('['):
+                    self.features = [f.strip() for f in x[1:-1].split(",")]
+                    self.splitted = self.splitted[:idx]
+                    break
 
         self.is_simple = len(self.splitted) == 1
         self.final = self.raw
@@ -164,6 +172,35 @@ class CondaBuildSpec:
             else self.name
         )
 
+    def eval_features(self, feature_map):
+        active_features = []
+        if not self.features:
+            return
+
+        for f in self.features:
+            if f[0] == '&' and f[1:] in feature_map[f[1:]] and feature_map[f[1:]]['activated']:
+                active_features.append(f[1:])
+            elif f[0] != '&':
+                active_features.append(f)
+
+        # special handling with `static` feature
+        if 'static' in active_features:
+            self.name += '-static'
+            active_features.remove('static')
+
+        if len(active_features):
+            active_features = sorted(active_features)
+            feature_string = "*" + ''.join([f"+{feat}*" for f in active_features]) + "*"
+            version = "*"
+            if len(self.splitted) >= 2:
+                version = self.splitted[1]
+        else:
+            feature_string = ""
+            version = ""
+            if len(self.splitted) >= 2:
+                version = self.splitted[1]
+
+        self.final = f"{self.name} {version} {feature_string}".strip()
 
 class Output:
     def __init__(
@@ -600,7 +637,8 @@ class Output:
                     s.eval_pin_compatible(
                         self.requirements["build"], self.requirements["host"]
                     )
-
+                if s.features:
+                    s.eval_features(self.feature_map)
             # save finalized requirements in data for usage in metadata
             self.data["requirements"][env] = [s.final for s in self.requirements[env]]
 
