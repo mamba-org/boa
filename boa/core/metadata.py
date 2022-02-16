@@ -23,7 +23,9 @@ import json
 import copy
 
 from boa.core.config import boa_config
+
 console = boa_config.console
+
 
 def get_package_version_pin(specs, name):
     for s in specs:
@@ -349,9 +351,8 @@ class MetaData:
         """
 
         # trim_build_only_deps(self, dependencies)
-        raw_dependencies = (
-            self.get_dependencies("build")
-            + self.get_dependencies("host")
+        raw_dependencies = self.get_dependencies("build") + self.get_dependencies(
+            "host"
         )
         dependencies = {x.name for x in raw_dependencies}
         # filter out ignored versions
@@ -388,21 +389,21 @@ class MetaData:
         # Add <lang>_compiler and <lang>_compiler_version if it was used
         for dep in raw_dependencies:
             if dep.is_compiler:
-                if f'{dep.splitted[1]}_compiler' in self.config.variant:
-                    take_keys.add(f'{dep.splitted[1]}_compiler')
-                if f'{dep.splitted[1]}_compiler_version' in self.config.variant:
-                    take_keys.add(f'{dep.splitted[1]}_compiler_version')
+                if f"{dep.splitted[1]}_compiler" in self.config.variant:
+                    take_keys.add(f"{dep.splitted[1]}_compiler")
+                if f"{dep.splitted[1]}_compiler_version" in self.config.variant:
+                    take_keys.add(f"{dep.splitted[1]}_compiler_version")
 
-        if 'CONDA_BUILD_SYSROOT' in self.config.variant:
+        if "CONDA_BUILD_SYSROOT" in self.config.variant:
             for dep in raw_dependencies:
-                if dep.is_compiler and dep.splitted[1] in ['c', 'cxx']:
-                    take_keys.add('CONDA_BUILD_SYSROOT')
+                if dep.is_compiler and dep.splitted[1] in ["c", "cxx"]:
+                    take_keys.add("CONDA_BUILD_SYSROOT")
 
         # always add target_platform and channel_targets to hash
-        if ('target_platform' in self.config.variant) and not self.noarch:
-            take_keys.add('target_platform')
-        if 'channel_targets' in self.config.variant:
-            take_keys.add('channel_targets')
+        if ("target_platform" in self.config.variant) and not self.noarch:
+            take_keys.add("target_platform")
+        if "channel_targets" in self.config.variant:
+            take_keys.add("channel_targets")
 
         console.print(self.config.variant)
 
@@ -486,9 +487,8 @@ class MetaData:
 
     def get_used_vars(self, force_top_level=False):
 
-        raw_dependencies = (
-            self.get_dependencies("build")
-            + self.get_dependencies("host")
+        raw_dependencies = self.get_dependencies("build") + self.get_dependencies(
+            "host"
         )
         dependencies = {x.name for x in raw_dependencies}
 
@@ -499,21 +499,21 @@ class MetaData:
         # Add <lang>_compiler and <lang>_compiler_version if it was used
         for dep in raw_dependencies:
             if dep.is_compiler:
-                if f'{dep.splitted[1]}_compiler' in self.config.variant:
-                    take_keys.add(f'{dep.splitted[1]}_compiler')
-                if f'{dep.splitted[1]}_compiler_version' in self.config.variant:
-                    take_keys.add(f'{dep.splitted[1]}_compiler_version')
+                if f"{dep.splitted[1]}_compiler" in self.config.variant:
+                    take_keys.add(f"{dep.splitted[1]}_compiler")
+                if f"{dep.splitted[1]}_compiler_version" in self.config.variant:
+                    take_keys.add(f"{dep.splitted[1]}_compiler_version")
 
-        if 'CONDA_BUILD_SYSROOT' in self.config.variant:
+        if "CONDA_BUILD_SYSROOT" in self.config.variant:
             for dep in raw_dependencies:
-                if dep.is_compiler and dep.splitted[1] in ['c', 'cxx']:
-                    take_keys.add('CONDA_BUILD_SYSROOT')
+                if dep.is_compiler and dep.splitted[1] in ["c", "cxx"]:
+                    take_keys.add("CONDA_BUILD_SYSROOT")
 
         # always add target_platform and channel_targets to hash
-        if ('target_platform' in self.config.variant) and not self.noarch:
-            take_keys.add('target_platform')
-        if 'channel_targets' in self.config.variant:
-            take_keys.add('channel_targets')
+        if ("target_platform" in self.config.variant) and not self.noarch:
+            take_keys.add("target_platform")
+        if "channel_targets" in self.config.variant:
+            take_keys.add("channel_targets")
 
         return take_keys
 

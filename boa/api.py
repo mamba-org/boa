@@ -5,21 +5,31 @@ from boa.core.utils import get_config
 from boa.core.run_build import to_build_tree, get_dependency_variants
 from boa.core.metadata import MetaData
 
-                # os.path.join(forge_dir, forge_config["recipe_dir"]),
-                # platform=platform,
-                # arch=arch,
-                # ignore_system_variants=True,
-                # variants=migrated_combined_variant_spec,
-                # permit_undefined_jinja=True,
-                # finalize=False,
-                # bypass_env_check=True,
-                # channel_urls=forge_config.get("channels", {}).get(
-                #     "sources", []
-                # ),
+# os.path.join(forge_dir, forge_config["recipe_dir"]),
+# platform=platform,
+# arch=arch,
+# ignore_system_variants=True,
+# variants=migrated_combined_variant_spec,
+# permit_undefined_jinja=True,
+# finalize=False,
+# bypass_env_check=True,
+# channel_urls=forge_config.get("channels", {}).get(
+#     "sources", []
+# ),
 
-def render(recipe_dir, platform, arch, 
-    ignore_system_variants=True, variants=None, permit_undefined_jinja=True, 
-    finalize=False, bypass_env_check=True, channel_urls=None, selected_features=None):
+
+def render(
+    recipe_dir,
+    platform,
+    arch,
+    ignore_system_variants=True,
+    variants=None,
+    permit_undefined_jinja=True,
+    finalize=False,
+    bypass_env_check=True,
+    channel_urls=None,
+    selected_features=None,
+):
 
     if not channel_urls:
         channel_urls = []
@@ -34,12 +44,8 @@ def render(recipe_dir, platform, arch,
     recipe_path = Path(recipe_dir) / "recipe.yaml"
     ydoc = core_render(recipe_path, config)
 
-    print("\n\n\nVARIANTS!!!\n\n", variants)
     # this takes in all variants and outputs, builds a dependency tree and returns
     # the final metadata
-
-    print(config)
-    print(cbc)
 
     assembled_variants = {}
     # if we have a outputs section, use that order the outputs
@@ -69,10 +75,9 @@ def render(recipe_dir, platform, arch,
 
     print("Selected variants: ", assembled_variants)
 
-    sorted_outputs = to_build_tree(ydoc, 
-        assembled_variants,
-        config, variants, 
-        selected_features)
+    sorted_outputs = to_build_tree(
+        ydoc, assembled_variants, config, variants, selected_features
+    )
 
     metas = []
     for output in sorted_outputs:
@@ -80,8 +85,8 @@ def render(recipe_dir, platform, arch,
         print(output)
         meta.config.variants = {}
         meta.config.input_variants = variants
-        # meta.config.variants = 
+        # meta.config.variants =
         metas.append((meta, None, None))
     print(metas)
     return metas
-        # o.set_final_build_id(meta)
+    # o.set_final_build_id(meta)
