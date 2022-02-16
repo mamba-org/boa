@@ -6,6 +6,7 @@ import glob
 import itertools
 import json
 import pathlib
+import copy
 
 from libmambapy import PrefixData
 from libmambapy import Context as MambaContext
@@ -280,10 +281,9 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
 
         # zip keys need to be contracted
         zipped_keys = cbc.get("zip_keys", [])
-
+        print(f"Variant for {variant_name} ", variants.get(variant_name))
         if variants.get(variant_name):
             v = variants[variant_name]
-            import copy
 
             vzipped = copy.copy(v)
             zippers = {}
@@ -344,6 +344,7 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
 
                 unzipped_combinations.append(unz_combo)
 
+            print("Applying variant! ", c, differentiating_keys)
             for c in unzipped_combinations:
                 x = output.apply_variant(c, differentiating_keys)
                 final_outputs.append(x)

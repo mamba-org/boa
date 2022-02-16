@@ -278,6 +278,8 @@ class Output:
         copied = copy.deepcopy(self)
 
         copied.variant = variant
+        # copied.variants = [variant]
+        # copied.config.variants = [variant]
         for idx, r in enumerate(self.requirements["build"]):
             vname = r.name.replace("-", "_")
             if vname in variant:

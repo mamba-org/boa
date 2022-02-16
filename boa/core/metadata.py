@@ -22,6 +22,8 @@ import re
 import json
 import copy
 
+from boa.core.config import boa_config
+console = boa_config.console
 
 def get_package_version_pin(specs, name):
     for s in specs:
@@ -347,12 +349,11 @@ class MetaData:
         """
 
         # trim_build_only_deps(self, dependencies)
-        dependencies = (
+        raw_dependencies = (
             self.get_dependencies("build")
             + self.get_dependencies("host")
-            # self.output.requirements["build"] + self.output.requirements["host"]
         )
-        dependencies = {x.name for x in dependencies}
+        dependencies = {x.name for x in raw_dependencies}
         # filter out ignored versions
         build_string_excludes = ["python", "r_base", "perl", "lua", "target_platform"]
         build_string_excludes.extend(
@@ -380,12 +381,35 @@ class MetaData:
                         continue
                 filtered_deps.append(req)
 
-        take_keys = set(self.config.variant.keys())
+        take_keys = set(k for k in self.config.variant.keys() if k in dependencies)
         if "python" in take_keys and "python" not in dependencies:
             take_keys.remove("python")
 
+        # Add <lang>_compiler and <lang>_compiler_version if it was used
+        for dep in raw_dependencies:
+            if dep.is_compiler:
+                if f'{dep.splitted[1]}_compiler' in self.config.variant:
+                    take_keys.add(f'{dep.splitted[1]}_compiler')
+                if f'{dep.splitted[1]}_compiler_version' in self.config.variant:
+                    take_keys.add(f'{dep.splitted[1]}_compiler_version')
+
+        if 'CONDA_BUILD_SYSROOT' in self.config.variant:
+            for dep in raw_dependencies:
+                if dep.is_compiler and dep.splitted[1] in ['c', 'cxx']:
+                    take_keys.add('CONDA_BUILD_SYSROOT')
+
+        # always add target_platform and channel_targets to hash
+        if ('target_platform' in self.config.variant) and not self.noarch:
+            take_keys.add('target_platform')
+        if 'channel_targets' in self.config.variant:
+            take_keys.add('channel_targets')
+
+        console.print(self.config.variant)
+
         # retrieve values - this dictionary is what makes up the hash.
-        return {key: self.config.variant[key] for key in take_keys}
+        hash_dict = {key: self.config.variant[key] for key in take_keys}
+        console.print("[bold]Hash dictionary:\n", hash_dict)
+        return hash_dict
 
     def info_index(self):
         arch = (
@@ -459,6 +483,11 @@ class MetaData:
         self.output.transactions = None
         new = copy.deepcopy(self)
         return new
+
+    def get_used_vars(self, force_top_level=False):
+        return []
+    def get_used_loop_vars(self, force_top_level=False):
+        return []
 
     def get_test_deps(self, py_files, pl_files, lua_files, r_files):
         specs = ["%s %s %s" % (self.name(), self.version(), self.build_id())]
