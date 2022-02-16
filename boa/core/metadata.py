@@ -485,9 +485,40 @@ class MetaData:
         return new
 
     def get_used_vars(self, force_top_level=False):
-        return []
+
+        raw_dependencies = (
+            self.get_dependencies("build")
+            + self.get_dependencies("host")
+        )
+        dependencies = {x.name for x in raw_dependencies}
+
+        take_keys = set(k for k in self.config.variant.keys() if k in dependencies)
+        if "python" in take_keys and "python" not in dependencies:
+            take_keys.remove("python")
+
+        # Add <lang>_compiler and <lang>_compiler_version if it was used
+        for dep in raw_dependencies:
+            if dep.is_compiler:
+                if f'{dep.splitted[1]}_compiler' in self.config.variant:
+                    take_keys.add(f'{dep.splitted[1]}_compiler')
+                if f'{dep.splitted[1]}_compiler_version' in self.config.variant:
+                    take_keys.add(f'{dep.splitted[1]}_compiler_version')
+
+        if 'CONDA_BUILD_SYSROOT' in self.config.variant:
+            for dep in raw_dependencies:
+                if dep.is_compiler and dep.splitted[1] in ['c', 'cxx']:
+                    take_keys.add('CONDA_BUILD_SYSROOT')
+
+        # always add target_platform and channel_targets to hash
+        if ('target_platform' in self.config.variant) and not self.noarch:
+            take_keys.add('target_platform')
+        if 'channel_targets' in self.config.variant:
+            take_keys.add('channel_targets')
+
+        return take_keys
+
     def get_used_loop_vars(self, force_top_level=False):
-        return []
+        return set()
 
     def get_test_deps(self, py_files, pl_files, lua_files, r_files):
         specs = ["%s %s %s" % (self.name(), self.version(), self.build_id())]

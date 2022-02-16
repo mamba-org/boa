@@ -77,12 +77,11 @@ def main(config=None):
     )
     build_parser.add_argument(
         "--suppress-variables",
-        action="append",
+        action="store_true",
         help="CURRENTLY IGNORED! Do not display value of environment variables specified in build.script_env"
     )
     build_parser.add_argument(
         "--clobber-file",
-        action="append",
         help="CURRENTLY IGNORED! Clobber data in meta.yaml with fields from this file. Jinja2 is not done on clobbered fields"
     )
     subparsers.add_parser(
