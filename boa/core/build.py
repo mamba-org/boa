@@ -238,62 +238,60 @@ def select_files(files, include_files, exclude_files):
 
 def hack_emscripten_generated_js(metadata, filename):
 
-    # the dir where "filename" file lives in (TODO: fixme)
     file_base_dir = metadata.config.host_prefix
-    # os.path.join(os.path.dirname(metadata.config.work_dir),"_build_env")
     full_filename = os.path.join(file_base_dir, filename)
-
-
-    # we only consider files with a ".js or no suffix"
-    path = pathlib.Path(filename)
-    suffix = path.suffix
-    basename = path.stem
-
-    # files to search
-    wasm_filename = f'{basename}.wasm'
-    worker_filename =f'{basename}.worker.js'
-
-    # console.print(f"\n[orange] looking for {wasm_filename} [/orange]\n")
-
-
     added_files = []
-    if suffix == ".js" or suffix == "":
+    with open(full_filename) as f:
+        try:
+            content = f.read()
+            is_emscripten_generated_wasm = False
+
+            if 'wasmBinaryFile = "' in content:
+                minified = False  
+                is_emscripten_generated_wasm = True  
+                split_on = 'wasmBinaryFile = "'
+            elif 'wasmBinaryFile="' in content:
+                minified = True
+                is_emscripten_generated_wasm = True
+                split_on = 'wasmBinaryFile="'
 
 
-        with open(full_filename) as f:
-            try:
-                content = f.read()
-                if wasm_filename in content:
-                    console.print(f"\n[red] checking {filename} is referencing WASM [/red]\n")
-                    # search the whole work dir for that file...
-        
-                    # pathname = os.path.join(metadata.config.work_dir + f"/**/{wasm_filename}")
+            if is_emscripten_generated_wasm:
 
-                    # find wasm file and worker
-                    n_found = 0
-                    for root, subFolders, files in os.walk(metadata.config.work_dir, followlinks=False):
-                        for file in files:
-                            if file == wasm_filename:
-                                console.print(f"\n[red] FOUND WASM [/red]\n")
-                                shutil.copy2(src=os.path.join(root,file), 
+                console.print(f"\n[red] FOUND EMSCRIPTEN GENERATED [/red]\n")
+
+                res = content.split(split_on)
+                assert len(res) == 2
+                res2 = res[1].split('.wasm')
+                assert len(res2) == 2
+
+
+                wasm_filename = res2[0] + ".wasm"
+                worker_filename = res[0] + ".worker.js"
+                found = 0
+                for root, subFolders, files in os.walk(metadata.config.work_dir, followlinks=False):
+                    for file in files:
+                        if file == wasm_filename:
+                            console.print(f"\n[red] FOUND WASM [/red]\n")
+                            shutil.copy2(src=os.path.join(root,file), 
                                     dst=os.path.join(metadata.config.host_prefix,'bin',file))
-                                added_files.append(f'bin/{file}')
-                                n_found += 1
-                            if file == worker_filename:
-                                console.print(f"\n[red] FOUND WORKER [/red]\n")
-                                shutil.copy2(src=os.path.join(root,file), 
+                            added_files.append(f'bin/{file}')
+                            found += 1
+                        if file == worker_filename:
+                            console.print(f"\n[red] FOUND WORKER [/red]\n")
+                            shutil.copy2(src=os.path.join(root,file), 
                                     dst=os.path.join(metadata.config.host_prefix,'bin',file))
-                                added_files.append(f'bin/{file}')
-                                n_found += 1
-                        if n_found == 2:
-                            break
+                            added_files.append(f'bin/{file}')
+                            found += 1
+                    if found == 2:
+                        break
 
+        except UnicodeDecodeError:
+            return added_files
 
-
-
-            except UnicodeDecodeError:
-                return added_files
     return added_files
+
+
 
 def bundle_conda(metadata, initial_files, env, files_selector=None):
     console.print(f"\n[green]initial_files {initial_files}[/green]\n")
@@ -523,7 +521,9 @@ function feature()
 
         if build_file and isfile(build_file) and build_file.endswith(".py"):
             pyexe = sys.executable
-            bf.write(f"{pyexe} $BUILD_PREFIX/bitfurnace/runner.py {build_file}")
+
+            bf.write(f"{pyexe} $HOME/src/bitfurnace/bitfurnace/runner.py {build_file}")
+            # bf.write(f"{pyexe} $BUILD_PREFIX/bitfurnace/runner.py {build_file}")
         elif build_file and isfile(build_file):
             bf.write(open(build_file).read())
         elif script:
