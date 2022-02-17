@@ -22,7 +22,7 @@ def main(config=None):
     parser = argparse.ArgumentParser(
         description="Boa, the fast, mamba powered-build tool for conda packages."
     )
-    parser.add_argument("--version", action='version', version=__version__)
+    parser.add_argument("--version", action="version", version=__version__)
 
     subparsers = parser.add_subparsers(help="sub-command help", dest="command")
     parent_parser = argparse.ArgumentParser(add_help=False)
