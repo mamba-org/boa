@@ -745,10 +745,11 @@ def run_test(
     # get_build_metadata(metadata)
 
     specs = metadata.get_test_deps(py_files, pl_files, lua_files, r_files)
+
     tests_metadata = metadata.output.data.get("test")
-    exists_metadata = tests_metadata.get("exists") if tests_metadata else None
-    cmake_find = exists_metadata.get("cmake_find") if exists_metadata else None
-    pkg_config = exists_metadata.get("pkg_config") if exists_metadata else None
+    exists_metadata = tests_metadata.get("exists", {})
+    cmake_find = exists_metadata.get("cmake_find", [])
+    pkg_config = exists_metadata.get("pkg_config", [])
     if cmake_find:
         specs.append("cmake")
     if pkg_config:
