@@ -5,7 +5,7 @@ import sys
 import argparse
 
 from boa.core.config import init_global_config
-
+from boa._version import __version__
 from mamba.utils import init_api_context
 
 banner = r"""
@@ -22,6 +22,7 @@ def main(config=None):
     parser = argparse.ArgumentParser(
         description="Boa, the fast, mamba powered-build tool for conda packages."
     )
+    parser.add_argument("--version", action='version', version=__version__)
 
     subparsers = parser.add_subparsers(help="sub-command help", dest="command")
     parent_parser = argparse.ArgumentParser(add_help=False)
