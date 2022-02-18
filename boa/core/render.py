@@ -95,28 +95,31 @@ def normalize_recipe(ydoc):
     if ydoc.get("source"):
         ydoc["source"] = ensure_list(ydoc["source"])
 
+    toplevel_output = None
     if not ydoc.get("outputs"):
         ydoc["outputs"] = [{"package": ydoc["package"]}]
-
         toplevel_output = ydoc["outputs"][0]
     else:
         for o in ydoc["outputs"]:
-            if o["package"]["name"] == ydoc["package"]["name"]:
+            if not toplevel_output and o["package"]["name"] == ydoc["package"]["name"]:
                 toplevel_output = o
-                break
-        else:
-            # how do we handle no-output toplevel?!
-            toplevel_output = None
+
+            # merge version into outputs if they don't have one
+            if "version" not in o["package"]:
+                o["package"]["version"] = ydoc["package"]["version"]
+
+        # how do we handle no-output toplevel?!
+        if toplevel_output is None:
             assert not ydoc.get("requirements")
 
+    # move these under toplevel output
     if ydoc.get("requirements"):
-        # move these under toplevel output
         assert not toplevel_output.get("requirements")
         toplevel_output["requirements"] = ydoc["requirements"]
         del ydoc["requirements"]
 
+    # move these under toplevel output
     if ydoc.get("test"):
-        # move these under toplevel output
         assert not toplevel_output.get("test")
         toplevel_output["test"] = ydoc["test"]
         del ydoc["test"]
@@ -179,6 +182,7 @@ def render(recipe_path, config=None):
 
     flatten_selectors(ydoc, ns_cfg(config))
 
+    # Normalize the entire recipe
     ydoc = normalize_recipe(ydoc)
     # console.print("\n[yellow]Normalized recipe[/yellow]\n")
     # console.print(ydoc)
