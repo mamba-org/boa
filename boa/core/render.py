@@ -88,7 +88,7 @@ def ensure_list(x):
 def normalize_recipe(ydoc):
     # normalizing recipe:
     # sources -> list
-    # every output -> to outputs list
+    # every output -> to steps list
     if ydoc.get("context"):
         del ydoc["context"]
 
@@ -96,15 +96,17 @@ def normalize_recipe(ydoc):
         ydoc["source"] = ensure_list(ydoc["source"])
 
     toplevel_output = None
-    if not ydoc.get("outputs"):
-        ydoc["outputs"] = [{"package": ydoc["package"]}]
-        toplevel_output = ydoc["outputs"][0]
+    if not ydoc.get("steps"):
+        ydoc["steps"] = [{"package": ydoc["package"]}]
+        toplevel_output = ydoc["steps"][0]
     else:
-        for o in ydoc["outputs"]:
+        for o in ydoc["steps"]:
+            if "package" not in o:
+                continue
             if not toplevel_output and o["package"]["name"] == ydoc["package"]["name"]:
                 toplevel_output = o
 
-            # merge version into outputs if they don't have one
+            # merge version into steps if they don't have one
             if "version" not in o["package"]:
                 o["package"]["version"] = ydoc["package"]["version"]
 
@@ -133,7 +135,6 @@ def normalize_recipe(ydoc):
 
     move_to_toplevel("run_exports")
     move_to_toplevel("ignore_run_exports")
-
     return ydoc
 
 
@@ -184,6 +185,6 @@ def render(recipe_path, config=None):
 
     # Normalize the entire recipe
     ydoc = normalize_recipe(ydoc)
-    # console.print("\n[yellow]Normalized recipe[/yellow]\n")
-    # console.print(ydoc)
+    console.print("\n[yellow]Normalized recipe[/yellow]\n")
+    console.print(ydoc)
     return ydoc
