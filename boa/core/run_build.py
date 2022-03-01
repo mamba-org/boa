@@ -27,8 +27,6 @@ from boa.core.validation import validate, ValidationError, SchemaError
 from boa.core.variant_arithmetic import get_variants
 from boa.tui.exceptions import BoaRunBuildException
 
-from boa.helpers.asciigraph import draw as draw_ascii_graph
-
 from conda_build.utils import rm_rf
 from conda.common import toposort
 from conda.base.context import context
@@ -161,6 +159,8 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
 
     debug_draw = False
     if debug_draw:
+        from boa.helpers.asciigraph import draw as draw_ascii_graph
+
         for x in final_outputs:
             cc = Console(file=StringIO())
             t = Table(title=x.name)
