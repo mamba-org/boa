@@ -190,6 +190,6 @@ def render(recipe_path, config=None):
 
     # Normalize the entire recipe
     ydoc = normalize_recipe(ydoc)
-    console.print("\n[yellow]Normalized recipe[/yellow]\n")
-    console.print(ydoc)
+    # console.print("\n[yellow]Normalized recipe[/yellow]\n")
+    # console.print(ydoc)
     return ydoc

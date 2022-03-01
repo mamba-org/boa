@@ -145,8 +145,6 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
     tsorted = [o for o in tsorted if o in sort_dict.keys()]
 
     sorted_outputs = OrderedDict((k, outputs[k]) for k in tsorted)
-    for _, o in sorted_outputs.items():
-        console.print(o)
 
     variants, final_outputs = get_variants(sorted_outputs, cbc, config)
 
@@ -161,22 +159,22 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
 
     edges, vertices = [], []
 
-    for x in final_outputs:
-        cc = Console(file=StringIO())
-        t = Table(title=x.name)
-        t.add_column("Variant")
-        for v in x.differentiating_keys:
-            t.add_row(f"{v} {x.variant[v]}")
-        cc.print(t)
+    # for x in final_outputs:
+    #     cc = Console(file=StringIO())
+    #     t = Table(title=x.name)
+    #     t.add_column("Variant")
+    #     for v in x.differentiating_keys:
+    #         t.add_row(f"{v} {x.variant[v]}")
+    #     cc.print(t)
 
-        str_output = cc.file.getvalue()
+    #     str_output = cc.file.getvalue()
 
-        vertices.append(str_output)
-        for ps in x.parent_steps:
-            edges.append([final_outputs.index(ps), final_outputs.index(x)])
+    #     vertices.append(str_output)
+    #     for ps in x.parent_steps:
+    #         edges.append([final_outputs.index(ps), final_outputs.index(x)])
 
-    for ascii_graph in draw_ascii_graph(vertices, edges):
-        print(ascii_graph)
+    # for ascii_graph in draw_ascii_graph(vertices, edges):
+    #     print(ascii_graph)
 
     return final_outputs
 
