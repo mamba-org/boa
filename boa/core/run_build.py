@@ -12,7 +12,8 @@ from libmambapy import Context as MambaContext
 
 from boa.core.render import render
 from boa.core.utils import get_config, get_sys_vars_stubs
-from boa.core.recipe_output import Output, CondaBuildSpec
+from boa.core.recipe_output import Output
+from boa.core.conda_build_spec import CondaBuildSpec
 from boa.core.solver import refresh_solvers
 from boa.core.build import build, download_source
 from boa.core.metadata import MetaData
