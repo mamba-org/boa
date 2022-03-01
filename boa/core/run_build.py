@@ -159,22 +159,24 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
 
     edges, vertices = [], []
 
-    # for x in final_outputs:
-    #     cc = Console(file=StringIO())
-    #     t = Table(title=x.name)
-    #     t.add_column("Variant")
-    #     for v in x.differentiating_keys:
-    #         t.add_row(f"{v} {x.variant[v]}")
-    #     cc.print(t)
+    debug_draw = False
+    if debug_draw:
+        for x in final_outputs:
+            cc = Console(file=StringIO())
+            t = Table(title=x.name)
+            t.add_column("Variant")
+            for v in x.differentiating_keys:
+                t.add_row(f"{v} {x.variant[v]}")
+            cc.print(t)
 
-    #     str_output = cc.file.getvalue()
+            str_output = cc.file.getvalue()
 
-    #     vertices.append(str_output)
-    #     for ps in x.parent_steps:
-    #         edges.append([final_outputs.index(ps), final_outputs.index(x)])
+            vertices.append(str_output)
+            for ps in x.parent_steps:
+                edges.append([final_outputs.index(ps), final_outputs.index(x)])
 
-    # for ascii_graph in draw_ascii_graph(vertices, edges):
-    #     print(ascii_graph)
+        for ascii_graph in draw_ascii_graph(vertices, edges):
+            print(ascii_graph)
 
     return final_outputs
 
