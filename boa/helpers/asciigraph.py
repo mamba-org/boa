@@ -188,7 +188,6 @@ def _build_sugiyama_layout(vertices, edges):
     # NOTE: determine min box length to create the best layout
     minw = min(v.view.w for v in vertices)
     minh = min(v.view.h for v in vertices)
-    print(minw, minh)
 
     for edge in edges:
         edge.view = EdgeViewer()

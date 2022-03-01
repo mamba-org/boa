@@ -30,7 +30,6 @@ class Output:
     def __init__(
         self, d, config, parent=None, conda_build_config=None, selected_features=None
     ):
-        print(d)
         if parent is None:
             parent = {}
 
@@ -41,7 +40,6 @@ class Output:
         self.conda_build_config = conda_build_config or {}
         self.name = d["step"]["name"]
         if "package" in d:
-            print("\n\n\n\nTHERE IS A PACKAGE")
             self.version = d["package"]["version"]
             self.build_string = d["package"].get("build_string")
         else:
@@ -52,7 +50,6 @@ class Output:
         self.noarch = d["build"].get("noarch", False)
         self.is_first = False
         self.is_package = "package" in d
-        print(f"\n\n\n\nPACKAGE IS {self.is_package}")
 
         self.sections = {}
 

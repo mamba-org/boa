@@ -96,6 +96,11 @@ def normalize_recipe(ydoc):
         ydoc["source"] = ensure_list(ydoc["source"])
 
     toplevel_output = None
+
+    if ydoc.get("outputs"):
+        ydoc["steps"] = ydoc["outputs"]
+        del ydoc["outputs"]
+
     if not ydoc.get("steps"):
         ydoc["steps"] = [{"package": ydoc["package"]}]
         toplevel_output = ydoc["steps"][0]

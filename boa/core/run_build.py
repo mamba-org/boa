@@ -167,72 +167,16 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
         t.add_column("Variant")
         for v in x.differentiating_keys:
             t.add_row(f"{v} {x.variant[v]}")
-
         cc.print(t)
+
         str_output = cc.file.getvalue()
 
         vertices.append(str_output)
         for ps in x.parent_steps:
             edges.append([final_outputs.index(ps), final_outputs.index(x)])
 
-    # names = [o.name for o in final_outputs]
-    # for idx, o in enumerate(final_outputs):
-    #     reqs = o.requirements.get("build") + o.requirements.get("host")
-    #     vertices.append(f"{o.name} {o.differentiating_variant}")
-
-    #     for r in reqs:
-    #         print(r.name)
-    #         max_v_overlap = 0
-    #         other_dep = None
-    #         for idx, f in enumerate(final_outputs):
-    #             if f.name == r.name:
-    #                 k = set(f.differentiating_keys) - set(o.differentiating_keys)
-    #                 if k >= max_v_overlap:
-    #                     other_dep = idx
-    #                     max_v_overlap = k
-    #             if other_dep:
-    #                 edges.append([idx, other_dep])
-
-    for xx in draw_ascii_graph(vertices, edges):
-        print(xx)
-
-    exit(0)
-    # TODO not sure if this is used anywhere
-    # has_intermediate = False
-    # for o in temp:
-    #     if o.sections["build"].get("intermediate"):
-    #         if has_intermediate:
-    #             raise RuntimeError(
-    #                 "Already found an intermediate build. There can be only one!"
-    #             )
-    #         final_outputs.insert(0, o)
-    #         has_intermediate = True
-    #     else:
-    #         final_outputs.append(o)
-
-    # Note: maybe this should happen _before_ apply variant?!
-    # if has_intermediate:
-    #     # inherit dependencies
-    #     def merge_requirements(a, b):
-    #         b_names = [x.name for x in b]
-    #         for r in a:
-    #             if r.name in b_names:
-    #                 continue
-    #             else:
-    #                 b.append(r)
-
-    #     intermediate = final_outputs[0]
-    #     for o in final_outputs[1:]:
-    #         merge_requirements(
-    #             intermediate.requirements["host"], o.requirements["host"]
-    #         )
-    #         merge_requirements(
-    #             intermediate.requirements["build"], o.requirements["build"]
-    #         )
-    #         merged_variant = {}
-    #         merged_variant.update(intermediate.config.variant)
-    #         merged_variant.update(o.config.variant)
-    #         o.config.variant = merged_variant
+    for ascii_graph in draw_ascii_graph(vertices, edges):
+        print(ascii_graph)
 
     return final_outputs
 

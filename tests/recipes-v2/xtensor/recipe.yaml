@@ -24,8 +24,6 @@ requirements:
     - xtl >=0.7,<0.8
   run_constrained:
     - xsimd >=7.4.8,<8
-  test:
-    - ...
 
 test:
   commands:
@@ -36,30 +34,6 @@ test:
     - sel(win): if not exist %LIBRARY_PREFIX%\include\xtensor\xarray.hpp (exit 1)
     - sel(win): if not exist %LIBRARY_PREFIX%\lib\cmake\xtensor\xtensorConfig.cmake (exit 1)
     - sel(win): if not exist %LIBRARY_PREFIX%\lib\cmake\xtensor\xtensorConfigVersion.cmake (exit 1)
-
-
-    - sel(unix):
-        - test -d ${PREFIX}/include/xtensor
-        - test -d ${PREFIX}/include/xtensor
-        - test -d ${PREFIX}/include/xtensor
-
-    - if: unix
-      put: test -d ${PREFIX}/include/xtensor
-
-    - if: unix
-      put:
-        - test -d ${PREFIX}/include/xtensor
-        - test -d ${PREFIX}/include/xtensor
-        - test -d ${PREFIX}/include/xtensor
-
-
-    - sel(unix): test -f ${PREFIX}/include/xtensor/xarray.hpp
-    - sel(unix): test -f ${PREFIX}/lib/cmake/xtensor/xtensorConfig.cmake
-    - sel(unix): test -f ${PREFIX}/lib/cmake/xtensor/xtensorConfigVersion.cmake
-    - sel(win): if not exist %LIBRARY_PREFIX%\include\xtensor\xarray.hpp (exit 1)
-    - sel(win): if not exist %LIBRARY_PREFIX%\lib\cmake\xtensor\xtensorConfig.cmake (exit 1)
-    - sel(win): if not exist %LIBRARY_PREFIX%\lib\cmake\xtensor\xtensorConfigVersion.cmake (exit 1)
-
   exists:
     include:
         - xtensor
