@@ -33,6 +33,7 @@ from conda_build.index import update_index
 from conda_build.post import (
     post_process,
     post_build,
+    filetypes_for_platform,
     fix_permissions,
     get_build_metadata,
 )
@@ -71,6 +72,10 @@ from conda_build.build import (
 from rich.prompt import Confirm
 
 console = boa_config.console
+
+
+# Avoid error when checking overlinking if noarch package bundles a library
+filetypes_for_platform["noarch"] = []
 
 
 def create_post_scripts(m):
