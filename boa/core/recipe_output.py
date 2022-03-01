@@ -33,6 +33,7 @@ class Output:
             parent = {}
         if selected_features is None:
             selected_features = {}
+
         self.data = d
         self.data["source"] = d.get("source", parent.get("source", {}))
         self.config = config
@@ -53,7 +54,13 @@ class Output:
         set_section("build")
         set_section("package")
         set_section("app")
+
+        # TODO this is a hack ...
         set_section("extra")
+        set_section("about")
+        self.data["extra"] = self.sections["extra"]
+        self.data["about"] = self.sections["about"]
+
         set_section("test")
 
         self.sections["files"] = d.get("files")
@@ -149,6 +156,8 @@ class Output:
         copied = copy.deepcopy(self)
 
         copied.variant = variant
+        # copied.variants = [variant]
+        # copied.config.variants = [variant]
         for idx, r in enumerate(self.requirements["build"]):
             vname = r.name.replace("-", "_")
             if vname in variant:

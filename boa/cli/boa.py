@@ -60,7 +60,7 @@ def main(config=None):
         "-i",
         "--interactive",
         action="store_true",
-        help="Use interactive mode if build fails",
+        help="Use (experimental) interactive mode if build fails",
     )
     build_parser.add_argument(
         "--skip-existing", nargs="?", default="default", const="yes",
@@ -76,11 +76,19 @@ def main(config=None):
         action="store_true",
         help="Continue building remaining recipes if a recipe fails.",
     )
-
+    build_parser.add_argument(
+        "--suppress-variables",
+        action="store_true",
+        help="CURRENTLY IGNORED! Do not display value of environment variables specified in build.script_env",
+    )
+    build_parser.add_argument(
+        "--clobber-file",
+        help="CURRENTLY IGNORED! Clobber data in meta.yaml with fields from this file. Jinja2 is not done on clobbered fields",
+    )
     subparsers.add_parser(
         "build",
         parents=[parent_parser, build_parser, variant_parser],
-        help="build a recipe",
+        help="Build a recipe",
     )
 
     transmute_parser = subparsers.add_parser(
