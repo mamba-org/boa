@@ -85,7 +85,7 @@ class BoaRecipeV1(BaseModel):
     source: Optional[List[SourceItem]] = Field(
         None, description="The package name and version."
     )
-    outputs: Optional[List[Output]] = None
+    steps: Optional[List[Output]] = None
     features: Optional[List] = None
     extra: Optional[Dict[str, Any]] = None
     build: Optional[Dict[str, Any]] = None

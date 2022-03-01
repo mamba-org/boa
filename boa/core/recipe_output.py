@@ -19,8 +19,9 @@ from conda_build.metadata import eval_selector, ns_cfg
 from conda_build.jinja_context import native_compiler
 
 from libmambapy import Context as MambaContext
-from boa.core.conda_build_spec import CondaBuildSpec
 from boa.core.config import boa_config
+from boa.core.conda_build_spec import CondaBuildSpec
+from boa.helpers.ast_extract_syms import ast_extract_syms
 
 console = boa_config.console
 
@@ -31,18 +32,25 @@ class Output:
     ):
         if parent is None:
             parent = {}
-        if selected_features is None:
-            selected_features = {}
+
+        self.selected_features = selected_features or {}
         self.data = d
         self.data["source"] = d.get("source", parent.get("source", {}))
         self.config = config
         self.conda_build_config = conda_build_config or {}
-        self.name = d["package"]["name"]
-        self.version = d["package"]["version"]
-        self.build_string = d["package"].get("build_string")
+        self.name = d["step"]["name"]
+        if "package" in d:
+            self.version = d["package"]["version"]
+            self.build_string = d["package"].get("build_string")
+        else:
+            self.version = None
+            self.build_string = None
+
         self.build_number = d["build"].get("number", 0)
         self.noarch = d["build"].get("noarch", False)
         self.is_first = False
+        self.is_package = "package" in d
+
         self.sections = {}
 
         def set_section(sname):
@@ -61,13 +69,18 @@ class Output:
         if hasattr(self.sections["source"], "keys"):
             self.sections["source"] = [self.sections["source"]]
 
+        self.required_steps = []
+        for s in self.sections["source"]:
+            if "step" in s:
+                self.required_steps += [s["step"]]
+
         self.sections["features"] = parent.get("features", [])
 
         self.feature_map = {f["name"]: f for f in self.sections.get("features", [])}
         for fname, feat in self.feature_map.items():
             activated = feat.get("default", False)
-            if fname in selected_features:
-                activated = selected_features[fname]
+            if fname in self.selected_features:
+                activated = self.selected_features[fname]
 
             feat["activated"] = activated
 
@@ -137,6 +150,36 @@ class Output:
             )
         return len(skip_reasons) != 0
 
+    def inherit_requirements(self, steps):
+        def merge_requirements(a, b):
+            b_names = [x.name for x in b]
+            for r in a:
+                print(r)
+                if r.name in b_names:
+                    continue
+                else:
+                    print(r, "is inherited!!!")
+
+                    rc = copy.deepcopy(r)
+                    rc.is_inherited = True
+                    b.append(rc)
+
+        for s in self.required_steps:
+            merge_requirements(
+                steps[s].requirements["build"], self.requirements["build"]
+            )
+            merge_requirements(steps[s].requirements["host"], self.requirements["host"])
+
+    def variant_keys(self):
+        all_keys = self.requirements.get("build", []) + self.requirements.get(
+            "host", []
+        )
+
+        for s in self.sections["build"].get("skip", []):
+            all_keys += ast_extract_syms(s)
+
+        return [str(x) for x in all_keys]
+
     def all_requirements(self):
         requirements = (
             self.requirements.get("build")
@@ -156,6 +199,8 @@ class Output:
                     r.name + " " + variant[vname]
                 )
                 copied.requirements["build"][idx].from_pinnings = True
+                copied.requirements["build"][idx].is_inherited = r.is_inherited
+
         for idx, r in enumerate(self.requirements["host"]):
             vname = r.name.replace("-", "_")
             if vname in variant:
@@ -163,6 +208,7 @@ class Output:
                     r.name + " " + variant[vname]
                 )
                 copied.requirements["host"][idx].from_pinnings = True
+                copied.requirements["host"][idx].is_inherited = r.is_inherited
 
         # todo figure out if we should pin like that in the run reqs as well?
         # for idx, r in enumerate(self.requirements["run"]):
@@ -196,6 +242,7 @@ class Output:
 
         copied.config = get_or_merge_config(self.config, variant=variant)
 
+        copied.differentiating_keys = differentiating_keys
         copied.differentiating_variant = []
         for k in differentiating_keys:
             copied.differentiating_variant.append(variant[k])
@@ -291,9 +338,14 @@ class Output:
                     version = "PS " + version
                 color = "cyan"
 
+            name = r.final_name
+            if x.is_inherited:
+                name += " (inherited)"
+                color = "magenta"
+
             if len(fv) >= 2:
                 table.add_row(
-                    f"[bold white]{r.final_name}[/bold white]",
+                    f"[bold white]{name}[/bold white]",
                     f"[{color}]{version}[/{color}]",
                     f"{fv[0]}",
                     f"{fv[1]}",
@@ -301,7 +353,7 @@ class Output:
                 )
             else:
                 table.add_row(
-                    f"[bold white]{r.final_name}[/bold white]",
+                    f"[bold white]{name}[/bold white]",
                     f"[{color}]{version}[/{color}]",
                     f"{fv[0]}",
                     "",

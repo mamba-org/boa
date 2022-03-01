@@ -24,8 +24,8 @@
         "$ref": "#/definitions/SourceItem"
       }
     },
-    "outputs": {
-      "title": "Outputs",
+    "steps": {
+      "title": "Steps",
       "type": "array",
       "items": {
         "$ref": "#/definitions/Output"

@@ -3,36 +3,36 @@
 
 import os
 import glob
-import itertools
 import json
+import shutil
 import pathlib
+from collections import OrderedDict
+
+from rich.console import Console
+from rich.table import Table
+from io import StringIO
 
 from libmambapy import PrefixData
 from libmambapy import Context as MambaContext
 
 from boa.core.render import render
-from boa.core.utils import get_config, get_sys_vars_stubs
+from boa.core.utils import get_config
 from boa.core.recipe_output import Output
-from boa.core.conda_build_spec import CondaBuildSpec
 from boa.core.solver import refresh_solvers
 from boa.core.build import build, download_source
 from boa.core.metadata import MetaData
 from boa.core.test import run_test
 from boa.core.config import boa_config
 from boa.core.validation import validate, ValidationError, SchemaError
+from boa.core.variant_arithmetic import get_variants
 from boa.tui.exceptions import BoaRunBuildException
 
 from conda_build.utils import rm_rf
-import conda_build.jinja_context
 from conda.common import toposort
 from conda.base.context import context
-from conda.models.match_spec import MatchSpec
 from conda.gateways.disk.create import mkdir_p
-from conda_build.variants import get_default_variant
-from conda_build.utils import ensure_list, on_win
+from conda_build.utils import on_win
 from conda_build.index import update_index
-
-from rich.table import Table
 
 console = boa_config.console
 
@@ -67,8 +67,12 @@ def find_all_recipes(target, config):
 
         # find all outputs from recipe
         output_names = set([yml["package"]["name"]])
-        for output in yml.get("outputs", []):
-            output_names.add(output["package"]["name"])
+        for output in yml.get("steps", []):
+            if "package" in output:
+                output_names.add(output["package"]["name"])
+            else:
+                # support non-package steps
+                output_names.add(output["step"]["name"])
 
         if "static" in [f["name"] for f in yml.get("features", [])]:
             output_names.add(yml["package"]["name"] + "-static")
@@ -83,7 +87,7 @@ def find_all_recipes(target, config):
         for feat in x.get("features", []):
             req += feat.get("requirements", {}).get("host", [])
             req += feat.get("requirements", {}).get("run", [])
-        for o in x.get("outputs", []):
+        for o in x.get("steps", []):
             req += get_all_requirements(o)
         return req
 
@@ -112,118 +116,36 @@ def find_all_recipes(target, config):
     return [recipes[x] for x in sorted_recipes]
 
 
-def get_dependency_variants(requirements, conda_build_config, config):
-    host = requirements.get("host") or []
-    build = requirements.get("build") or []
-    # run = requirements.get("run") or []
-
-    variants = {}
-    default_variant = get_default_variant(config)
-
-    # When compiling for OS X, we should fetch the clang compilers ...
-    # I think this needs a more thorough rework
-    # if config.variant["target_platform"] == "osx-64":
-    # default_variant.update(
-    #     {
-    #         "c_compiler": "clang",
-    #         "cxx_compiler": "clangxx",
-    #         "fortran_compiler": "gfortran",
-    #     },
-    # )
-
-    variants["target_platform"] = conda_build_config.get(
-        "target_platform", [default_variant["target_platform"]]
-    )
-
-    if conda_build_config["target_platform"] == [None]:
-        variants["target_platform"] = [default_variant["target_platform"]]
-
-    config.variant["target_platform"] = variants["target_platform"][0]
-
-    sys_var_stubs = get_sys_vars_stubs(config.variant["target_platform"])
-
-    def get_variants(env):
-        specs = {}
-
-        for var in sys_var_stubs:
-            if var in conda_build_config:
-                variants[var] = ensure_list(conda_build_config[var])
-
-        for s in env:
-            spec = CondaBuildSpec(s)
-            specs[spec.name] = spec
-
-        for n, cb_spec in specs.items():
-            if cb_spec.is_compiler:
-                # This is a compiler package
-                _, lang = cb_spec.raw.split()
-                compiler = conda_build.jinja_context.compiler(lang, config)
-                cb_spec.final = compiler
-                config_key = f"{lang}_compiler"
-                config_version_key = f"{lang}_compiler_version"
-
-                if conda_build_config.get(config_key):
-                    variants[config_key] = conda_build_config[config_key]
-                if conda_build_config.get(config_version_key):
-                    variants[config_version_key] = conda_build_config[
-                        config_version_key
-                    ]
-
-            # Note: as a historical artifact we __have to__ use underscore-replaced
-            # names here!
-            variant_key = n.replace("-", "_")
-            vlist = None
-            if variant_key in conda_build_config:
-                vlist = conda_build_config[variant_key]
-            elif variant_key in default_variant:
-                vlist = [default_variant[variant_key]]
-            if vlist:
-                # we need to check if v matches the spec
-                if cb_spec.is_simple:
-                    variants[variant_key] = vlist
-                elif cb_spec.is_pin:
-                    # ignore variants?
-                    pass
-                else:
-                    # check intersection of MatchSpec and variants
-                    ms = MatchSpec(cb_spec.raw)
-                    filtered = []
-                    for var in vlist:
-                        vsplit = var.split()
-                        if len(vsplit) == 1:
-                            p = {
-                                "name": n,
-                                "version": vsplit[0],
-                                "build_number": 0,
-                                "build": "",
-                            }
-                        elif len(vsplit) == 2:
-                            p = {
-                                "name": n,
-                                "version": var.split()[0],
-                                "build": var.split()[1],
-                                "build_number": 0,
-                            }
-                        else:
-                            raise RuntimeError("Check your conda_build_config")
-
-                        if ms.match(p):
-                            filtered.append(var)
-                        else:
-                            console.print(
-                                f"Configured variant ignored because of the recipe requirement:\n  {cb_spec.raw} : {var}\n"
-                            )
-
-                    if len(filtered):
-                        variants[variant_key] = filtered
-
-        return variants
-
-    v = get_variants(host + build)
-    return v
-
-
 def to_build_tree(ydoc, variants, config, cbc, selected_features):
+    # first we need to perform a topological sort taking into account all the outputs
+    outputs = [
+        Output(
+            o,
+            config,
+            parent=ydoc,
+            conda_build_config=cbc,
+            selected_features=selected_features,
+        )
+        for o in ydoc["steps"]
+    ]
+    outputs = {o.name: o for o in outputs}
+
+    # inherit all requirements from previous build-only steps
+    for _, o in outputs.items():
+        o.inherit_requirements(outputs)
+
+    # topological sort of the build steps
+    sort_dict = {
+        k: [x.name for x in o.all_requirements()] + o.required_steps
+        for k, o in outputs.items()
+    }
+    tsorted = toposort.toposort(sort_dict)
+    tsorted = [o for o in tsorted if o in sort_dict.keys()]
+
+    sorted_outputs = OrderedDict((k, outputs[k]) for k in tsorted)
+
+    variants, final_outputs = get_variants(sorted_outputs, cbc, config)
+
     for k in variants:
         table = Table(show_header=True, header_style="bold")
         table.title = f"Output: [bold white]{k}[/bold white]"
@@ -233,162 +155,28 @@ def to_build_tree(ydoc, variants, config, cbc, selected_features):
             table.add_row(pkg, "\n".join(var))
         console.print(table)
 
-    # first we need to perform a topological sort taking into account all the outputs
-    if ydoc.get("outputs"):
-        outputs = [
-            Output(
-                o,
-                config,
-                parent=ydoc,
-                conda_build_config=cbc,
-                selected_features=selected_features,
-            )
-            for o in ydoc["outputs"]
-        ]
-        outputs = {o.name: o for o in outputs}
-    else:
-        outputs = [
-            Output(
-                ydoc,
-                config,
-                conda_build_config=cbc,
-                selected_features=selected_features,
-            )
-        ]
-        outputs = {o.name: o for o in outputs}
+    edges, vertices = [], []
 
-    if len(outputs) > 1:
-        sort_dict = {
-            k: [x.name for x in o.all_requirements()] for k, o in outputs.items()
-        }
-        tsorted = toposort.toposort(sort_dict)
-        tsorted = [o for o in tsorted if o in sort_dict.keys()]
-    else:
-        tsorted = [o for o in outputs.keys()]
+    debug_draw = False
+    if debug_draw:
+        from boa.helpers.asciigraph import draw as draw_ascii_graph
 
-    final_outputs = []
+        for x in final_outputs:
+            cc = Console(file=StringIO())
+            t = Table(title=x.name)
+            t.add_column("Variant")
+            for v in x.differentiating_keys:
+                t.add_row(f"{v} {x.variant[v]}")
+            cc.print(t)
 
-    # need to strip static away from output name... :/
-    static_feature = selected_features.get("static", False)
+            str_output = cc.file.getvalue()
 
-    for name in tsorted:
-        output = outputs[name]
+            vertices.append(str_output)
+            for ps in x.parent_steps:
+                edges.append([final_outputs.index(ps), final_outputs.index(x)])
 
-        # this is all a bit hacky ... will have to clean that up eventually
-        variant_name = name
-        if static_feature and name.endswith("-static"):
-            variant_name = name[: -len("-static")]
-
-        # zip keys need to be contracted
-        zipped_keys = cbc.get("zip_keys", [])
-
-        if variants.get(variant_name):
-            v = variants[variant_name]
-            import copy
-
-            vzipped = copy.copy(v)
-            zippers = {}
-            for zkeys in zipped_keys:
-                # we check if our variant contains keys that need to be zipped
-                if sum(k in v for k in zkeys) > 1:
-                    filtered_zip_keys = [k for k in v if k in zkeys]
-
-                    zkname = "__zip_" + "_".join(filtered_zip_keys)
-
-                    zklen = None
-                    for zk in filtered_zip_keys:
-                        if zk not in cbc:
-                            raise RuntimeError(
-                                f"Trying to zip keys, but not all zip keys found on conda-build-config {zk}"
-                            )
-
-                        zkl = len(cbc[zk])
-                        if not zklen:
-                            zklen = zkl
-
-                        if zklen and zkl != zklen:
-                            raise RuntimeError(
-                                f"Trying to zip keys, but not all zip keys have the same length {zkeys}"
-                            )
-
-                    vzipped[zkname] = [str(i) for i in range(zklen)]
-                    zippers[zkname] = {zk: cbc[zk] for zk in filtered_zip_keys}
-
-                    for zk in filtered_zip_keys:
-                        del vzipped[zk]
-
-            combos = []
-            differentiating_keys = []
-            for k, vz in vzipped.items():
-                if len(vz) > 1:
-                    differentiating_keys.append(k)
-                combos.append([(k, x) for x in vz])
-
-            all_combinations = tuple(itertools.product(*combos))
-            all_combinations = [dict(x) for x in all_combinations]
-
-            # unzip the zipped keys
-            unzipped_combinations = []
-            for c in all_combinations:
-                unz_combo = {}
-                for vc in c:
-                    if vc.startswith("__zip_"):
-                        ziptask = zippers[vc]
-                        zipindex = int(c[vc])
-                        for zippkg in ziptask:
-                            unz_combo[zippkg] = ziptask[zippkg][zipindex]
-                        if vc in differentiating_keys:
-                            differentiating_keys.remove(vc)
-                            differentiating_keys.extend(zippers[vc].keys())
-                    else:
-                        unz_combo[vc] = c[vc]
-
-                unzipped_combinations.append(unz_combo)
-
-            for c in unzipped_combinations:
-                x = output.apply_variant(c, differentiating_keys)
-                final_outputs.append(x)
-        else:
-            x = output.apply_variant({})
-            final_outputs.append(x)
-
-    temp = final_outputs
-    final_outputs = []
-    has_intermediate = False
-    for o in temp:
-        if o.sections["build"].get("intermediate"):
-            if has_intermediate:
-                raise RuntimeError(
-                    "Already found an intermediate build. There can be only one!"
-                )
-            final_outputs.insert(0, o)
-            has_intermediate = True
-        else:
-            final_outputs.append(o)
-
-    # Note: maybe this should happen _before_ apply variant?!
-    if has_intermediate:
-        # inherit dependencies
-        def merge_requirements(a, b):
-            b_names = [x.name for x in b]
-            for r in a:
-                if r.name in b_names:
-                    continue
-                else:
-                    b.append(r)
-
-        intermediate = final_outputs[0]
-        for o in final_outputs[1:]:
-            merge_requirements(
-                intermediate.requirements["host"], o.requirements["host"]
-            )
-            merge_requirements(
-                intermediate.requirements["build"], o.requirements["build"]
-            )
-            merged_variant = {}
-            merged_variant.update(intermediate.config.variant)
-            merged_variant.update(o.config.variant)
-            o.config.variant = merged_variant
+        for ascii_graph in draw_ascii_graph(vertices, edges):
+            print(ascii_graph)
 
     return final_outputs
 
@@ -411,29 +199,24 @@ def build_recipe(
     # We need to assemble the variants for each output
     variants = {}
     # if we have a outputs section, use that order the outputs
-    if ydoc.get("outputs"):
-        for o in ydoc["outputs"]:
-            # inherit from global package
+    for o in ydoc["steps"]:
+        # inherit from global package
+
+        if "package" in o:
             pkg_meta = {}
             pkg_meta.update(ydoc["package"])
-            pkg_meta.update(o["package"])
+            pkg_meta.update(o.get("package", {}))
             o["package"] = pkg_meta
 
-            build_meta = {}
-            build_meta.update(ydoc.get("build"))
-            build_meta.update(o.get("build") or {})
-            o["build"] = build_meta
+        build_meta = {}
+        build_meta.update(ydoc.get("build"))
+        build_meta.update(o.get("build", {}))
+        o["build"] = build_meta
 
-            o["selected_features"] = selected_features
+        o["selected_features"] = selected_features
 
-            variants[o["package"]["name"]] = get_dependency_variants(
-                o.get("requirements", {}), cbc, config
-            )
-    else:
-        # we only have one output
-        variants[ydoc["package"]["name"]] = get_dependency_variants(
-            ydoc.get("requirements", {}), cbc, config
-        )
+        if "step" not in o:
+            o["step"] = {"name": pkg_meta["name"]}
 
     # this takes in all variants and outputs, builds a dependency tree and returns
     # the final metadata
@@ -562,6 +345,19 @@ def build_recipe(
             if cached_source != o.sections["source"] and not rerun_build:
                 download_source(meta, interactive)
                 cached_source = o.sections["source"]
+
+            if o.required_steps:
+                console.print(f"\n[red]Reusing steps: {o.required_steps}[/red]")
+                for step in o.required_steps:
+                    # TODO handle variants
+                    for other in sorted_outputs:
+                        if other.name == step:
+                            shutil.copytree(
+                                other.moved_work_dir,
+                                o.config.work_dir,
+                                dirs_exist_ok=True,
+                            )
+                            break
 
             console.print(
                 f"\n[yellow]Starting build for [bold]{o.name}[/bold][/yellow]\n"
