@@ -294,10 +294,7 @@ def hack_emscripten_generated_js(metadata, filename):
 
 
 def bundle_conda(metadata, initial_files, env, files_selector=None):
-    console.print(f"\n[green]initial_files {initial_files}[/green]\n")
     files = post_process_files(metadata, initial_files)
-    console.print(f"\n[green]files {initial_files}[/green]\n")
-
 
     # first filter is so that info_files does not pick up ignored files
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
@@ -316,7 +313,9 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
             for f in added_files:
                 console.print(f"[red] added missing file  {f} [/red]\n")
             extra_files += added_files
+
     files = sorted(files + extra_files)
+    files = list(dict.fromkeys(files))
 
 
 
@@ -352,8 +351,7 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
         files = select_files(files, include_files, files_selector.get("exclude"))
 
     basename = metadata.dist()
-    print(f"{ metadata.config.work_dir=}")
-    print(f"{basename=} { metadata.config.host_prefix=}")
+
     tmp_archives = []
     final_outputs = []
     ext = ".tar.bz2"
@@ -521,9 +519,9 @@ function feature()
 
         if build_file and isfile(build_file) and build_file.endswith(".py"):
             pyexe = sys.executable
-
-            bf.write(f"{pyexe} $HOME/src/bitfurnace/bitfurnace/runner.py {build_file}")
-            # bf.write(f"{pyexe} $BUILD_PREFIX/bitfurnace/runner.py {build_file}")
+            # sys.path.append("$BUILD_PREFIX/")
+            # bf.write(f"{pyexe} $HOME/src/bitfurnace/bitfurnace/runner.py {build_file}")
+            bf.write(f"{pyexe} $BUILD_PREFIX/bitfurnace/runner.py {build_file}")
         elif build_file and isfile(build_file):
             bf.write(open(build_file).read())
         elif script:
@@ -718,8 +716,7 @@ def build(
         utils.rm_rf(m.config.info_dir)
         files_before_script = utils.prefix_files(prefix=m.config.host_prefix)
 
-        print("files_before_script",files_before_script)
-
+    
         with open(join(m.config.build_folder, "prefix_files.txt"), "w") as f:
             f.write("\n".join(sorted(list(files_before_script))))
             f.write("\n")
@@ -733,11 +730,9 @@ def build(
             utils.rm_rf(m.config.host_prefix)
             return
 
-        print(f'\n\n{m.output.sections["files"]=}')
         final_outputs = bundle_conda(
             m, files_before_script, env, m.output.sections["files"]
         )
-        print("final_outputs",final_outputs)
         return final_outputs
     except subprocess.CalledProcessError:
         ext = "bat" if utils.on_win else "sh"
