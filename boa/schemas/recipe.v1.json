@@ -474,10 +474,6 @@
             "type": "string"
           }
         },
-        "msvc_compiler": {
-          "title": "Msvc Compiler",
-          "type": "string"
-        },
         "force_use_keys": {
           "title": "Force Use Keys",
           "type": "array",

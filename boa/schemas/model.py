@@ -168,8 +168,7 @@ class Build(BaseModel):
     # Files to be included even if they are present in the PREFIX before building
     always_include_files: Optional[List[str]] = None
 
-    msvc_compiler: Optional[str] = None
-
+    # msvc_compiler: Optional[str] = None -- deprecated in conda_build
     # pin_depends: Optional[str] -- did not find usage anywhere, removed
     # preferred_env: Optional[str]
     # preferred_env_executable_paths': Optional[List]
