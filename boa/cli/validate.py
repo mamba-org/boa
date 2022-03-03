@@ -13,11 +13,12 @@ console = Console()
 def main(recipe):
     cbc, config = get_config(recipe)
     ydoc = render(recipe, config)
+    console.print("\n\nNormalized Recipe:\n")
+    console.print(ydoc)
     try:
         result = validate(ydoc)
-
         if result is None:
-            console.print("[green]Validation OK[/green]")
+            console.print("\n[green]Validation OK[/green]")
     except ValidationError:
         exit(1)
     except SchemaError:
