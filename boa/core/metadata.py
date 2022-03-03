@@ -316,7 +316,7 @@ class MetaData:
         return []
 
     def binary_relocation(self):
-        return True
+        return self.get_value("build/binary_relocation", True)
 
     def get_dependencies(self, which):
         deps = self.output.requirements[which]
