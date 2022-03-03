@@ -1,0 +1,16 @@
+#boarecipev1 .table p
+{
+	font-size: 0.75em;
+}
+
+#boarecipev1 .table td
+{
+	padding: 0;
+}
+
+#boarecipev1 ul
+{
+	padding-left: 3px;
+	list-style: none;
+	font-weight: bold;
+}
