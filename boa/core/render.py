@@ -13,12 +13,56 @@ from boa.core.config import boa_config
 console = boa_config.console
 
 
-class TemplateStr(str):
-    def __new__(cls, template, value, missing_keys):
-        obj = str.__new__(cls, value)
-        obj.template = template
-        obj.missing_keys = missing_keys
-        return obj
+class TemplateStr:
+    def __init__(self, template, rendered, missing_keys, context_dict):
+        # obj = str.__new__(cls, rendered)
+        assert isinstance(rendered, str)
+        assert isinstance(template, str)
+        assert isinstance(missing_keys, list)
+        self.value = rendered
+        self.template = template
+        self.context_dict = context_dict
+        self.missing_keys = missing_keys
+        # return obj
+
+    def split(self, sval=None):
+        if sval:
+            return self.value.split(sval)
+        return self.value.split()
+
+    def render(self, variant_vars):
+        # execute render to record missing values!
+        jenv = jinja2.Environment()
+        cc = copy.copy(self.context_dict)
+        cc.update(variant_vars)
+        tmpl = jenv.from_string(self.template)
+        rendered = tmpl.render(cc)
+        return rendered
+
+    def __str__(self):
+        # return str.__str__(self)
+        return str(self.value)
+
+    def __repr__(self):
+        # return "TemplateStr{" + str.__str__(self) + "} (" + " ".join(self.missing_keys) + ")"
+        return "TS{" + self.value + "} (" + " ".join(self.missing_keys) + ")"
+
+    def to_json(self):
+        return self.template
+
+    # def __copy__(self):
+    #     cls = self.__class__
+    #     result = cls.__new__(cls, self.template, str(self), self.missing_keys)
+    #     return result
+
+    # def __deepcopy__(self, memo):
+    #     cls = self.__class__
+    #     template = copy.deepcopy(self.template)
+    #     missing_keys = copy.deepcopy(self.missing_keys)
+    #     # value = copy.deepcopy(str.__str__(self))
+    #     result = cls.__new__(cls, template, value, missing_keys)
+    #     memo[id(self)] = result
+    #     return result
 
 
 class ContextDictAccessor(jinja2.runtime.Context):
@@ -35,10 +79,15 @@ class ContextDictAccessor(jinja2.runtime.Context):
 
 def render_jinja(value, context_dict, jenv):
     if "{{" in value:
+        print(type(value), value)
         tmpl = jenv.from_string(value)
-        missing_vals = copy.copy(ContextDictAccessor.global_missing)
+        # execute render to record missing values!
+        rendered = tmpl.render(context_dict)
+        missing_vals = copy.deepcopy(ContextDictAccessor.global_missing)
+        if not missing_vals:
+            return rendered
         ContextDictAccessor.global_missing = []
-        return TemplateStr(tmpl, tmpl.render(context_dict), missing_vals)
+        return TemplateStr(value, rendered, missing_vals, context_dict)
 
     return value
 
@@ -49,11 +98,6 @@ def render_recursive(dict_or_array, context_dict, jenv):
         for key, value in dict_or_array.items():
             if isinstance(value, str):
                 dict_or_array[key] = render_jinja(value, context_dict, jenv)
-                # tmpl = jenv.from_string(value)
-                # dict_or_array[key] = TemplateStr(
-                #     tmpl,
-                #     tmpl.render(context_dict)
-                # )
             elif isinstance(value, Mapping):
                 render_recursive(dict_or_array[key], context_dict, jenv)
             elif isinstance(value, Iterable):
