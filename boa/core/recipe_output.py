@@ -117,6 +117,8 @@ class Output:
         self.parent = parent
 
         for section in ("build", "host", "run", "run_constrained"):
+            print(self.requirements.get(section))
+            print([type(x) for x in self.requirements.get(section)])
             self.requirements[section] = [
                 CondaBuildSpec(r) for r in (self.requirements.get(section) or [])
             ]
@@ -177,6 +179,14 @@ class Output:
 
         for s in self.sections["build"].get("skip", []):
             all_keys += ast_extract_syms(s)
+
+        for _, v in self.sections["build"].items():
+            if "{{" in v:
+                print(v)
+
+        for v in all_keys:
+            if "{{" in v:
+                print(v)
 
         return [str(x) for x in all_keys]
 

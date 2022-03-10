@@ -1,5 +1,6 @@
 # Copyright (C) 2021, QuantStack
 # SPDX-License-Identifier: BSD-3-Clause
+import copy
 
 from ruamel.yaml import YAML
 import jinja2
@@ -12,13 +13,47 @@ from boa.core.config import boa_config
 console = boa_config.console
 
 
+class TemplateStr(str):
+    def __new__(cls, template, value, missing_keys):
+        obj = str.__new__(cls, value)
+        obj.template = template
+        obj.missing_keys = missing_keys
+        return obj
+
+
+class ContextDictAccessor(jinja2.runtime.Context):
+
+    global_missing = []
+
+    def resolve_or_missing(self, key):
+        val = jinja2.runtime.Context.resolve_or_missing(self, key)
+        if val is jinja2.utils.missing:
+            ContextDictAccessor.global_missing.append(key)
+            return f"JINJA[{key}]"
+        return val
+
+
+def render_jinja(value, context_dict, jenv):
+    if "{{" in value:
+        tmpl = jenv.from_string(value)
+        missing_vals = copy.copy(ContextDictAccessor.global_missing)
+        ContextDictAccessor.global_missing = []
+        return TemplateStr(tmpl, tmpl.render(context_dict), missing_vals)
+
+    return value
+
+
 def render_recursive(dict_or_array, context_dict, jenv):
     # check if it's a dict?
     if isinstance(dict_or_array, Mapping):
         for key, value in dict_or_array.items():
             if isinstance(value, str):
-                tmpl = jenv.from_string(value)
-                dict_or_array[key] = tmpl.render(context_dict)
+                dict_or_array[key] = render_jinja(value, context_dict, jenv)
+                # tmpl = jenv.from_string(value)
+                # dict_or_array[key] = TemplateStr(
+                #     tmpl,
+                #     tmpl.render(context_dict)
+                # )
             elif isinstance(value, Mapping):
                 render_recursive(dict_or_array[key], context_dict, jenv)
             elif isinstance(value, Iterable):
@@ -28,8 +63,7 @@ def render_recursive(dict_or_array, context_dict, jenv):
         for i in range(len(dict_or_array)):
             value = dict_or_array[i]
             if isinstance(value, str):
-                tmpl = jenv.from_string(value)
-                dict_or_array[i] = tmpl.render(context_dict)
+                dict_or_array[i] = render_jinja(value, context_dict, jenv)
             elif isinstance(value, Mapping):
                 render_recursive(value, context_dict, jenv)
             elif isinstance(value, Iterable):
@@ -174,8 +208,14 @@ def render(recipe_path, config=None):
 
     # step 2: fill out context dict
     context_dict = default_jinja_vars(config)
+    print(context_dict, type(context_dict))
+
     context_dict.update(ydoc.get("context", {}))
+
     jenv = jinja2.Environment()
+    # use our special context dict accessor to register when we have missing variables
+    jenv.context_class = ContextDictAccessor
+
     for key, value in context_dict.items():
         if isinstance(value, str):
             tmpl = jenv.from_string(value)
@@ -190,6 +230,6 @@ def render(recipe_path, config=None):
 
     # Normalize the entire recipe
     ydoc = normalize_recipe(ydoc)
-    # console.print("\n[yellow]Normalized recipe[/yellow]\n")
-    # console.print(ydoc)
+    console.print("\n[yellow]Normalized recipe[/yellow]\n")
+    console.print(ydoc)
     return ydoc
