@@ -7,6 +7,7 @@ import argparse
 from boa.core.config import init_global_config
 
 from mamba.utils import init_api_context
+import libmambapy as api
 
 banner = r"""
            _
@@ -103,6 +104,8 @@ def main(config=None):
     command = args.command
 
     init_api_context()
+    api_ctx = api.Context()
+    api_ctx.add_pip_as_python_dependency = False
     init_global_config(args)
 
     from boa.core.run_build import run_build
