@@ -6,7 +6,7 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 """
 from __future__ import absolute_import, division, print_function
 
-import fnmatchF
+import fnmatch
 import io
 import os
 import glob
