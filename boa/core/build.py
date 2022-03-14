@@ -452,11 +452,11 @@ def write_build_scripts(m, script, build_file):
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     # HACK
-    emsdk_dir = os.environ.get('EMSDK_DIR')
-    print(f"\n\n\nEMSDK DIR {emsdk_dir}")
+    emsdk_dir = os.environ.get('CONDA_EMSDK_DIR')
+    print(f"\n\n\nCONDA_EMSDK_DIR {emsdk_dir}")
     if emsdk_dir is None:
         raise RuntimeError("emsdk_dir is none")
-    env["EMSDK_DIR"] = emsdk_dir
+    env["CONDA_EMSDK_DIR"] = emsdk_dir
 
 
     # forcing shiny colors everywhere
