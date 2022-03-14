@@ -15,15 +15,10 @@ console = boa_config.console
 
 class TemplateStr:
     def __init__(self, template, rendered, missing_keys, context_dict):
-        # obj = str.__new__(cls, rendered)
-        assert isinstance(rendered, str)
-        assert isinstance(template, str)
-        assert isinstance(missing_keys, list)
         self.value = rendered
         self.template = template
         self.context_dict = context_dict
         self.missing_keys = missing_keys
-        # return obj
 
     def split(self, sval=None):
         if sval:
@@ -40,29 +35,13 @@ class TemplateStr:
         return rendered
 
     def __str__(self):
-        # return str.__str__(self)
         return str(self.value)
 
     def __repr__(self):
-        # return "TemplateStr{" + str.__str__(self) + "} (" + " ".join(self.missing_keys) + ")"
         return "TS{" + self.value + "} (" + " ".join(self.missing_keys) + ")"
 
     def to_json(self):
         return self.template
-
-    # def __copy__(self):
-    #     cls = self.__class__
-    #     result = cls.__new__(cls, self.template, str(self), self.missing_keys)
-    #     return result
-
-    # def __deepcopy__(self, memo):
-    #     cls = self.__class__
-    #     template = copy.deepcopy(self.template)
-    #     missing_keys = copy.deepcopy(self.missing_keys)
-    #     # value = copy.deepcopy(str.__str__(self))
-    #     result = cls.__new__(cls, template, value, missing_keys)
-    #     memo[id(self)] = result
-    #     return result
 
 
 class ContextDictAccessor(jinja2.runtime.Context):
@@ -92,26 +71,24 @@ def render_jinja(value, context_dict, jenv):
     return value
 
 
-def render_recursive(dict_or_array, context_dict, jenv):
-    # check if it's a dict?
-    if isinstance(dict_or_array, Mapping):
-        for key, value in dict_or_array.items():
-            if isinstance(value, str):
-                dict_or_array[key] = render_jinja(value, context_dict, jenv)
-            elif isinstance(value, Mapping):
-                render_recursive(dict_or_array[key], context_dict, jenv)
-            elif isinstance(value, Iterable):
-                render_recursive(dict_or_array[key], context_dict, jenv)
+def render_recursive(dict_or_array, context_dict, jenv, key=None):
+    if key is not None:
+        das = dict_or_array[key]
+        if isinstance(das, str):
+            dict_or_array[key] = render_jinja(das, context_dict, jenv)
+            return
+    else:
+        das = dict_or_array
 
-    elif isinstance(dict_or_array, Iterable):
-        for i in range(len(dict_or_array)):
-            value = dict_or_array[i]
-            if isinstance(value, str):
-                dict_or_array[i] = render_jinja(value, context_dict, jenv)
-            elif isinstance(value, Mapping):
-                render_recursive(value, context_dict, jenv)
-            elif isinstance(value, Iterable):
-                render_recursive(value, context_dict, jenv)
+    if isinstance(das, Mapping):
+        for key in das.keys():
+            render_recursive(das, context_dict, jenv, key=key)
+        return
+
+    if isinstance(das, Iterable):
+        for i in range(len(das)):
+            render_recursive(das, context_dict, jenv, key=i)
+        return
 
 
 def flatten_selectors(ydoc, namespace):
@@ -252,8 +229,6 @@ def render(recipe_path, config=None):
 
     # step 2: fill out context dict
     context_dict = default_jinja_vars(config)
-    print(context_dict, type(context_dict))
-
     context_dict.update(ydoc.get("context", {}))
 
     jenv = jinja2.Environment()
