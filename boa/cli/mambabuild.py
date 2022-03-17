@@ -38,8 +38,8 @@ def parse_problems(problems):
         if not line.startswith("- "):
             continue
         if "none of the providers can be installed" in line:
-            assert words[1] == "package"
-            assert words[3] == "requires"
+            assert words[1] == "package", f"words = {repr(words)}"
+            assert words[3] == "requires", f"words = {repr(words)}"
             dashed_specs.append(words[2])
             end = words.index("but")
             conda_build_specs.append(words[4:end])
