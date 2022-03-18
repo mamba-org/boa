@@ -1,9 +1,34 @@
+from conda.base import constants
+
+
+KNOWN_SUBDIRS = PLATFORM_DIRECTORIES = (
+    "noarch",
+    "linux-32",
+    "linux-64",
+    "linux-aarch64",
+    "linux-armv6l",
+    "linux-armv7l",
+    "linux-ppc64",
+    "linux-ppc64le",
+    "linux-s390x",
+    "osx-64",
+    "osx-arm64",
+    "win-32",
+    "win-64",
+    "zos-z",
+    "emscripten-32"
+)
+constants.KNOWN_SUBDIRS = KNOWN_SUBDIRS
+constants.PLATFORM_DIRECTORIES = PLATFORM_DIRECTORIES
+
+
 from conda_build import exceptions, utils, variants, environ
 from conda_build.conda_interface import non_x86_linux_machines
 from conda_build import metadata
 from conda_build import utils,environ
 from conda_build.features import feature_list
 from conda_build.conda_interface import string_types
+
 
 import os 
 import sys
@@ -130,3 +155,4 @@ def get_shlib_ext(host_platform):
     else:
         raise NotImplementedError(host_platform)
 environ.get_shlib_ext = get_shlib_ext
+
