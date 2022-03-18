@@ -5,9 +5,9 @@
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
 
-from .monkeypatch import *
 
 from __future__ import absolute_import, division, print_function
+from .monkeypatch import *
 
 import fnmatch
 import io

@@ -2,6 +2,9 @@ from conda_build import exceptions, utils, variants, environ
 from conda_build.conda_interface import non_x86_linux_machines
 from conda_build import metadata
 from conda_build import utils
+from conda_build.features import feature_list
+from conda_build.conda_interface import string_types
+import os 
 
 def ns_cfg(config):
     print("MONKEYPATCHED")
