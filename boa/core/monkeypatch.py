@@ -1,11 +1,12 @@
 from conda_build import exceptions, utils, variants, environ
 from conda_build.conda_interface import non_x86_linux_machines
 from conda_build import metadata
-from conda_build import utils
+from conda_build import utils,environ
 from conda_build.features import feature_list
 from conda_build.conda_interface import string_types
-import os 
 
+import os 
+import sys
 def ns_cfg(config):
     print("MONKEYPATCHED")
     # Remember to update the docs of any of this changes
@@ -111,3 +112,21 @@ DEFAULT_SUBDIRS = {
 }
 
 utils.DEFAULT_SUBDIRS = DEFAULT_SUBDIRS
+
+
+
+def get_shlib_ext(host_platform):
+    # Return the shared library extension.
+    if host_platform.startswith('win'):
+        return '.dll'
+    elif host_platform in ['osx', 'darwin']:
+        return '.dylib'
+    elif host_platform.startswith('linux') or host_platform.startswith("emscripten"):
+        return '.so'
+    elif host_platform == 'noarch':
+        # noarch packages should not contain shared libraries, use the system
+        # platform if this is requested
+        return get_shlib_ext(sys.platform)
+    else:
+        raise NotImplementedError(host_platform)
+environ.get_shlib_ext = get_shlib_ext

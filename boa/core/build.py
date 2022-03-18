@@ -8,7 +8,7 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 
 from __future__ import absolute_import, division, print_function
 from .monkeypatch import *
-
+import conda_build
 import fnmatch
 import io
 import os
@@ -306,19 +306,20 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
             files, files_selector.get("include"), files_selector.get("exclude")
         )
 
-    extra_files = []
-    # todo add emscripten selector
-    # check for binary files
-    for f in sorted(files):
-    
-        if(f.startswith("bin/")):
-            added_files = hack_emscripten_generated_js(metadata, f)
-            for f in added_files:
-                console.print(f"[red] added missing file  {f} [/red]\n")
-            extra_files += added_files
+    if False:
+        extra_files = []
+        # todo add emscripten selector
+        # check for binary files
+        for f in sorted(files):
+        
+            if(f.startswith("bin/")):
+                added_files = hack_emscripten_generated_js(metadata, f)
+                for f in added_files:
+                    console.print(f"[red] added missing file  {f} [/red]\n")
+                extra_files += added_files
 
-    files = sorted(files + extra_files)
-    files = list(dict.fromkeys(files))
+        files = sorted(files + extra_files)
+        files = list(dict.fromkeys(files))
 
 
 
@@ -704,7 +705,7 @@ def build(
         if m.skip():
             # console.print(utils.get_skip_message(m))
             return {}
-
+        print(conda_build.utils.DEFAULT_SUBDIRS)
         with utils.path_prepended(m.config.build_prefix):
             env = environ.get_dict(m=m)
 
