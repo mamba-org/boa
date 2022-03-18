@@ -1,6 +1,6 @@
 # Copyright (C) 2021, QuantStack
 # SPDX-License-Identifier: BSD-3-Clause
-
+from .monkeypatch import *
 from ruamel.yaml import YAML
 import jinja2
 from boa.core.jinja_support import jinja_functions
