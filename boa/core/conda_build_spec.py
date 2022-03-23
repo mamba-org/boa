@@ -154,7 +154,7 @@ class CondaBuildSpec:
         version = output.version
         build_string = output.final_build_id
 
-        if self.pin.exact:
+        if self.is_pin and self.pin.exact:
             self.final = f"{pkg_name} {version} {build_string}"
         else:
             version_parts = version.split(".")
