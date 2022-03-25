@@ -1,6 +1,11 @@
+import os 
+import sys
+
+
+###############################################
+# CONDA MONKEY-PATCH
+###############################################
 from conda.base import constants
-
-
 KNOWN_SUBDIRS = PLATFORM_DIRECTORIES = (
     "noarch",
     "linux-32",
@@ -22,6 +27,10 @@ constants.KNOWN_SUBDIRS = KNOWN_SUBDIRS
 constants.PLATFORM_DIRECTORIES = PLATFORM_DIRECTORIES
 
 
+###############################################
+# CONDA-BUILD MONKEY-PATCH
+###############################################
+
 from conda_build import exceptions, utils, variants, environ
 from conda_build.conda_interface import non_x86_linux_machines
 from conda_build import metadata
@@ -30,13 +39,9 @@ from conda_build.features import feature_list
 from conda_build.conda_interface import string_types
 
 
-import os 
-import sys
 def ns_cfg(config):
-    print("MONKEYPATCHED")
     # Remember to update the docs of any of this changes
     plat = config.host_subdir
-    print(f"\n\n\n{plat=}\n\n\n")
     d = dict(
         linux=plat.startswith('linux-'),
         linux32=bool(plat == 'linux-32'),

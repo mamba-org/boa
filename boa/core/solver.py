@@ -159,6 +159,7 @@ class MambaSolver:
 
         start_prio = len(self.channels) + len(self.index)
         for subdir, channel in self.local_index:
+            print(f"{subdir=} {channel=}")
             if not subdir.loaded():
                 continue
 
