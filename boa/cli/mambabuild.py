@@ -217,6 +217,17 @@ def call_conda_build(action, config, **kwargs):
             variants=config.variants,
             **kwargs,
         )
+    elif action == "render":
+        result = api.render(
+            recipe,
+            post=config.post,
+            build_only=config.build_only,
+            notest=config.notest,
+            config=config,
+            variants=config.variants,
+            **kwargs,
+        )
+        print(result)
     else:
         raise ValueError("action should be 'build' or 'test', got: %r" % action)
 
@@ -229,11 +240,13 @@ def main():
 
     config = prepare(**args.__dict__)
 
-    if args.test:
+    if "render" in sys.argv[0]:
+        action = "render"
+    elif args.test:
         action = "test"
     elif args.output:
         action = "output"
     else:
         action = "build"
-
+    print("ACTION IS ", action)
     call_conda_build(action, config)
