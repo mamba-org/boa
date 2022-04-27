@@ -454,7 +454,9 @@ class Output:
                 collected_run_exports.append(s.run_exports_info)
             else:
                 path = Path(pkg_cache).joinpath(
-                    final_triplet, "info", "run_exports.json",
+                    final_triplet,
+                    "info",
+                    "run_exports.json",
                 )
                 if path.exists():
                     with open(path) as fi:

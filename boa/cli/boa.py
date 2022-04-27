@@ -52,7 +52,9 @@ def main(config=None):
         help="convert recipe.yaml to old-style meta.yaml",
     )
     subparsers.add_parser(
-        "validate", parents=[parent_parser], help="Validate recipe.yaml",
+        "validate",
+        parents=[parent_parser],
+        help="Validate recipe.yaml",
     )
 
     build_parser = argparse.ArgumentParser(add_help=False)
@@ -63,7 +65,10 @@ def main(config=None):
         help="Use interactive mode if build fails",
     )
     build_parser.add_argument(
-        "--skip-existing", nargs="?", default="default", const="yes",
+        "--skip-existing",
+        nargs="?",
+        default="default",
+        const="yes",
     )
     build_parser.add_argument(
         "--no-test",

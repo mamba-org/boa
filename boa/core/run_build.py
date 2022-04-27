@@ -262,7 +262,11 @@ def build_recipe(
             build_pkgs += [
                 os.path.basename(x.rsplit("-", 1)[0])
                 for x in glob.glob(
-                    os.path.join(o0.config.output_folder, arch, "*.tar.bz2",)
+                    os.path.join(
+                        o0.config.output_folder,
+                        arch,
+                        "*.tar.bz2",
+                    )
                 )
             ]
 
