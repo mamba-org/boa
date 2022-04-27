@@ -798,7 +798,9 @@ def run_test(
         raise RuntimeError("Did not succeed in downloading packages.")
 
     mkdir_p(os.path.join(metadata.config.test_prefix, "conda-meta"))
-    transaction.execute(PrefixData(metadata.config.test_prefix),)
+    transaction.execute(
+        PrefixData(metadata.config.test_prefix),
+    )
 
     with utils.path_prepended(metadata.config.test_prefix):
         env = dict(os.environ.copy())
