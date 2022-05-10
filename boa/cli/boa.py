@@ -49,7 +49,7 @@ def main(config=None):
     subparsers.add_parser(
         "convert",
         parents=[parent_parser],
-        help="convert recipe.yaml to old-style meta.yaml",
+        help="convert old-style meta.yaml to recipe.yaml",
     )
     subparsers.add_parser(
         "validate",
