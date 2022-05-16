@@ -742,9 +742,22 @@ def build(
             utils.rm_rf(m.config.host_prefix)
             return
 
-        final_outputs = bundle_conda(
-            m, files_before_script, env, m.output.sections["files"]
-        )
+        if m.output.is_package:
+            final_outputs = bundle_conda(
+                m, files_before_script, env, m.output.sections["files"]
+            )
+        else:
+            # only store the working dir!
+            # TODO add the build hash to distinguish variants
+            moved_work_dir = (
+                pathlib.Path(m.config.work_dir).parent / f"work_{m.output.name}"
+            )
+            shutil.move(m.config.work_dir, moved_work_dir)
+            m.output.moved_work_dir = moved_work_dir
+            (moved_work_dir / "conda_build.sh").unlink()
+            (moved_work_dir / "build_env_setup.sh").unlink()
+            final_outputs = []
+
         return final_outputs
     except subprocess.CalledProcessError:
         ext = "bat" if utils.on_win else "sh"

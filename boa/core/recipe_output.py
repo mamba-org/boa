@@ -3,19 +3,14 @@
 from .monkeypatch import *
 from boa.core.solver import get_solver
 import copy
-import re
 import json
 from pathlib import Path
 import sys
-
-from dataclasses import dataclass
-from typing import Tuple
 
 import rich
 from rich.table import Table
 from rich.padding import Padding
 
-# TODO remove
 from conda.base.context import context
 from conda_build.config import get_or_merge_config
 from conda_build.utils import apply_pin_expressions
@@ -25,133 +20,10 @@ from conda_build.jinja_context import native_compiler
 
 from libmambapy import Context as MambaContext
 from boa.core.config import boa_config
+from boa.core.conda_build_spec import CondaBuildSpec
+from boa.helpers.ast_extract_syms import ast_extract_syms
 
 console = boa_config.console
-
-
-@dataclass
-class CondaBuildSpec:
-    name: str
-    raw: str
-    splitted: Tuple[str]
-    is_pin: bool = False
-    is_pin_compatible: bool = False
-    is_compiler: bool = False
-    is_transitive_dependency: bool = False
-    channel: str = ""
-    # final: String
-
-    from_run_export: bool = False
-    from_pinnings: bool = False
-
-    def __init__(self, ms):
-        self.raw = ms
-        self.splitted = ms.split()
-        self.name = self.splitted[0]
-        if len(self.splitted) > 1:
-            self.is_pin = self.splitted[1].startswith("PIN_")
-            self.is_pin_compatible = self.splitted[1].startswith("PIN_COMPATIBLE")
-            self.is_compiler = self.splitted[0].startswith("COMPILER_")
-
-        self.is_simple = len(self.splitted) == 1
-        self.final = self.raw
-
-        if self.is_pin_compatible:
-            self.final[len("PIN_COMPATIBLE") + 1 : -1]
-
-    @property
-    def final_name(self):
-        return self.final.split(" ")[0]
-
-    def loosen_spec(self):
-        if self.is_compiler or self.is_pin:
-            return
-
-        if len(self.splitted) == 1:
-            return
-
-        if re.search(r"[^0-9\.]+", self.splitted[1]) is not None:
-            return
-
-        dot_c = self.splitted[1].count(".")
-
-        app = "*" if dot_c >= 2 else ".*"
-
-        if len(self.splitted) == 3:
-            self.final = (
-                f"{self.splitted[0]} {self.splitted[1]}{app} {self.splitted[2]}"
-            )
-        else:
-            self.final = f"{self.splitted[0]} {self.splitted[1]}{app}"
-
-    def __repr__(self):
-        self.loosen_spec()
-        return self.final
-
-    def eval_pin_subpackage(self, all_outputs):
-        if len(self.splitted) <= 1 or not self.splitted[1].startswith("PIN_SUBPACKAGE"):
-            return
-        pkg_name = self.name
-        max_pin, exact = self.splitted[1][len("PIN_SUBPACKAGE") + 1 : -1].split(",")
-        exact = exact == "True"
-        output = None
-        # TODO are we pinning the right version if building multiple variants?!
-        for o in all_outputs:
-            if o.name == pkg_name:
-                output = o
-                break
-
-        if not output:
-            raise RuntimeError(f"Could not find output with name {pkg_name}")
-        version = output.version
-        build_string = output.final_build_id
-
-        if exact:
-            self.final = f"{pkg_name} {version} {build_string}"
-        else:
-            version_parts = version.split(".")
-            count_pin = max_pin.count(".")
-            version_pin = ".".join(version_parts[: count_pin + 1])
-            version_pin += ".*"
-            self.final = f"{pkg_name} {version_pin}"
-
-    def eval_pin_compatible(self, build, host):
-        if len(self.splitted) <= 1:
-            return
-
-        lower_bound, upper_bound, min_pin, max_pin, exact = self.splitted[1][
-            len("PIN_COMPATIBLE") + 1 : -1
-        ].split(",")
-        if lower_bound == "None":
-            lower_bound = None
-        if upper_bound == "None":
-            upper_bound = None
-        exact = exact == "True"
-
-        versions = {b.name: b for b in build}
-        versions.update({h.name: h for h in host})
-
-        compatibility = None
-        if versions:
-            if exact and versions.get(self.name):
-                compatibility = " ".join(versions[self.name].final_version)
-            else:
-                version = lower_bound or versions.get(self.name).final_version[0]
-                if version:
-                    if upper_bound:
-                        if min_pin or lower_bound:
-                            compatibility = ">=" + str(version) + ","
-                        compatibility += "<{upper_bound}".format(
-                            upper_bound=upper_bound
-                        )
-                    else:
-                        compatibility = apply_pin_expressions(version, min_pin, max_pin)
-
-        self.final = (
-            " ".join((self.name, compatibility))
-            if compatibility is not None
-            else self.name
-        )
 
 
 class Output:
@@ -160,18 +32,25 @@ class Output:
     ):
         if parent is None:
             parent = {}
-        if selected_features is None:
-            selected_features = {}
+
+        self.selected_features = selected_features or {}
         self.data = d
         self.data["source"] = d.get("source", parent.get("source", {}))
         self.config = config
         self.conda_build_config = conda_build_config or {}
-        self.name = d["package"]["name"]
-        self.version = d["package"]["version"]
-        self.build_string = d["package"].get("build_string")
+        self.name = d["step"]["name"]
+        if "package" in d:
+            self.version = d["package"]["version"]
+            self.build_string = d["package"].get("build_string")
+        else:
+            self.version = None
+            self.build_string = None
+
         self.build_number = d["build"].get("number", 0)
         self.noarch = d["build"].get("noarch", False)
         self.is_first = False
+        self.is_package = "package" in d
+
         self.sections = {}
 
         def set_section(sname):
@@ -190,13 +69,18 @@ class Output:
         if hasattr(self.sections["source"], "keys"):
             self.sections["source"] = [self.sections["source"]]
 
+        self.required_steps = []
+        for s in self.sections["source"]:
+            if "step" in s:
+                self.required_steps += [s["step"]]
+
         self.sections["features"] = parent.get("features", [])
 
         self.feature_map = {f["name"]: f for f in self.sections.get("features", [])}
         for fname, feat in self.feature_map.items():
             activated = feat.get("default", False)
-            if fname in selected_features:
-                activated = selected_features[fname]
+            if fname in self.selected_features:
+                activated = self.selected_features[fname]
 
             feat["activated"] = activated
 
@@ -266,6 +150,36 @@ class Output:
             )
         return len(skip_reasons) != 0
 
+    def inherit_requirements(self, steps):
+        def merge_requirements(a, b):
+            b_names = [x.name for x in b]
+            for r in a:
+                print(r)
+                if r.name in b_names:
+                    continue
+                else:
+                    print(r, "is inherited!!!")
+
+                    rc = copy.deepcopy(r)
+                    rc.is_inherited = True
+                    b.append(rc)
+
+        for s in self.required_steps:
+            merge_requirements(
+                steps[s].requirements["build"], self.requirements["build"]
+            )
+            merge_requirements(steps[s].requirements["host"], self.requirements["host"])
+
+    def variant_keys(self):
+        all_keys = self.requirements.get("build", []) + self.requirements.get(
+            "host", []
+        )
+
+        for s in self.sections["build"].get("skip", []):
+            all_keys += ast_extract_syms(s)
+
+        return [str(x) for x in all_keys]
+
     def all_requirements(self):
         requirements = (
             self.requirements.get("build")
@@ -285,6 +199,8 @@ class Output:
                     r.name + " " + variant[vname]
                 )
                 copied.requirements["build"][idx].from_pinnings = True
+                copied.requirements["build"][idx].is_inherited = r.is_inherited
+
         for idx, r in enumerate(self.requirements["host"]):
             vname = r.name.replace("-", "_")
             if vname in variant:
@@ -292,6 +208,7 @@ class Output:
                     r.name + " " + variant[vname]
                 )
                 copied.requirements["host"][idx].from_pinnings = True
+                copied.requirements["host"][idx].is_inherited = r.is_inherited
 
         # todo figure out if we should pin like that in the run reqs as well?
         # for idx, r in enumerate(self.requirements["run"]):
@@ -325,6 +242,7 @@ class Output:
 
         copied.config = get_or_merge_config(self.config, variant=variant)
 
+        copied.differentiating_keys = differentiating_keys
         copied.differentiating_variant = []
         for k in differentiating_keys:
             copied.differentiating_variant.append(variant[k])
@@ -420,9 +338,14 @@ class Output:
                     version = "PS " + version
                 color = "cyan"
 
+            name = r.final_name
+            if x.is_inherited:
+                name += " (inherited)"
+                color = "magenta"
+
             if len(fv) >= 2:
                 table.add_row(
-                    f"[bold white]{r.final_name}[/bold white]",
+                    f"[bold white]{name}[/bold white]",
                     f"[{color}]{version}[/{color}]",
                     f"{fv[0]}",
                     f"{fv[1]}",
@@ -430,7 +353,7 @@ class Output:
                 )
             else:
                 table.add_row(
-                    f"[bold white]{r.final_name}[/bold white]",
+                    f"[bold white]{name}[/bold white]",
                     f"[{color}]{version}[/{color}]",
                     f"{fv[0]}",
                     "",
@@ -515,10 +438,9 @@ class Output:
                 continue
             if s.name in self.sections["build"].get("ignore_run_exports", []):
                 continue
+
             if hasattr(s, "final_version"):
-                final_triple = (
-                    f"{s.final_name}-{s.final_version[0]}-{s.final_version[1]}"
-                )
+                final_triplet = s.final_triplet
             else:
                 console.print(f"[red]{s} has no final version")
                 continue
@@ -532,7 +454,9 @@ class Output:
                 collected_run_exports.append(s.run_exports_info)
             else:
                 path = Path(pkg_cache).joinpath(
-                    final_triple, "info", "run_exports.json",
+                    final_triplet,
+                    "info",
+                    "run_exports.json",
                 )
                 if path.exists():
                     with open(path) as fi:
@@ -582,6 +506,7 @@ class Output:
         if self.requirements.get(env):
             console.print(f"Finalizing [yellow]{env}[/yellow] for {self.name}")
             specs = self.requirements[env]
+
             for s in specs:
                 if s.is_pin:
                     s.eval_pin_subpackage(all_outputs)

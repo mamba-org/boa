@@ -193,8 +193,12 @@ class MambaSolver:
             `MatchSpec(mypec).conda_build_form()`
         Returns
         -------
-        solvable : bool
-            True if the set of specs has a solution, False otherwise.
+        transaction : libmambapy.Transaction
+            The mamba transaction.
+        Raises
+        ------
+        RuntimeError :
+            If the solver did not find a solution.
         """
         solver_options = [(libmambapy.SOLVER_FLAG_ALLOW_DOWNGRADE, 1)]
         api_solver = libmambapy.Solver(self.pool, solver_options)
@@ -222,9 +226,7 @@ class MambaSolver:
             pkg_cache_path = pkgs_dirs
 
         package_cache = libmambapy.MultiPackageCache(pkg_cache_path)
-        return libmambapy.Transaction(
-            api_solver, package_cache, self.repos + list(self.local_repos.values())
-        )
+        return libmambapy.Transaction(api_solver, package_cache)
 
     def solve_for_action(self, specs, prefix):
         t = self.solve(specs)

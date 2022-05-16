@@ -1,6 +1,15 @@
 # Copyright (C) 2021, QuantStack
 # SPDX-License-Identifier: BSD-3-Clause
 from .monkeypatch import *
+
+import hashlib
+import os
+import time
+import sys
+import re
+import json
+import copy
+
 from typing import Union, Dict, Iterable, Any, Optional
 
 try:
@@ -12,15 +21,7 @@ except ImportError:
 
     default_structs = None
 
-from conda_build.utils import ensure_list
-
-import hashlib
-import os
-import time
-import sys
-import re
-import json
-import copy
+from conda_build.utils import ensure_list, expand_globs, on_win
 
 
 def get_package_version_pin(specs, name):
@@ -156,6 +157,13 @@ class MetaData:
             return section[int(num)].get(key, default)
         else:
             return section.get(key, default)
+
+    def rendered_meta(self):
+        res = self.meta.copy()
+        for typ in res.get("requirements", tuple()):
+            res["requirements"][typ] = [x.final_pin for x in self.get_dependencies(typ)]
+
+        return res
 
     @property
     def source_provided(self):
@@ -305,12 +313,6 @@ class MetaData:
     def dist(self):
         return "%s-%s-%s" % (self.name(), self.version(), self.build_id())
 
-    def always_include_files(self):
-        return []
-
-    def binary_relocation(self):
-        return True
-
     def get_dependencies(self, which):
         deps = self.output.requirements[which]
         # print(deps)
@@ -444,14 +446,38 @@ class MetaData:
         #     d.update(self.app_meta())
         return d
 
+    # options
+    def always_include_files(self):
+        files = ensure_list(self.get_value("build/always_include_files", []))
+        if any("\\" in i for i in files):
+            raise RuntimeError(
+                "build/always_include_files paths must use / "
+                "as the path delimiter on Windows"
+            )
+        if on_win:
+            files = [f.replace("/", "\\") for f in files]
+
+        return expand_globs(files, self.config.host_prefix)
+
+    def binary_relocation(self):
+        v = self.get_value("build/binary_relocation", True)
+        if isinstance(v, bool):
+            return v
+        return expand_globs(v, self.config.host_prefix)
+
     def ignore_prefix_files(self):
-        return self.get_value("build/ignore_prefix_files")
+        v = self.get_value("build/ignore_prefix_files", False)
+        if isinstance(v, bool):
+            return v
+        return expand_globs(v, self.config.host_prefix)
 
     def binary_has_prefix_files(self):
-        return self.get_value("build/binary_has_prefix_files", [])
+        ret = self.get_value("build/binary_has_prefix_files", [])
+        return expand_globs(ret, self.config.host_prefix)
 
     def has_prefix_files(self):
-        return self.get_value("build/has_prefix_files", [])
+        ret = self.get_value("build/has_prefix_files", [])
+        return expand_globs(ret, self.config.host_prefix)
 
     def copy(self):
         # delete transactions as we can't copy them

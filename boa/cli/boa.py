@@ -5,7 +5,7 @@ import sys
 import argparse
 from boa.core.monkeypatch import *
 from boa.core.config import init_global_config
-
+from boa._version import __version__
 from mamba.utils import init_api_context
 import libmambapy as api
 
@@ -23,6 +23,7 @@ def main(config=None):
     parser = argparse.ArgumentParser(
         description="Boa, the fast, mamba powered-build tool for conda packages."
     )
+    parser.add_argument("--version", action="version", version=__version__)
 
     subparsers = parser.add_subparsers(help="sub-command help", dest="command")
     parent_parser = argparse.ArgumentParser(add_help=False)
@@ -49,10 +50,12 @@ def main(config=None):
     subparsers.add_parser(
         "convert",
         parents=[parent_parser],
-        help="convert recipe.yaml to old-style meta.yaml",
+        help="convert old-style meta.yaml to recipe.yaml",
     )
     subparsers.add_parser(
-        "validate", parents=[parent_parser], help="Validate recipe.yaml",
+        "validate",
+        parents=[parent_parser],
+        help="Validate recipe.yaml",
     )
 
     build_parser = argparse.ArgumentParser(add_help=False)
@@ -63,7 +66,10 @@ def main(config=None):
         help="Use interactive mode if build fails",
     )
     build_parser.add_argument(
-        "--skip-existing", nargs="?", default="default", const="yes",
+        "--skip-existing",
+        nargs="?",
+        default="default",
+        const="yes",
     )
     build_parser.add_argument(
         "--no-test",
