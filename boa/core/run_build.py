@@ -456,7 +456,6 @@ def run_build(args):
     console.print(f"Updating build index: {(config.output_folder)}\n")
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
-
     all_recipes = find_all_recipes(args.target, config)  # [noqa]
 
     console.print("\n[yellow]Assembling all recipes and variants[/yellow]\n")
@@ -479,6 +478,8 @@ def run_build(args):
                     rerun_build=rerun_build,
                 )
                 rerun_build = False
+                if hasattr(args, "post_build_callback"):
+                    args.post_build_callback(recipe)
             except BoaRunBuildException:
                 rerun_build = True
             except Exception as e:
