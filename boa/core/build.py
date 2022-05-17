@@ -239,63 +239,6 @@ def select_files(files, include_files, exclude_files):
     return final_files
 
 
-def hack_emscripten_generated_js(metadata, filename):
-
-    file_base_dir = metadata.config.host_prefix
-    full_filename = os.path.join(file_base_dir, filename)
-    added_files = []
-    with open(full_filename) as f:
-        try:
-            content = f.read()
-            is_emscripten_generated_wasm = False
-
-            if 'wasmBinaryFile = "' in content:
-                minified = False  
-                is_emscripten_generated_wasm = True  
-                split_on = 'wasmBinaryFile = "'
-            elif 'wasmBinaryFile="' in content:
-                minified = True
-                is_emscripten_generated_wasm = True
-                split_on = 'wasmBinaryFile="'
-
-
-            if is_emscripten_generated_wasm:
-
-                console.print(f"\n[red] FOUND EMSCRIPTEN GENERATED [/red]\n")
-
-                res = content.split(split_on)
-                assert len(res) == 2
-                res2 = res[1].split('.wasm')
-                assert len(res2) == 2
-
-
-                wasm_filename = res2[0] + ".wasm"
-                worker_filename = res[0] + ".worker.js"
-                found = 0
-                for root, subFolders, files in os.walk(metadata.config.work_dir, followlinks=False):
-                    for file in files:
-                        if file == wasm_filename:
-                            console.print(f"\n[red] FOUND WASM [/red]\n")
-                            shutil.copy2(src=os.path.join(root,file), 
-                                    dst=os.path.join(metadata.config.host_prefix,'bin',file))
-                            added_files.append(f'bin/{file}')
-                            found += 1
-                        if file == worker_filename:
-                            console.print(f"\n[red] FOUND WORKER [/red]\n")
-                            shutil.copy2(src=os.path.join(root,file), 
-                                    dst=os.path.join(metadata.config.host_prefix,'bin',file))
-                            added_files.append(f'bin/{file}')
-                            found += 1
-                    if found == 2:
-                        break
-
-        except UnicodeDecodeError:
-            return added_files
-
-    return added_files
-
-
-
 def bundle_conda(metadata, initial_files, env, files_selector=None):
     files = post_process_files(metadata, initial_files)
 
@@ -305,23 +248,6 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
         files = select_files(
             files, files_selector.get("include"), files_selector.get("exclude")
         )
-
-    if False:
-        extra_files = []
-        # todo add emscripten selector
-        # check for binary files
-        for f in sorted(files):
-        
-            if(f.startswith("bin/")):
-                added_files = hack_emscripten_generated_js(metadata, f)
-                for f in added_files:
-                    console.print(f"[red] added missing file  {f} [/red]\n")
-                extra_files += added_files
-
-        files = sorted(files + extra_files)
-        files = list(dict.fromkeys(files))
-
-
 
     console.print(f"\n[yellow]Adding files for {metadata.name()}[/yellow]\n")
     if files:
@@ -456,12 +382,11 @@ def write_build_scripts(m, script, build_file):
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     # HACK
-    emsdk_dir = os.environ.get('CONDA_EMSDK_DIR')
+    emsdk_dir = os.environ.get("CONDA_EMSDK_DIR")
     print(f"\n\n\nCONDA_EMSDK_DIR {emsdk_dir}")
     if emsdk_dir is None:
         raise RuntimeError("emsdk_dir is none")
     env["CONDA_EMSDK_DIR"] = emsdk_dir
-
 
     # forcing shiny colors everywhere
     env["CLICOLOR_FORCE"] = 1
@@ -728,7 +653,6 @@ def build(
         utils.rm_rf(m.config.info_dir)
         files_before_script = utils.prefix_files(prefix=m.config.host_prefix)
 
-    
         with open(join(m.config.build_folder, "prefix_files.txt"), "w") as f:
             f.write("\n".join(sorted(list(files_before_script))))
             f.write("\n")
