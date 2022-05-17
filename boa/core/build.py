@@ -381,9 +381,7 @@ def write_build_scripts(m, script, build_file):
 
     env["CONDA_BUILD_STATE"] = "BUILD"
 
-    # HACK
     emsdk_dir = os.environ.get("CONDA_EMSDK_DIR")
-    print(f"\n\n\nCONDA_EMSDK_DIR {emsdk_dir}")
     if emsdk_dir is None:
         raise RuntimeError("emsdk_dir is none")
     env["CONDA_EMSDK_DIR"] = emsdk_dir
@@ -456,8 +454,6 @@ function feature()
 
         if build_file and isfile(build_file) and build_file.endswith(".py"):
             pyexe = sys.executable
-            # sys.path.append("$BUILD_PREFIX/")
-            # bf.write(f"{pyexe} $HOME/src/bitfurnace/bitfurnace/runner.py {build_file}")
             bf.write(f"{pyexe} $BUILD_PREFIX/bitfurnace/runner.py {build_file}")
         elif build_file and isfile(build_file):
             bf.write(open(build_file).read())
@@ -630,7 +626,6 @@ def build(
         if m.skip():
             # console.print(utils.get_skip_message(m))
             return {}
-        print(conda_build.utils.DEFAULT_SUBDIRS)
         with utils.path_prepended(m.config.build_prefix):
             env = environ.get_dict(m=m)
 
