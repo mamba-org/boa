@@ -464,7 +464,7 @@ def run_build(args):
     for recipe in all_recipes:
         while True:
             try:
-                build_recipe(
+                sorted_outputs = build_recipe(
                     args.command,
                     recipe["recipe_file"],
                     cbc,
@@ -479,7 +479,11 @@ def run_build(args):
                 )
                 rerun_build = False
                 if getattr(args, "post_build_callback", None) is not None:
-                    args.post_build_callback(recipe)
+                    args.post_build_callback(
+                        recipe=recipe,
+                        target_platform=args.target_platform,
+                        sorted_outputs=sorted_outputs,
+                    )
             except BoaRunBuildException:
                 rerun_build = True
             except Exception as e:
