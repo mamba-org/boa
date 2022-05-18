@@ -478,7 +478,7 @@ def run_build(args):
                     rerun_build=rerun_build,
                 )
                 rerun_build = False
-                if hasattr(args, "post_build_callback"):
+                if getattr(args, "post_build_callback", None) is not None:
                     args.post_build_callback(recipe)
             except BoaRunBuildException:
                 rerun_build = True
