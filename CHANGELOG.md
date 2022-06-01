@@ -1,3 +1,15 @@
+0.11.1 (June 01, 2022)
+=======================
+
+- [boa] compatibility with mamba 0.24.0
+- [boa] Fix documentation and docstrings (thanks @LunarLanding and @martinRenou)
+
+0.11.0 (April 27, 2022)
+=======================
+
+- [boa] compatibility with mamba 0.23.0
+- [boa] fix an AttributeError if there is no pin (thanks @TobiasFischer) #268
+
 0.10.0 (March 18, 2022)
 =======================
 
