@@ -123,19 +123,20 @@ class Output:
         self.sections["requirements"] = self.requirements
 
         # handle strong and weak run exports
-        run_exports = []
-        for el in self.sections["build"].get("run_exports", []):
-            if type(el) is str:
-                run_exports.append(CondaBuildSpec(el))
+        self.run_exports = {"weak": [], "strong": []}
+        if self.sections["build"].get("run_exports"):
+            if isinstance(self.sections["build"]["run_exports"], list):
+                self.run_exports["weak"] = [
+                    CondaBuildSpec(el) for el in self.sections["build"]["run_exports"]
+                ]
             else:
-                raise RuntimeError("no strong run exports supported as of now.")
-                # sub_run_exports = []
-                # for key, val in el:
-                #     for x in val:
-                #         sub_run_exports.append(CondaBuildSpec(x))
-                #     run_exports.append({})
-        if run_exports:
-            self.sections["build"]["run_exports"] = run_exports
+                for strength in ["weak", "strong"]:
+                    self.run_exports[strength] = [
+                        CondaBuildSpec(el)
+                        for el in self.sections["build"]["run_exports"].get(
+                            strength, []
+                        )
+                    ]
 
     def skip(self):
         skips = self.sections["build"].get("skip", [])
@@ -185,7 +186,10 @@ class Output:
             self.requirements.get("build")
             + self.requirements.get("host")
             + self.requirements.get("run")
+            + self.run_exports.get("weak")
+            + self.run_exports.get("strong")
         )
+
         return requirements
 
     def apply_variant(self, variant, differentiating_keys=()):
@@ -565,21 +569,23 @@ class Output:
             if env in ("build", "host"):
                 self.propagate_run_exports(env, self.transactions[env]["pkg_cache"])
 
-    def set_final_build_id(self, meta):
+    def set_final_build_id(self, meta, all_outputs):
         self.final_build_id = meta.build_id()
-        # we need to evaluate run_exports pin_subpackage here...
-        if self.sections["build"].get("run_exports"):
-            run_exports_list = self.sections["build"]["run_exports"]
+
+        final_run_exports = {}
+        # we need to evaluate run_exports pin_subpackage here
+        for k, run_exports_list in self.run_exports.items():
             for x in run_exports_list:
                 if self.name.endswith("-static") and self.name.startswith(x.name):
                     # remove self-run-exports for static packages
                     run_exports_list[:] = []
                 else:
-                    x.eval_pin_subpackage([self])
+                    x.eval_pin_subpackage(all_outputs)
 
-                x.eval_pin_subpackage([self])
-            run_exports_list[:] = [x.final for x in run_exports_list]
-            self.data["build"]["run_exports"] = run_exports_list
+            if run_exports_list:
+                final_run_exports[k] = [x.final for x in run_exports_list]
+
+        self.data["build"]["run_exports"] = final_run_exports or None
 
     def finalize_solve(self, all_outputs):
 
