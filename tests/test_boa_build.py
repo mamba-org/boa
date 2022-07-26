@@ -23,7 +23,7 @@ def test_build_notest():
 def test_run_exports():
     recipe = tests_dir / "runexports"
     with tempfile.TemporaryDirectory() as td:
-        check_call(["boa", "build", recipe, "--output-folder", td])
+        check_call(["boa", "build", str(recipe), "--output-folder", td])
         output_path = pathlib.Path(td)
 
         rex_a = next(output_path.rglob("**/rex-a*.tar.bz2"))
