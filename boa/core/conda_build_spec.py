@@ -143,6 +143,7 @@ class CondaBuildSpec:
     def eval_pin_subpackage(self, all_outputs):
         pkg_name = self.name
         output = None
+
         # TODO are we pinning the right version if building multiple variants?!
         for o in all_outputs:
             if o.name == pkg_name:
@@ -151,6 +152,7 @@ class CondaBuildSpec:
 
         if not output:
             raise RuntimeError(f"Could not find output with name {pkg_name}")
+
         version = output.version
         build_string = output.final_build_id
 

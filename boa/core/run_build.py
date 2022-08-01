@@ -306,7 +306,7 @@ def build_recipe(
             o.finalize_solve(sorted_outputs)
 
             meta = MetaData(recipe_path, o)
-            o.set_final_build_id(meta)
+            o.set_final_build_id(meta, sorted_outputs)
 
             if o.skip() or full_render:
                 continue
@@ -451,6 +451,10 @@ def run_build(args):
     folder = args.recipe_dir or os.path.dirname(args.target)
     variant = {"target_platform": args.target_platform or context.subdir}
     cbc, config = get_config(folder, variant, args.variant_config_files)
+
+    if args.output_folder:
+        config.output_folder = args.output_folder
+
     cbc["target_platform"] = [variant["target_platform"]]
 
     if not os.path.exists(config.output_folder):

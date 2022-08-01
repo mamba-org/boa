@@ -9,6 +9,8 @@ from boa._version import __version__
 from mamba.utils import init_api_context
 import libmambapy as api
 
+from conda_build.conda_interface import cc_conda_build
+
 banner = r"""
            _
           | |__   ___   __ _
@@ -65,6 +67,16 @@ def main(config=None):
         action="store_true",
         help="Use interactive mode if build fails",
     )
+
+    build_parser.add_argument(
+        "--output-folder",
+        help=(
+            "folder to dump output package to.  Package are moved here if build or test succeeds."
+            "  Destination folder must exist prior to using this."
+        ),
+        default=cc_conda_build.get("output_folder"),
+    )
+
     build_parser.add_argument(
         "--skip-existing",
         nargs="?",
@@ -95,7 +107,7 @@ def main(config=None):
         help="transmute one or many tar.bz2 packages into a conda packages (or vice versa!)",
     )
     transmute_parser.add_argument("files", type=str, nargs="+")
-    transmute_parser.add_argument("-o", "--output-directory", type=str, default=".")
+    transmute_parser.add_argument("-o", "--output-folder", type=str, default=".")
     transmute_parser.add_argument("-c", "--compression-level", type=int, default=22)
     transmute_parser.add_argument(
         "-n_jobs",

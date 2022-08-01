@@ -298,32 +298,39 @@ def _construct_metadata_for_test_from_package(package, config):
     # update indices in the channel
     update_index(local_channel, verbose=config.debug, threads=1)
 
+    recipe_path = os.path.join(info_dir, "recipe", "recipe.yaml")
     try:
         # raise IOError()
         # metadata = render_recipe(
         #     os.path.join(info_dir, "recipe"), config=config, reset_build_id=False
         # )[0][0]
 
-        metadata = get_metadata(os.path.join(info_dir, "recipe", "recipe.yaml"), config)
+        metadata = get_metadata(recipe_path, config)
         # with open(os.path.join(info_dir, "recipe", "recipe.yaml")) as fi:
         # metadata = yaml.load(fi)
     # no recipe in package.  Fudge metadata
-    except SystemExit:
+    except (SystemExit, FileNotFoundError):
         # force the build string to line up - recomputing it would
         #    yield a different result
-        metadata = MetaData.fromdict(
-            {
-                "package": {
-                    "name": package_data["name"],
-                    "version": package_data["version"],
+        metadata = MetaData(
+            recipe_path,
+            Output(
+                {
+                    "package": {
+                        "name": package_data["name"],
+                        "version": package_data["version"],
+                    },
+                    "build": {
+                        "number": int(package_data["build_number"]),
+                        "string": package_data["build"],
+                    },
+                    "step": {
+                        "name": package_data["name"],
+                    },
+                    "requirements": {"run": package_data["depends"]},
                 },
-                "build": {
-                    "number": int(package_data["build_number"]),
-                    "string": package_data["build"],
-                },
-                "requirements": {"run": package_data["depends"]},
-            },
-            config=config,
+                config=config,
+            ),
         )
     # HACK: because the recipe is fully baked, detecting "used" variables no longer works.  The set
     #     of variables in the hash_input suffices, though.
