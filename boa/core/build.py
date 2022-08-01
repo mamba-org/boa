@@ -4,11 +4,15 @@
 """
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
-from __future__ import absolute_import, division, print_function
 
+
+from __future__ import absolute_import, division, print_function
+from .monkeypatch import *
+import conda_build
 import fnmatch
 import io
 import os
+import glob
 from os.path import isdir, isfile, join
 import shutil
 import sys
@@ -236,7 +240,6 @@ def select_files(files, include_files, exclude_files):
 
 
 def bundle_conda(metadata, initial_files, env, files_selector=None):
-
     files = post_process_files(metadata, initial_files)
 
     # first filter is so that info_files does not pick up ignored files
@@ -278,6 +281,7 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
         files = select_files(files, include_files, files_selector.get("exclude"))
 
     basename = metadata.dist()
+
     tmp_archives = []
     final_outputs = []
     ext = ".tar.bz2"
@@ -376,6 +380,11 @@ def write_build_scripts(m, script, build_file):
     env.update(m.build_features())
 
     env["CONDA_BUILD_STATE"] = "BUILD"
+
+    emsdk_dir = os.environ.get("CONDA_EMSDK_DIR")
+    if emsdk_dir is None:
+        raise RuntimeError("emsdk_dir is none")
+    env["CONDA_EMSDK_DIR"] = emsdk_dir
 
     # forcing shiny colors everywhere
     env["CLICOLOR_FORCE"] = 1
@@ -617,7 +626,6 @@ def build(
         if m.skip():
             # console.print(utils.get_skip_message(m))
             return {}
-
         with utils.path_prepended(m.config.build_prefix):
             env = environ.get_dict(m=m)
 

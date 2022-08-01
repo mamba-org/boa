@@ -1,6 +1,6 @@
 # Copyright (C) 2021, QuantStack
 # SPDX-License-Identifier: BSD-3-Clause
-
+from .monkeypatch import *
 import os
 import glob
 import json
@@ -194,7 +194,7 @@ def build_recipe(
     continue_on_failure: bool = False,
     rerun_build: bool = False,
 ):
-
+    print("in build_recipe")
     ydoc = render(recipe_path, config=config)
     # We need to assemble the variants for each output
     variants = {}
@@ -221,6 +221,9 @@ def build_recipe(
     # this takes in all variants and outputs, builds a dependency tree and returns
     # the final metadata
     sorted_outputs = to_build_tree(ydoc, variants, config, cbc, selected_features)
+
+    # the actual filenames like `pyjs-0.1.0-hc96583f_0` without ending (ie the filename without .tar.bz2)
+    final_names = []
 
     # then we need to solve and build from the bottom up
     # we can't first solve all packages without finalizing everything
@@ -309,7 +312,7 @@ def build_recipe(
                 continue
 
             final_name = meta.dist()
-
+            final_names.append(final_name)
             # TODO this doesn't work for noarch!
             if skip_existing:
                 final_name = meta.dist()
@@ -410,7 +413,7 @@ def build_recipe(
                 raise e
             else:
                 console.print_exception(show_locals=False)
-                exit(1)
+                raise e
 
     for o in sorted_outputs:
         if o in failed_outputs:
@@ -419,7 +422,7 @@ def build_recipe(
             print("\n\n")
             console.print(o)
 
-    return sorted_outputs
+    return sorted_outputs,final_names
 
 
 def extract_features(feature_string):
@@ -468,7 +471,7 @@ def run_build(args):
     for recipe in all_recipes:
         while True:
             try:
-                build_recipe(
+                sorted_outputs,final_names = build_recipe(
                     args.command,
                     recipe["recipe_file"],
                     cbc,
@@ -482,9 +485,17 @@ def run_build(args):
                     rerun_build=rerun_build,
                 )
                 rerun_build = False
+                if getattr(args, "post_build_callback", None) is not None:
+                    args.post_build_callback(
+                        recipe=recipe,
+                        target_platform=args.target_platform,
+                        sorted_outputs=sorted_outputs,
+                        final_names=final_names
+                    )
             except BoaRunBuildException:
                 rerun_build = True
             except Exception as e:
+                print(e)
                 raise e
             else:
                 break
