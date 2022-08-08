@@ -1,4 +1,4 @@
-import os 
+import os
 import sys
 
 
@@ -37,6 +37,10 @@ from conda_build import metadata
 from conda_build import utils,environ
 from conda_build.features import feature_list
 from conda_build.conda_interface import string_types
+from conda_build.post import filetypes_for_platform
+
+
+filetypes_for_platform["emscripten"] = ["wasm"]
 
 
 def ns_cfg(config):
@@ -160,4 +164,3 @@ def get_shlib_ext(host_platform):
     else:
         raise NotImplementedError(host_platform)
 environ.get_shlib_ext = get_shlib_ext
-
