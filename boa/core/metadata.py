@@ -403,7 +403,7 @@ class MetaData:
             arch=ARCH_MAP.get(arch, arch),
             subdir=self.config.target_subdir,
             depends=sorted(
-                " ".join(ms.final.split(" ")[:2]) for ms in self.ms_depends()
+                " ".join(ms.final.split(" ")[:3]) for ms in self.ms_depends()
             ),
             timestamp=int(time.time() * 1000),
         )
