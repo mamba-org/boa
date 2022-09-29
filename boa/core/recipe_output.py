@@ -117,6 +117,7 @@ class Output:
         self.parent = parent
 
         for section in ("build", "host", "run", "run_constrained"):
+            print(self.requirements.get(section))
             self.requirements[section] = [
                 CondaBuildSpec(r) for r in (self.requirements.get(section) or [])
             ]
@@ -176,8 +177,17 @@ class Output:
             "host", []
         )
 
+        for key in all_keys:
+            if isinstance(key, CondaBuildSpec) and hasattr(key.raw, "missing_keys"):
+                all_keys += key.raw.missing_keys
+
         for s in self.sections["build"].get("skip", []):
             all_keys += ast_extract_syms(s)
+
+        for k in all_keys:
+            print(type(k))
+            print(k)
+        # print(all_keys)
 
         return [str(x) for x in all_keys]
 
@@ -196,6 +206,27 @@ class Output:
         copied = copy.deepcopy(self)
 
         copied.variant = variant
+
+        # TODO we need to do this recursively to also catch list items
+        for k in self.sections["build"]:
+            if hasattr(self.sections["build"][k], "missing_keys"):
+                print("replacing string in ", self.sections["build"][k])
+                print("with: ", self.sections["build"][k].render(variant))
+                copied.sections["build"][k] = copied.sections["build"][k].render(
+                    variant
+                )
+
+        for idx, r in enumerate(self.requirements["build"]):
+            if hasattr(r.raw, "missing_keys"):
+                copied.requirements["build"][idx] = CondaBuildSpec(
+                    r.raw.render(variant)
+                )
+
+        for idx, r in enumerate(self.requirements["host"]):
+            if hasattr(r.raw, "missing_keys"):
+                print("!!! --- RENDERING --- !!! ", r.raw.render(variant))
+                copied.requirements["host"][idx] = CondaBuildSpec(r.raw.render(variant))
+
         for idx, r in enumerate(self.requirements["build"]):
             vname = r.name.replace("-", "_")
             if vname in variant:
@@ -298,11 +329,10 @@ class Output:
 
     def __rich__(self):
         table = Table(box=rich.box.MINIMAL_DOUBLE_HEAD)
-        s = f"Output: {self.name} {self.version} BN: {self.build_number}\n"
+        s = f"Output: {self.name} {self.version} {self.final_build_id} BN: {self.build_number}\n"
         if hasattr(self, "differentiating_variant"):
             short_v = " ".join([val for val in self.differentiating_variant])
             s += f"Variant: {short_v}\n"
-        s += "Build:\n"
         table.title = s
         table.add_column("Dependency")
         table.add_column("Version requirement")

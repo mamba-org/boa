@@ -1,5 +1,6 @@
 # Copyright (C) 2021, QuantStack
 # SPDX-License-Identifier: BSD-3-Clause
+import copy
 
 from ruamel.yaml import YAML
 import jinja2
@@ -12,28 +13,82 @@ from boa.core.config import boa_config
 console = boa_config.console
 
 
-def render_recursive(dict_or_array, context_dict, jenv):
-    # check if it's a dict?
-    if isinstance(dict_or_array, Mapping):
-        for key, value in dict_or_array.items():
-            if isinstance(value, str):
-                tmpl = jenv.from_string(value)
-                dict_or_array[key] = tmpl.render(context_dict)
-            elif isinstance(value, Mapping):
-                render_recursive(dict_or_array[key], context_dict, jenv)
-            elif isinstance(value, Iterable):
-                render_recursive(dict_or_array[key], context_dict, jenv)
+class TemplateStr:
+    def __init__(self, template, rendered, missing_keys, context_dict):
+        self.value = rendered
+        self.template = template
+        self.context_dict = context_dict
+        self.missing_keys = missing_keys
 
-    elif isinstance(dict_or_array, Iterable):
-        for i in range(len(dict_or_array)):
-            value = dict_or_array[i]
-            if isinstance(value, str):
-                tmpl = jenv.from_string(value)
-                dict_or_array[i] = tmpl.render(context_dict)
-            elif isinstance(value, Mapping):
-                render_recursive(value, context_dict, jenv)
-            elif isinstance(value, Iterable):
-                render_recursive(value, context_dict, jenv)
+    def split(self, sval=None):
+        if sval:
+            return self.value.split(sval)
+        return self.value.split()
+
+    def render(self, variant_vars):
+        # execute render to record missing values!
+        jenv = jinja2.Environment()
+        cc = copy.copy(self.context_dict)
+        cc.update(variant_vars)
+        tmpl = jenv.from_string(self.template)
+        rendered = tmpl.render(cc)
+        return rendered
+
+    def __str__(self):
+        return str(self.value)
+
+    def __repr__(self):
+        return "TS{" + self.value + "} (" + " ".join(self.missing_keys) + ")"
+
+    def to_json(self):
+        return self.template
+
+
+class ContextDictAccessor(jinja2.runtime.Context):
+
+    global_missing = []
+
+    def resolve_or_missing(self, key):
+        val = jinja2.runtime.Context.resolve_or_missing(self, key)
+        if val is jinja2.utils.missing:
+            ContextDictAccessor.global_missing.append(key)
+            return f"JINJA[{key}]"
+        return val
+
+
+def render_jinja(value, context_dict, jenv):
+    if "{{" in value:
+        print(type(value), value)
+        tmpl = jenv.from_string(value)
+        # execute render to record missing values!
+        rendered = tmpl.render(context_dict)
+        missing_vals = copy.deepcopy(ContextDictAccessor.global_missing)
+        if not missing_vals:
+            return rendered
+        ContextDictAccessor.global_missing = []
+        return TemplateStr(value, rendered, missing_vals, context_dict)
+
+    return value
+
+
+def render_recursive(dict_or_array, context_dict, jenv, key=None):
+    if key is not None:
+        das = dict_or_array[key]
+        if isinstance(das, str):
+            dict_or_array[key] = render_jinja(das, context_dict, jenv)
+            return
+    else:
+        das = dict_or_array
+
+    if isinstance(das, Mapping):
+        for key in das.keys():
+            render_recursive(das, context_dict, jenv, key=key)
+        return
+
+    if isinstance(das, Iterable):
+        for i in range(len(das)):
+            render_recursive(das, context_dict, jenv, key=i)
+        return
 
 
 def flatten_selectors(ydoc, namespace):
@@ -175,7 +230,11 @@ def render(recipe_path, config=None):
     # step 2: fill out context dict
     context_dict = default_jinja_vars(config)
     context_dict.update(ydoc.get("context", {}))
+
     jenv = jinja2.Environment()
+    # use our special context dict accessor to register when we have missing variables
+    jenv.context_class = ContextDictAccessor
+
     for key, value in context_dict.items():
         if isinstance(value, str):
             tmpl = jenv.from_string(value)
@@ -190,6 +249,6 @@ def render(recipe_path, config=None):
 
     # Normalize the entire recipe
     ydoc = normalize_recipe(ydoc)
-    # console.print("\n[yellow]Normalized recipe[/yellow]\n")
-    # console.print(ydoc)
+    console.print("\n[yellow]Normalized recipe[/yellow]\n")
+    console.print(ydoc)
     return ydoc

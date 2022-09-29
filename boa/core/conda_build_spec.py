@@ -138,7 +138,7 @@ class CondaBuildSpec:
 
     def __repr__(self):
         self.loosen_spec()
-        return self.final
+        return str(self.final)
 
     def eval_pin_subpackage(self, all_outputs):
         pkg_name = self.name
