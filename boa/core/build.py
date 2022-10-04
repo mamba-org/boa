@@ -280,13 +280,23 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
     basename = metadata.dist()
     tmp_archives = []
     final_outputs = []
+    cph_kwargs = {}
     ext = ".tar.bz2"
     if output.get("type") == "conda_v2" or metadata.config.conda_pkg_format == "2":
         ext = ".conda"
+        cph_kwargs["compression_tuple"] = (
+            ".tar.zst",
+            "zstd",
+            f"zstd:compression-level={metadata.config.zstd_compression_level}",
+        )
 
     with TemporaryDirectory() as tmp:
         conda_package_handling.api.create(
-            metadata.config.host_prefix, files, basename + ext, out_folder=tmp
+            metadata.config.host_prefix,
+            files,
+            basename + ext,
+            out_folder=tmp,
+            **cph_kwargs,
         )
         tmp_archives = [os.path.join(tmp, basename + ext)]
 
