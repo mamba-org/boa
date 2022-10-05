@@ -1,0 +1,9 @@
+package:
+  name: "metapackage-channel-pin"
+  version: "0.1.0"
+
+build:
+  number: 0
+
+run:
+  - conda-forge::zlib
