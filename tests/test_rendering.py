@@ -31,7 +31,11 @@ def get_outputs(
     recipe = tests_path / folder / recipename
     cbc_file = tests_path / folder / cbcfname
 
-    variant = {"target_platform": "linux-64"}
+    if sys.platform == "win32":
+        variant = {"target_platform": "win-64"}
+    else:
+        variant = {"target_platform": "linux-64"}
+
     cbc, config = get_config(".", variant, [cbc_file])
     cbc["target_platform"] = [variant["target_platform"]]
 
