@@ -1,3 +1,20 @@
+0.12.0 (October 5, 2022)
+========================
+
+- [boa] compatibility with mamba 0.27.0
+- [boa] Fix documentation and docstrings (thanks @LunarLanding and @martinRenou)
+- [boa] Allow channel pinnings in boa build (thanks @mariusvniekerk)
+- [boa] Support additional conda build command line arguments (thanks @mariusvniekerk)
+- [boa] Fix propagation of build strings in dependencies (thanks @alexshagiev)
+- [boa] Proper run exports handling
+- [boa] Fix error in test when include_recipe is false (thanks @frmdstryr)
+
+0.11.0 (April 27, 2022)
+=======================
+
+- [boa] compatibility with mamba 0.23.0
+- [boa] fix an AttributeError if there is no pin (thanks @TobiasFischer) #268
+
 0.10.0 (March 18, 2022)
 =======================
 
