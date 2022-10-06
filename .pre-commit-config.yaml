@@ -23,6 +23,9 @@ repos:
     rev: 3.8.3
     hooks:
     -   id: flake8
+        args:
+            # used by flake8-typing-imports
+            - "--min-python-version=3.7.0"
         exclude: tests/data
         language_version: python3
         additional_dependencies:

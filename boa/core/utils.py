@@ -4,6 +4,7 @@
 import collections
 import sys
 import os
+import typing
 
 from conda.base.context import context
 from conda_build import utils
@@ -12,6 +13,11 @@ from conda_build.variants import find_config_files, parse_config_file, combine_s
 from conda_build import __version__ as cb_version
 
 from boa.core.config import boa_config
+
+if typing.TYPE_CHECKING:
+    from typing import Any
+    from conda_build.config import Config as CondaBuildConfig
+
 
 console = boa_config.console
 
@@ -28,12 +34,17 @@ else:
     shell_path = "/bin/bash"
 
 
-def get_config(folder, variant=None, additional_files=None):
+def get_config(
+    folder,
+    variant=None,
+    additional_files=None,
+    config: "CondaBuildConfig | None" = None,
+) -> "tuple[Any, CondaBuildConfig]":
     if not additional_files:
         additional_files = []
     if not variant:
         variant = {}
-    config = get_or_merge_config(None, variant)
+    config = get_or_merge_config(config, variant)
 
     if cb_split_version >= (3, 20, 5):
         config_files = find_config_files(folder, config)
