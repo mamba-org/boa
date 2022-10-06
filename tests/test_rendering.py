@@ -25,16 +25,20 @@ def test_extract_features():
     assert feats == {}
 
 
+def get_target_platform():
+    if sys.platform == "win32":
+        return "win-64"
+    else:
+        return "linux-64"
+
+
 def get_outputs(
     cbcfname, recipename="recipe.yaml", folder="variant_test", cmd="render"
 ):
     recipe = tests_path / folder / recipename
     cbc_file = tests_path / folder / cbcfname
 
-    if sys.platform == "win32":
-        variant = {"target_platform": "win-64"}
-    else:
-        variant = {"target_platform": "linux-64"}
+    variant = {"target_platform": get_target_platform()}
 
     cbc, config = get_config(".", variant, [cbc_file])
     cbc["target_platform"] = [variant["target_platform"]]
@@ -57,7 +61,10 @@ def get_outputs(
 def test_variants_zipping():
 
     cbc, sorted_outputs = get_outputs("cbc1.yaml")
-    assert cbc == {"python": ["3.6", "3.7", "3.8"], "target_platform": ["linux-64"]}
+    assert cbc == {
+        "python": ["3.6", "3.7", "3.8"],
+        "target_platform": [get_target_platform()],
+    }
 
     expected_variants = ["python 3.6.*", "python 3.7.*", "python 3.8.*"]
 
@@ -180,18 +187,22 @@ def test_compiler():
         assert o.version == "0.1.0"
         print(o.requirements)
         c_comp = str(o.requirements["build"][0])
-        assert c_comp.rsplit("_", 1)[1] == "linux-64"
+        assert c_comp.rsplit("_", 1)[1] == get_target_platform()
         if sys.platform == "linux":
             str(o.requirements["build"][0]) == "gcc_linux-64"
-        assert str(o.requirements["build"][1]).rsplit("_", 1)[1] == "linux-64"
-        assert str(o.requirements["build"][2]).rsplit("_", 1)[1] == "linux-64"
+        assert (
+            str(o.requirements["build"][1]).rsplit("_", 1)[1] == get_target_platform()
+        )
+        assert (
+            str(o.requirements["build"][2]).rsplit("_", 1)[1] == get_target_platform()
+        )
         assert o.requirements["build"][0].from_pinnings is True
 
     cbc, sorted_outputs = get_outputs("compilers.yaml", folder="compiler_test")
     expected_compilers = [
-        "customcompiler_linux-64 11*",
-        "fortranisstillalive_linux-64 2000*",
-        "cppcompiler_linux-64 200*",
+        f"customcompiler_{get_target_platform()} 11*",
+        f"fortranisstillalive_{get_target_platform()} 2000*",
+        f"cppcompiler_{get_target_platform()} 200*",
     ]
     for o in sorted_outputs:
         assert o.name == "compiler_test"
