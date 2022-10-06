@@ -23,7 +23,7 @@ def test_build_notest():
 
 def test_run_exports(tmp_path: Path):
     recipe = tests_dir / "runexports"
-    check_call(["boa", "build", str(recipe), "--output-folder", tmp_path])
+    check_call(["boa", "build", str(recipe), "--output-folder", str(tmp_path)])
 
     rex_a = next(tmp_path.rglob("**/rex-a*.tar.bz2"))
 
@@ -52,7 +52,7 @@ def test_run_exports(tmp_path: Path):
 def test_build_with_channel_pins(tmp_path: Path):
     # Ensure that channel pins round trip correctly
     recipe = tests_dir / "metapackage-channel-pin"
-    check_call(["boa", "build", str(recipe), "--output-folder", tmp_path])
+    check_call(["boa", "build", str(recipe), "--output-folder", str(tmp_path)])
 
     channel_pins = next(tmp_path.rglob("**/metapackage-channel-pin*.tar.bz2"))
 
