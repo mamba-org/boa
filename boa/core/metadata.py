@@ -202,12 +202,28 @@ class MetaData:
                     if self.noarch:
                         continue
 
-            for c in "=!@#$%^&*:;\"'\\|<>?/":
-                if c in spec.name:
+            channel_seperator = "::"
+            channel_seperator_found = channel_seperator in spec.name
+            if channel_seperator_found:
+                channel, _, package = spec.name.partition(channel_seperator)
+                if not channel:
                     sys.exit(
-                        "Error: bad character '%s' in package name "
-                        "dependency '%s'" % (c, spec.name)
+                        f"Error: channel separator '::' found in spec '{spec}' but no channel was specified."
                     )
+                if not package:
+                    sys.exit(
+                        f"Error: channel separator '::' found in spec '{spec}' but no package was specified."
+                    )
+                channel_seperator_found = True
+            else:
+                # since channel names can be full urls many of these characters are potentially valid
+                for c in "=!@#$%^&*;\"'\\|<>?/":
+                    if c in spec.name:
+                        breakpoint()
+                        sys.exit(
+                            "Error: bad character '%s' in package name "
+                            "dependency '%s'" % (c, spec.name)
+                        )
 
             parts = spec.splitted
             if len(parts) >= 2:
