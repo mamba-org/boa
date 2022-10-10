@@ -210,3 +210,21 @@ def test_compiler():
         print(o.requirements)
         comps = [str(x) for x in o.requirements["build"]]
         assert sorted(comps) == sorted(expected_compilers)
+
+from subprocess import check_call
+import json
+import os
+
+def call_render(recipe):
+    out = check_call(["boa", "render", str(recipe), "--json"])
+    return json.loads(out.decode('utf8'))
+
+recipe_tests_path = pathlib.Path(__file__).parent / "recipes-v2"
+
+def test_environ():
+    out = call_render(recipe_tests_path / "environ" / "recipe.yaml")
+    assert(out["package"]["version"] == "2.2")
+
+    os.environ["ENV_PKG_VERSION"] = "100.2000"
+    out = call_render(recipe_tests_path / "environ" / "recipe.yaml")
+    assert(out["package"]["version"] == "100.2000")
