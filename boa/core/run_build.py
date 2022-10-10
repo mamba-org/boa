@@ -471,12 +471,14 @@ def run_build(args: argparse.Namespace) -> None:
     variant = {"target_platform": args.target_platform or context.subdir}
 
     config = initialize_conda_build_config(args)
-    config.conda_pkg_format = args.conda_pkg_format
-    config.zstd_compression_level = args.zstd_compression_level
+
+    if hasattr(args, "conda_pkg_format"):
+        config.conda_pkg_format = args.conda_pkg_format
+        config.zstd_compression_level = args.zstd_compression_level
 
     cbc, config = get_config(folder, variant, args.variant_config_files, config=config)
 
-    if args.output_folder:
+    if hasattr(args, "output_folder") and args.output_folder:
         config.output_folder = args.output_folder
 
     cbc["target_platform"] = [variant["target_platform"]]

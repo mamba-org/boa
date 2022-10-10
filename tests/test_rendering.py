@@ -1,8 +1,12 @@
 import sys
+import os
+from subprocess import check_output
+import json
 import pytest
 from boa.core.run_build import extract_features, build_recipe
 from boa.core.utils import get_config
 import pathlib
+
 
 tests_path = pathlib.Path(__file__).parent / "variants"
 
@@ -211,20 +215,26 @@ def test_compiler():
         comps = [str(x) for x in o.requirements["build"]]
         assert sorted(comps) == sorted(expected_compilers)
 
-from subprocess import check_call
-import json
-import os
 
 def call_render(recipe):
-    out = check_call(["boa", "render", str(recipe), "--json"])
-    return json.loads(out.decode('utf8'))
+
+    os.chdir(recipe.parent)
+
+    print(["boa", "render", str(recipe.resolve()), "--json"])
+    out = check_output(["boa", "render", str(recipe.resolve()), "--json"])
+    out = out.decode("utf8")
+    print(out)
+    return json.loads(out)
+
 
 recipe_tests_path = pathlib.Path(__file__).parent / "recipes-v2"
 
+
 def test_environ():
     out = call_render(recipe_tests_path / "environ" / "recipe.yaml")
-    assert(out["package"]["version"] == "2.2")
+    assert out[0]["name"] == "test"
+    assert out[0]["version"] == "2.2"
 
     os.environ["ENV_PKG_VERSION"] = "100.2000"
     out = call_render(recipe_tests_path / "environ" / "recipe.yaml")
-    assert(out["package"]["version"] == "100.2000")
+    assert out[0]["version"] == "100.2000"
