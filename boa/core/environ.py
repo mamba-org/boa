@@ -2,7 +2,16 @@ import warnings
 import os
 import sys
 
-from conda_build.environ import conda_build_vars, python_vars, perl_vars, lua_vars, r_vars, system_vars, feature_list, LANGUAGES
+from conda_build.environ import (
+    conda_build_vars,
+    python_vars,
+    perl_vars,
+    lua_vars,
+    r_vars,
+    system_vars,
+    feature_list,
+    LANGUAGES,
+)
 from conda_build.os_utils import external
 from conda_build.environ import get_git_info, get_hg_build_info, verify_git_repo
 from conda_build import utils
@@ -72,7 +81,14 @@ def meta_vars(meta, skip_build_id=False):
     return d
 
 
-def get_dict(m, prefix=None, for_env=True, skip_build_id=False, escape_backslash=False, variant=None):
+def get_dict(
+    m,
+    prefix=None,
+    for_env=True,
+    skip_build_id=False,
+    escape_backslash=False,
+    variant=None,
+):
     if not prefix:
         prefix = m.config.host_prefix
 
@@ -94,8 +110,7 @@ def get_dict(m, prefix=None, for_env=True, skip_build_id=False, escape_backslash
     d.update(system_vars(d, m, prefix))
 
     # features
-    d.update({feat.upper(): str(int(value)) for feat, value in
-              feature_list})
+    d.update({feat.upper(): str(int(value)) for feat, value in feature_list})
 
     variant = variant or m.config.variant
     for k, v in variant.items():

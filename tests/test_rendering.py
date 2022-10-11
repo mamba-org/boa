@@ -232,7 +232,7 @@ recipe_tests_path = pathlib.Path(__file__).parent / "recipes-v2"
 
 def test_environ():
     out = call_render(recipe_tests_path / "environ" / "recipe.yaml")
-    assert out[0]["name"] == "test"
+    assert out[0]["name"] == "test_environ"
     assert out[0]["version"] == "2.2"
 
     os.environ["ENV_PKG_VERSION"] = "100.2000"
