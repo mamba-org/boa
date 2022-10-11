@@ -15,5 +15,6 @@ build:
       - echo $KEY1 > $PREFIX/key1.txt
       - echo $KEY2 > $PREFIX/key2.txt
     sel(win):
+      - "@echo off"
       - echo %KEY1% > %PREFIX%/key1.txt
       - echo %KEY2% > %PREFIX%/key2.txt
