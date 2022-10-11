@@ -37,11 +37,13 @@ from conda_build.render import bldpkg_path, try_download
 from conda_build.utils import shutil_move_more_retrying
 from conda_build.variants import set_language_env_vars
 
-from conda_build import environ, utils
+from conda_build import utils
+from conda_build.environ import clean_pkg_cache
 
 from boa.core.utils import shell_path
 from boa.core.recipe_output import Output
 from boa.core.metadata import MetaData
+from boa.core import environ
 
 from glob import glob
 from rich.console import Console
@@ -697,7 +699,7 @@ def run_test(
         and os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[0]
     )
     if not in_pkg_cache:
-        environ.clean_pkg_cache(metadata.dist(), metadata.config)
+        clean_pkg_cache(metadata.dist(), metadata.config)
 
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir

@@ -2,6 +2,8 @@ import pathlib
 from subprocess import check_call
 import tarfile
 import json
+import os
+
 from pathlib import Path
 
 
@@ -59,3 +61,18 @@ def test_build_with_channel_pins(tmp_path: Path):
     with tarfile.open(channel_pins) as fin:
         info = json.load(fin.extractfile("info/index.json"))
         assert "pytorch::pytorch" in info["depends"]
+
+
+def test_build_with_script_env(tmp_path: Path):
+    # Ensure that channel pins round trip correctly
+    recipe = recipes_dir / "environ"
+    os.environ["KEY1"] = "KEY1_RANDOM_VALUE"
+    check_call(["boa", "build", str(recipe), "--output-folder", str(tmp_path)])
+
+    result = next(tmp_path.rglob("**/test_environ*.tar.bz2"))
+
+    with tarfile.open(result) as fin:
+        key1 = fin.extractfile("key1.txt").read().decode("utf8").strip()
+        assert key1 == "KEY1_RANDOM_VALUE"
+        key2 = fin.extractfile("key2.txt").read().decode("utf8").strip()
+        assert key2 == "JUST A VALUE"
