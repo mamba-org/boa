@@ -42,7 +42,7 @@ from conda_build.exceptions import indent
 import conda_build.noarch_python as noarch_python
 
 if sys.platform == "win32":
-    import conda_build.windows as windows
+    import boa.core.windows as windows
 
 from boa.core.utils import shell_path, get_sys_vars_stubs
 from boa.core.recipe_handling import copy_recipe
