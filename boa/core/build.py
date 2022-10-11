@@ -16,10 +16,10 @@ import pathlib
 import subprocess
 from conda_build.create_test import create_all_test_files
 
-# this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
-#   eventually
-# exception is raises: "LookupError: unknown encoding: idna"
-#    http://stackoverflow.com/a/13057751/1170370
+# This import is to compensate for a requests idna encoding error.
+# Conda is a better place to fix, eventually.
+# Exception it raises: "LookupError: unknown encoding: idna"
+# http://stackoverflow.com/a/13057751/1170370
 import encodings.idna  # NOQA
 
 import conda_package_handling.api
@@ -28,7 +28,7 @@ import conda_package_handling.api
 from conda_build.conda_interface import env_path_backup_var_exists, TemporaryDirectory
 from conda_build.utils import tmp_chdir
 
-from conda_build import environ, source, utils
+from conda_build import source, utils
 from conda_build.index import update_index
 from conda_build.post import (
     post_process,
@@ -48,6 +48,7 @@ from boa.core.utils import shell_path, get_sys_vars_stubs
 from boa.core.recipe_handling import copy_recipe
 from boa.core.config import boa_config
 from boa.tui.exceptions import BoaRunBuildException
+from boa.core import environ
 
 from conda_build.build import (
     _write_sh_activation_text,
