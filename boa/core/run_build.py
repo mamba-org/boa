@@ -1,6 +1,8 @@
 # Copyright (C) 2021, QuantStack
 # SPDX-License-Identifier: BSD-3-Clause
+
 from .monkeypatch import *
+import argparse
 import os
 import glob
 import json
@@ -31,6 +33,7 @@ from conda_build.utils import rm_rf
 from conda.common import toposort
 from conda.base.context import context
 from conda.gateways.disk.create import mkdir_p
+from conda_build import config as conda_build_config
 from conda_build.utils import on_win
 from conda_build.index import update_index
 
@@ -306,7 +309,7 @@ def build_recipe(
             o.finalize_solve(sorted_outputs)
 
             meta = MetaData(recipe_path, o)
-            o.set_final_build_id(meta)
+            o.set_final_build_id(meta, sorted_outputs)
 
             if o.skip() or full_render:
                 continue
@@ -441,7 +444,27 @@ def extract_features(feature_string):
     return selected_features
 
 
-def run_build(args):
+def initialize_conda_build_config(
+    args: argparse.Namespace,
+) -> conda_build_config.Config:
+    conda_build_arg_prefix = "conda_build_"
+    conda_build_args = {
+        k: v
+        for k, v in vars(args).items()
+        if k.startswith(conda_build_arg_prefix) and v is not None
+    }
+    conda_build_args = {
+        k[len(conda_build_arg_prefix) :]: v for k, v in conda_build_args.items()
+    }
+    # duplicate the logic from conda_build for this setting
+    build_id_pat = conda_build_args.get("build_id_pat", None)
+    if (build_id_pat is not None) and (build_id_pat == ""):
+        conda_build_args["set_build_id"] = False
+
+    return conda_build_config.Config(None, **conda_build_args)
+
+
+def run_build(args: argparse.Namespace) -> None:
     if getattr(args, "json", False):
         global console
         console.quiet = True
@@ -450,7 +473,18 @@ def run_build(args):
 
     folder = args.recipe_dir or os.path.dirname(args.target)
     variant = {"target_platform": args.target_platform or context.subdir}
-    cbc, config = get_config(folder, variant, args.variant_config_files)
+
+    config = initialize_conda_build_config(args)
+
+    if hasattr(args, "conda_pkg_format"):
+        config.conda_pkg_format = args.conda_pkg_format
+        config.zstd_compression_level = args.zstd_compression_level
+
+    cbc, config = get_config(folder, variant, args.variant_config_files, config=config)
+
+    if hasattr(args, "output_folder") and args.output_folder:
+        config.output_folder = args.output_folder
+
     cbc["target_platform"] = [variant["target_platform"]]
 
     if not os.path.exists(config.output_folder):

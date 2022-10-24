@@ -1,0 +1,29 @@
+package:
+  name: "rex-a"
+  version: "0.1.0"
+
+build:
+  number: 0
+
+outputs:
+  - package:
+      name: rex-a
+      version: "0.1.0"
+
+    build:
+      run_exports:
+        - "{{ pin_subpackage('rex-exporter', max_pin='x.x') }}"
+
+  - package:
+      name: rex-b
+      version: "0.1.0"
+    build:
+      run_exports:
+        strong:
+          - "{{ pin_subpackage('rex-exporter', max_pin='x.x') }}"
+        weak:
+          - "{{ pin_subpackage('rex-a', max_pin='x.x.x') }}"
+
+  - package:
+      name: rex-exporter
+      version: "0.1.0"

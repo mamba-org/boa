@@ -1,8 +1,12 @@
 import sys
+import os
+from subprocess import check_output
+import json
 import pytest
 from boa.core.run_build import extract_features, build_recipe
 from boa.core.utils import get_config
 import pathlib
+
 
 tests_path = pathlib.Path(__file__).parent / "variants"
 
@@ -25,13 +29,21 @@ def test_extract_features():
     assert feats == {}
 
 
+def get_target_platform():
+    if sys.platform == "win32":
+        return "win-64"
+    else:
+        return "linux-64"
+
+
 def get_outputs(
     cbcfname, recipename="recipe.yaml", folder="variant_test", cmd="render"
 ):
     recipe = tests_path / folder / recipename
     cbc_file = tests_path / folder / cbcfname
 
-    variant = {"target_platform": "linux-64"}
+    variant = {"target_platform": get_target_platform()}
+
     cbc, config = get_config(".", variant, [cbc_file])
     cbc["target_platform"] = [variant["target_platform"]]
 
@@ -53,7 +65,10 @@ def get_outputs(
 def test_variants_zipping():
 
     cbc, sorted_outputs = get_outputs("cbc1.yaml")
-    assert cbc == {"python": ["3.6", "3.7", "3.8"], "target_platform": ["linux-64"]}
+    assert cbc == {
+        "python": ["3.6", "3.7", "3.8"],
+        "target_platform": [get_target_platform()],
+    }
 
     expected_variants = ["python 3.6.*", "python 3.7.*", "python 3.8.*"]
 
@@ -176,18 +191,22 @@ def test_compiler():
         assert o.version == "0.1.0"
         print(o.requirements)
         c_comp = str(o.requirements["build"][0])
-        assert c_comp.rsplit("_", 1)[1] == "linux-64"
+        assert c_comp.rsplit("_", 1)[1] == get_target_platform()
         if sys.platform == "linux":
             str(o.requirements["build"][0]) == "gcc_linux-64"
-        assert str(o.requirements["build"][1]).rsplit("_", 1)[1] == "linux-64"
-        assert str(o.requirements["build"][2]).rsplit("_", 1)[1] == "linux-64"
+        assert (
+            str(o.requirements["build"][1]).rsplit("_", 1)[1] == get_target_platform()
+        )
+        assert (
+            str(o.requirements["build"][2]).rsplit("_", 1)[1] == get_target_platform()
+        )
         assert o.requirements["build"][0].from_pinnings is True
 
     cbc, sorted_outputs = get_outputs("compilers.yaml", folder="compiler_test")
     expected_compilers = [
-        "customcompiler_linux-64 11*",
-        "fortranisstillalive_linux-64 2000*",
-        "cppcompiler_linux-64 200*",
+        f"customcompiler_{get_target_platform()} 11*",
+        f"fortranisstillalive_{get_target_platform()} 2000*",
+        f"cppcompiler_{get_target_platform()} 200*",
     ]
     for o in sorted_outputs:
         assert o.name == "compiler_test"
@@ -195,3 +214,27 @@ def test_compiler():
         print(o.requirements)
         comps = [str(x) for x in o.requirements["build"]]
         assert sorted(comps) == sorted(expected_compilers)
+
+
+def call_render(recipe):
+
+    os.chdir(recipe.parent)
+
+    print(["boa", "render", str(recipe.resolve()), "--json"])
+    out = check_output(["boa", "render", str(recipe.resolve()), "--json"])
+    out = out.decode("utf8")
+    print(out)
+    return json.loads(out)
+
+
+recipe_tests_path = pathlib.Path(__file__).parent / "recipes-v2"
+
+
+def test_environ():
+    out = call_render(recipe_tests_path / "environ" / "recipe.yaml")
+    assert out[0]["name"] == "test_environ"
+    assert out[0]["version"] == "2.2"
+
+    os.environ["ENV_PKG_VERSION"] = "100.2000"
+    out = call_render(recipe_tests_path / "environ" / "recipe.yaml")
+    assert out[0]["version"] == "100.2000"

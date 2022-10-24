@@ -191,35 +191,29 @@ setting to control that behavior.
 
 ### Use environment variables
 
+> **note**
+>
+> This section differs from conda-build: boa uses a dictionary, while conda-build
+> uses a list of strings for the `script_env`. To pass through environment variables,
+> boa requires explicit use of the jinja template syntax.
+
 Normally the build script in `build.sh` or `bld.bat` does not pass
 through environment variables from the command line. Only environment
 variables documented in env-vars are seen by the build script. To
-"white-list" environment variables that should be passed through to the
-build script:
+pass through environment variables to the build script you can use the `environ`
+object in `jinja` (it corresponds to the Python os.environ object):
 
 ```yaml
 build:
   script_env:
-    - MYVAR
-    - ANOTHER_VAR
-```
-
-If a listed environment variable is missing from the environment seen by
-the conda-build process itself, a UserWarning is emitted during the
-build process and the variable remains undefined.
-
-Additionally, values can be set by including `=` followed by the desired
-value:
-
-```yaml
-build:
-  script_env:
-   - MY_VAR=some value
+    MYVAR: "{{ environ.get('MYVAR', 'yes') }}"
+    ANOTHER_VAR: "{{ environ['ANOTHER_VAR'] }}"
+    SOME_VAR: "VALUE OF SOMEVAR"
 ```
 
 > **note**
 >
-> Inheriting environment variables can make it difficult for others to
+> Using pass-through environment variables can make it difficult for others to
 > reproduce binaries from source with your recipe. Use this feature with
 > caution or explicitly set values using the `=` syntax.
 

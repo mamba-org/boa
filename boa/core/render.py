@@ -3,6 +3,7 @@
 from .monkeypatch import *
 from ruamel.yaml import YAML
 import jinja2
+import os
 from boa.core.jinja_support import jinja_functions
 from conda_build.metadata import eval_selector, ns_cfg
 from collections.abc import Mapping, Iterable
@@ -175,6 +176,7 @@ def render(recipe_path, config=None):
     # step 2: fill out context dict
     context_dict = default_jinja_vars(config)
     context_dict.update(ydoc.get("context", {}))
+    context_dict["environ"] = os.environ
     jenv = jinja2.Environment()
     for key, value in context_dict.items():
         if isinstance(value, str):

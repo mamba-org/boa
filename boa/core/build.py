@@ -20,10 +20,10 @@ import pathlib
 import subprocess
 from conda_build.create_test import create_all_test_files
 
-# this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
-#   eventually
-# exception is raises: "LookupError: unknown encoding: idna"
-#    http://stackoverflow.com/a/13057751/1170370
+# This import is to compensate for a requests idna encoding error.
+# Conda is a better place to fix, eventually.
+# Exception it raises: "LookupError: unknown encoding: idna"
+# http://stackoverflow.com/a/13057751/1170370
 import encodings.idna  # NOQA
 
 import conda_package_handling.api
@@ -32,7 +32,7 @@ import conda_package_handling.api
 from conda_build.conda_interface import env_path_backup_var_exists, TemporaryDirectory
 from conda_build.utils import tmp_chdir
 
-from conda_build import environ, source, utils
+from conda_build import source, utils
 from conda_build.index import update_index
 from conda_build.post import (
     post_process,
@@ -46,12 +46,13 @@ from conda_build.exceptions import indent
 import conda_build.noarch_python as noarch_python
 
 if sys.platform == "win32":
-    import conda_build.windows as windows
+    import boa.core.windows as windows
 
 from boa.core.utils import shell_path, get_sys_vars_stubs
 from boa.core.recipe_handling import copy_recipe
 from boa.core.config import boa_config
 from boa.tui.exceptions import BoaRunBuildException
+from boa.core import environ
 
 from conda_build.build import (
     _write_sh_activation_text,
@@ -284,13 +285,23 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
 
     tmp_archives = []
     final_outputs = []
+    cph_kwargs = {}
     ext = ".tar.bz2"
     if output.get("type") == "conda_v2" or metadata.config.conda_pkg_format == "2":
         ext = ".conda"
+        cph_kwargs["compression_tuple"] = (
+            ".tar.zst",
+            "zstd",
+            f"zstd:compression-level={metadata.config.zstd_compression_level}",
+        )
 
     with TemporaryDirectory() as tmp:
         conda_package_handling.api.create(
-            metadata.config.host_prefix, files, basename + ext, out_folder=tmp
+            metadata.config.host_prefix,
+            files,
+            basename + ext,
+            out_folder=tmp,
+            **cph_kwargs,
         )
         tmp_archives = [os.path.join(tmp, basename + ext)]
 

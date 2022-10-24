@@ -9,6 +9,8 @@ from boa._version import __version__
 from mamba.utils import init_api_context
 import libmambapy as api
 
+from conda_build.conda_interface import cc_conda_build
+
 banner = r"""
            _
           | |__   ___   __ _
@@ -65,6 +67,16 @@ def main(config=None):
         action="store_true",
         help="Use interactive mode if build fails",
     )
+
+    build_parser.add_argument(
+        "--output-folder",
+        help=(
+            "folder to dump output package to.  Package are moved here if build or test succeeds."
+            "  Destination folder must exist prior to using this."
+        ),
+        default=cc_conda_build.get("output_folder"),
+    )
+
     build_parser.add_argument(
         "--skip-existing",
         nargs="?",
@@ -82,6 +94,67 @@ def main(config=None):
         action="store_true",
         help="Continue building remaining recipes if a recipe fails.",
     )
+    # The following arguments are taken directly from conda-build
+    conda_build_parser = build_parser.add_argument_group("special conda-build flags")
+    conda_build_parser.add_argument(
+        "--build-id-pat",
+        default=False,
+        dest="conda_build_build_id_pat",
+        help="""\
+            specify a templated pattern to use as build folder names.  Use if having issues with
+            paths being too long, or to ensure a particular build folder name.
+            When not specified, the default is to use the pattern {n}_{t}.
+            Template variables are: n: package name, t: timestamp, v: package_version""",
+    )
+    conda_build_parser.add_argument(
+        "--no-remove-work-dir",
+        dest="conda_build_remove_work_dir",
+        default=True,
+        action="store_false",
+        help="""\
+            Disable removal of the work dir before testing.  Be careful using this option, as
+            you package may depend on files that are not included in the package, and may pass
+            tests, but ultimately fail on installed systems.""",
+    )
+    conda_build_parser.add_argument(
+        "--keep-old-work",
+        action="store_true",
+        dest="conda_build_keep_old_work",
+        help="Do not remove anything from environment, even after successful build and test.",
+    )
+    conda_build_parser.add_argument(
+        "--prefix-length",
+        dest="conda_build_prefix_length",
+        help="""\
+            length of build prefix.  For packages with binaries that embed the path, this is
+            critical to ensuring that your package can run as many places as possible.  Note
+            that this value can be altered by the OS below boa (e.g. encrypted
+            filesystems on Linux), and you should prefer to set --croot to a non-encrypted
+            location instead, so that you maintain a known prefix length.""",
+        default=255,
+        type=int,
+    )
+    conda_build_parser.add_argument(
+        "--croot",
+        dest="conda_build_croot",
+        help="Build root folder.  Equivalent to CONDA_BLD_PATH, but applies only to this call of `boa build`.",
+    )
+    build_parser.add_argument(
+        "--pkg-format",
+        dest="conda_pkg_format",
+        choices=["1", "2"],
+        default="1",
+        help="Package format version.  Version 1 is the standard .tar.bz2 format.  Version 2 is the new .conda format.",
+    )
+    conda_build_parser.add_argument(
+        "--zstd-compression-level",
+        help="""\
+            When building v2 packages, set the compression level used by
+            conda-package-handling. Defaults to the maximum.""",
+        type=int,
+        choices=range(1, 22),
+        default=22,
+    )
 
     subparsers.add_parser(
         "build",
@@ -95,7 +168,7 @@ def main(config=None):
         help="transmute one or many tar.bz2 packages into a conda packages (or vice versa!)",
     )
     transmute_parser.add_argument("files", type=str, nargs="+")
-    transmute_parser.add_argument("-o", "--output-directory", type=str, default=".")
+    transmute_parser.add_argument("-o", "--output-folder", type=str, default=".")
     transmute_parser.add_argument("-c", "--compression-level", type=int, default=22)
     transmute_parser.add_argument(
         "-n_jobs",

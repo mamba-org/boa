@@ -37,11 +37,13 @@ from conda_build.render import bldpkg_path, try_download
 from conda_build.utils import shutil_move_more_retrying
 from conda_build.variants import set_language_env_vars
 
-from conda_build import environ, utils
+from conda_build import utils
+from conda_build.environ import clean_pkg_cache
 
 from boa.core.utils import shell_path
 from boa.core.recipe_output import Output
 from boa.core.metadata import MetaData
+from boa.core import environ
 
 from glob import glob
 from rich.console import Console
@@ -298,32 +300,39 @@ def _construct_metadata_for_test_from_package(package, config):
     # update indices in the channel
     update_index(local_channel, verbose=config.debug, threads=1)
 
+    recipe_path = os.path.join(info_dir, "recipe", "recipe.yaml")
     try:
         # raise IOError()
         # metadata = render_recipe(
         #     os.path.join(info_dir, "recipe"), config=config, reset_build_id=False
         # )[0][0]
 
-        metadata = get_metadata(os.path.join(info_dir, "recipe", "recipe.yaml"), config)
+        metadata = get_metadata(recipe_path, config)
         # with open(os.path.join(info_dir, "recipe", "recipe.yaml")) as fi:
         # metadata = yaml.load(fi)
     # no recipe in package.  Fudge metadata
-    except SystemExit:
+    except (SystemExit, FileNotFoundError):
         # force the build string to line up - recomputing it would
         #    yield a different result
-        metadata = MetaData.fromdict(
-            {
-                "package": {
-                    "name": package_data["name"],
-                    "version": package_data["version"],
+        metadata = MetaData(
+            recipe_path,
+            Output(
+                {
+                    "package": {
+                        "name": package_data["name"],
+                        "version": package_data["version"],
+                    },
+                    "build": {
+                        "number": int(package_data["build_number"]),
+                        "string": package_data["build"],
+                    },
+                    "step": {
+                        "name": package_data["name"],
+                    },
+                    "requirements": {"run": package_data["depends"]},
                 },
-                "build": {
-                    "number": int(package_data["build_number"]),
-                    "string": package_data["build"],
-                },
-                "requirements": {"run": package_data["depends"]},
-            },
-            config=config,
+                config=config,
+            ),
         )
     # HACK: because the recipe is fully baked, detecting "used" variables no longer works.  The set
     #     of variables in the hash_input suffices, though.
@@ -690,7 +699,7 @@ def run_test(
         and os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[0]
     )
     if not in_pkg_cache:
-        environ.clean_pkg_cache(metadata.dist(), metadata.config)
+        clean_pkg_cache(metadata.dist(), metadata.config)
 
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir

@@ -34,9 +34,11 @@ def parse_problems(problems):
 
     for line in problems.splitlines():
         line = line.strip()
-        words = line.split()
         if not line.startswith("- "):
             continue
+        if line.startswith("- - "):
+            line = line[2:]
+        words = line.split()
         if "none of the providers can be installed" in line:
             assert words[1] == "package", f"words = {repr(words)}"
             assert words[3] == "requires", f"words = {repr(words)}"

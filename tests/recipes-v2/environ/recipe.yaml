@@ -1,0 +1,20 @@
+context:
+  name: "test_environ"
+
+package:
+  name: "{{ name }}"
+  version: '{{ environ.get("ENV_PKG_VERSION", "2.2") }}'
+
+build:
+  number: 0
+  script_env:
+    KEY1: '{{ environ.get("KEY1", "TEST_KEY1_VALUE") }}'
+    KEY2: JUST A VALUE
+  script:
+    sel(unix):
+      - echo $KEY1 > $PREFIX/key1.txt
+      - echo $KEY2 > $PREFIX/key2.txt
+    sel(win):
+      - "@echo off"
+      - echo %KEY1% > %PREFIX%/key1.txt
+      - echo %KEY2% > %PREFIX%/key2.txt
