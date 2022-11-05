@@ -1,0 +1,8 @@
+package:
+  name: dep_error_package_requires
+  version: 1.0
+
+requirements:
+  host:
+    - cython * py310*
+    - python 3.11
