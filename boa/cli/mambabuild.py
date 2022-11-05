@@ -43,6 +43,13 @@ problem_re = re.compile(
                 \ {conda_build_spec_pattern}
                 ,\ but\ none\ of\ the\ providers\ can\ be\ installed
             ) | (?:
+                package
+                \ {dashed_spec_pattern}
+                \ has\ constraint
+                \ .*
+                \ conflicting\ with
+                \ {dashed_spec_pattern}
+            ) | (?:
                 nothing\ provides
                 \ {conda_build_spec_pattern}
                 \ needed\ by
