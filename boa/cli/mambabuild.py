@@ -27,45 +27,60 @@ only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
 
 solver_map = {}
 
+# e.g. package-1.2.3-h5487548_0
+dashed_spec_pattern = r"([^ ]+)-([^- ]+)-([^- ]+)"
+# e.g. package 1.2.8.*
+conda_build_spec_pattern = r"([^ ]+)(?:\ ([^ ]+))?(?:\ ([^ ]+))?"
+
+problem_re = re.compile(
+    rf"""
+        ^(?:\ *-\ +)+
+        (?:
+            (?:
+                package
+                \ {dashed_spec_pattern}
+                \ requires
+                \ {conda_build_spec_pattern}
+                ,\ but\ none\ of\ the\ providers\ can\ be\ installed
+            ) | (?:
+                package
+                \ {dashed_spec_pattern}
+                \ has\ constraint
+                \ .*
+                \ conflicting\ with
+                \ {dashed_spec_pattern}
+            ) | (?:
+                nothing\ provides
+                \ {conda_build_spec_pattern}
+                \ needed\ by
+                \ {dashed_spec_pattern}
+            ) | (?:
+                nothing\ provides(?:\ requested)?
+                \ {conda_build_spec_pattern}
+            )
+        )
+    """,
+    re.VERBOSE,
+)
+
 
 def parse_problems(problems):
-    dashed_specs = []  # e.g. package-1.2.3-h5487548_0
-    conda_build_specs = []  # e.g. package 1.2.8.*
-
-    for line in problems.splitlines():
-        line = line.strip()
-        if not line.startswith("- "):
-            continue
-        if line.startswith("- - "):
-            line = line[2:]
-        words = line.split()
-        if "none of the providers can be installed" in line:
-            assert words[1] == "package", f"words = {repr(words)}"
-            assert words[3] == "requires", f"words = {repr(words)}"
-            dashed_specs.append(words[2])
-            end = words.index("but")
-            conda_build_specs.append(words[4:end])
-        elif "- nothing provides" in line and "needed by" in line:
-            dashed_specs.append(words[-1])
-        elif "- nothing provides" in line:
-            if "requested" in line:
-                conda_build_specs.append(words[5:])
-            else:
-                conda_build_specs.append(words[4:])
-
     conflicts = {}
-    for conflict in dashed_specs:
-        name, version, build = conflict.rsplit("-", 2)
-        conflicts[name] = MatchSpec(name=name, version=version, build=build)
-
-    for conflict in conda_build_specs:
-        kwargs = {"name": conflict[0]}
-        if len(conflict) >= 2:
-            kwargs["version"] = conflict[1].rstrip(",")
-        if len(conflict) == 3:
-            kwargs["build"] = conflict[2].rstrip(",")
-        conflicts[kwargs["name"]] = MatchSpec(**kwargs)
-
+    for line in problems.splitlines():
+        match = problem_re.match(line)
+        if not match:
+            continue
+        # All capture groups in problem_re only come from dashed_spec_pattern
+        # and conda_build_spec_pattern and thus are always multiples of 3.
+        for name, version, build in zip(*([iter(match.groups())] * 3)):
+            if name is None:
+                continue
+            kwargs = {"name": name}
+            if version is not None:
+                kwargs["version"] = version
+            if build is not None:
+                kwargs["build"] = build
+            conflicts[name] = MatchSpec(**kwargs)
     return set(conflicts.values())
 
 

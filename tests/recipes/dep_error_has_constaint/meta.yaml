@@ -1,0 +1,8 @@
+package:
+  name: dep_error_has_constraint
+  version: 1.0
+
+requirements:
+  host:
+    - python_abi 3.10
+    - python 3.11
