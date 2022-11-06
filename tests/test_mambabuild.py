@@ -8,7 +8,8 @@ from threading import Thread
 recipes_dir = Path(__file__).parent / "recipes"
 
 dep_error_recipes = {
-    str(recipes_dir / name): deps for name, *deps in (
+    str(recipes_dir / name): deps
+    for name, *deps in (
         ("baddeps", "thispackagedoesnotexist"),
         ("dep_error_nothing_provides", "thispackagedoesnotexist"),
         ("dep_error_needed_by", "thispackagedoesnotexist", "dep_error_needed_by_1"),
@@ -17,7 +18,8 @@ dep_error_recipes = {
     )
 }
 recipes = [
-    str(x) for x in recipes_dir.iterdir()
+    str(x)
+    for x in recipes_dir.iterdir()
     if x.is_dir() and str(x) not in dep_error_recipes
 ]
 notest_recipes = [str(recipes_dir / "baddeps")]
@@ -40,14 +42,13 @@ def dep_error_capture_call(cmd):
         for line in iter(get, None):
             write(line)
 
+    def create_thread(target, *args):
+        return Thread(target=target, args=args, daemon=True)
+
     process = Popen(cmd, stderr=PIPE, close_fds=True, text=True)
     queue = Queue()
-    capture_thread = Thread(
-        target=capture, args=(process.stderr, queue.put), daemon=True
-    )
-    passthrough_thread = Thread(
-        target=passthrough, args=(sys.stderr.write, queue.get,), daemon=True
-    )
+    capture_thread = create_thread(capture, process.stderr, queue.put)
+    passthrough_thread = create_thread(passthrough, sys.stderr.write, queue.get)
     capture_thread.start()
     passthrough_thread.start()
     process.wait()
@@ -60,9 +61,7 @@ def dep_error_capture_call(cmd):
 @pytest.mark.parametrize("recipe,deps", dep_error_recipes.items())
 def test_build_dep_error_recipes(recipe, deps):
     with pytest.raises(CalledProcessError) as exc_info:
-        dep_error_capture_call(
-            ["conda", "mambabuild", recipe]
-        )
+        dep_error_capture_call(["conda", "mambabuild", recipe])
     error = exc_info.value.stderr
     for dep in deps:
         assert f'MatchSpec("{dep}' in error
