@@ -1,3 +1,12 @@
+0.13.0 (November 10, 2022)
+==========================
+
+- [boa] compatibility with mamba 1.0.0
+- [mambabuild] dependency error parse improvements (thanks @mbargull) #306
+- [mambabuild] fix parsing problems when test_downstream is called (thanks @isuruf) #301
+- [boa] Add environ to context and proper build/script_env handling #299
+
+
 0.12.0 (October 5, 2022)
 ========================
 
