@@ -225,7 +225,7 @@ sources, but can apply to recipes with single sources as well.
 ```yaml
 source:
   #[source information here]
-  folder: my-destination/folder
+  destination: my-destination/folder
 ```
 
 #### Source from multiple sources
@@ -240,11 +240,11 @@ Example:
 ```yaml
   source:
     - url: https://package1.com/a.tar.bz2
-      folder: stuff
+      destination: stuff
     - url: https://package1.com/b.tar.bz2
-      folder: stuff
+      destination: stuff
     - git_url: https://github.com/mamba-org/boa
-      folder: boa
+      destination: boa
 ```
 
 Here, the two URL tarballs will go into one folder, and the git repo
