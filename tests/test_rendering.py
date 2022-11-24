@@ -193,7 +193,7 @@ def test_compiler():
         c_comp = str(o.requirements["build"][0])
         assert c_comp.rsplit("_", 1)[1] == get_target_platform()
         if sys.platform == "linux":
-            str(o.requirements["build"][0]) == "gcc_linux-64"
+            assert str(o.requirements["build"][0]) == "gcc_linux-64"
         assert (
             str(o.requirements["build"][1]).rsplit("_", 1)[1] == get_target_platform()
         )
