@@ -37,7 +37,7 @@ class BaseSourceItem(BaseModel):
         extra = Extra.forbid
 
     patches: Optional[List[str]] = None
-    destination: Optional[str] = None
+    folder: Optional[str] = None
 
 
 class UrlSource(BaseSourceItem):
