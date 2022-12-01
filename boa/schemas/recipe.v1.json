@@ -97,8 +97,8 @@
             "type": "string"
           }
         },
-        "destination": {
-          "title": "Destination",
+        "folder": {
+          "title": "Folder",
           "type": "string"
         },
         "url": {
@@ -144,8 +144,8 @@
             "type": "string"
           }
         },
-        "destination": {
-          "title": "Destination",
+        "folder": {
+          "title": "Folder",
           "type": "string"
         },
         "git_rev": {
@@ -179,8 +179,8 @@
             "type": "string"
           }
         },
-        "destination": {
-          "title": "Destination",
+        "folder": {
+          "title": "Folder",
           "type": "string"
         },
         "hg_url": {
@@ -209,8 +209,8 @@
             "type": "string"
           }
         },
-        "destination": {
-          "title": "Destination",
+        "folder": {
+          "title": "Folder",
           "type": "string"
         },
         "svn_url": {
@@ -244,8 +244,8 @@
             "type": "string"
           }
         },
-        "destination": {
-          "title": "Destination",
+        "folder": {
+          "title": "Folder",
           "type": "string"
         },
         "path": {
