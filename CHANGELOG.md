@@ -1,3 +1,10 @@
+0.14.0 (November 10, 2022)
+==========================
+
+- [boa] fix schema mistake (destination should be folder in schema) (thanks @alexshagiev) #316
+- [boa] For issue 313 use os.path.normpath not os.normpath when setting git_url. (thanks @ericvoltron) #314
+- [boa, mambabuild] update precommit files (thanks @mariusvniekerk) #315
+
 0.13.0 (November 10, 2022)
 ==========================
 
