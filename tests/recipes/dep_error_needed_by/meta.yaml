@@ -1,0 +1,15 @@
+{% set name = "dep_error_needed_by" %}
+
+package:
+  name: {{ name }}
+  version: 1.0
+
+outputs:
+  - name: {{ name }}_1
+    requirements:
+      run:
+        - thispackagedoesnotexist
+  - name: {{ name }}_2
+    requirements:
+      host:
+        - {{ name }}_1

@@ -45,7 +45,7 @@ def meta_vars(meta, skip_build_id=False):
             if sys.platform == "win32":
                 git_url = utils.convert_unix_path_to_win(git_url)
             # If git_url is a relative path instead of a url, convert it to an abspath
-            git_url = os.normpath(os.path.join(meta.path, git_url))
+            git_url = os.path.normpath(os.path.join(meta.path, git_url))
 
         _x = False
 
