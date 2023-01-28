@@ -1,0 +1,15 @@
+context:
+  name: "test_pin_compatible"
+
+package:
+  name: "{{ name }}"
+  version: '1.2.3'
+
+build:
+  number: 0
+
+requirements:
+  host:
+    - numpy >=1.20
+  run:
+    - "{{ pin_compatible('numpy', lower_bound='1.20') }}"
