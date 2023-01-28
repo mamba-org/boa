@@ -83,6 +83,30 @@ class NoarchType(Enum):
     python = "python"
 
 
+class RunExports(BaseModel):
+    class Config:
+        extra = Extra.forbid
+
+    weak: Optional[List[str]] = Field(
+        None, description="Weak run exports apply from the host env to the run env"
+    )
+    strong: Optional[List[str]] = Field(
+        None,
+        description="Strong run exports apply from the build and host env to the run env",
+    )
+    noarch: Optional[List[str]] = Field(
+        None,
+        description="Noarch run exports are the only ones looked at when building noarch packages",
+    )
+    weak_constrains: Optional[List[str]] = Field(
+        None, description="Weak run constrains add run_constrains from the host env"
+    )
+    strong_constrains: Optional[List[str]] = Field(
+        None,
+        description="Strong run constrains add run_constrains from the build and host env",
+    )
+
+
 class Build(BaseModel):
     class Config:
         extra = Extra.forbid
@@ -113,7 +137,7 @@ class Build(BaseModel):
     # Deprecated
     # noarch_python: bool = False
 
-    run_exports: Optional[Dict[str, Any]] = None
+    run_exports: Optional[Union[RunExports, List[str]]] = None
     ignore_run_exports: Optional[List[str]] = None
     ignore_run_exports_from: Optional[List[str]] = None
 
