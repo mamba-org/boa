@@ -266,6 +266,53 @@
         "python"
       ]
     },
+    "RunExports": {
+      "title": "RunExports",
+      "type": "object",
+      "properties": {
+        "weak": {
+          "title": "Weak",
+          "description": "Weak run exports apply from the host env to the run env",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "strong": {
+          "title": "Strong",
+          "description": "Strong run exports apply from the build and host env to the run env",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "noarch": {
+          "title": "Noarch",
+          "description": "Noarch run exports are the only ones looked at when building noarch packages",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "weak_constrains": {
+          "title": "Weak Constrains",
+          "description": "Weak run constrains add run_constrains from the host env",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "strong_constrains": {
+          "title": "Strong Constrains",
+          "description": "Strong run constrains add run_constrains from the build and host env",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "Build": {
       "title": "Build",
       "type": "object",
@@ -322,7 +369,17 @@
         },
         "run_exports": {
           "title": "Run Exports",
-          "type": "object"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RunExports"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
         },
         "ignore_run_exports": {
           "title": "Ignore Run Exports",
