@@ -513,7 +513,7 @@ class Output:
             specs = self.requirements[env]
 
             for s in specs:
-                if s.is_pin:
+                if s.is_pin_subpackage:
                     s.eval_pin_subpackage(all_outputs)
                 if env == "run" and s.is_pin_compatible:
                     s.eval_pin_compatible(
