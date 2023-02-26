@@ -76,3 +76,9 @@ def test_build_with_script_env(tmp_path: Path):
         assert key1 == "KEY1_RANDOM_VALUE"
         key2 = fin.extractfile("key2.txt").read().decode("utf8").strip()
         assert key2 == "JUST A VALUE"
+
+
+def test_build_variant():
+    recipe = recipes_dir / "python_variants"
+    variant_file = recipe / "conda_build_config.yaml"
+    check_call(["boa", "build", "-m", variant_file, recipe])
