@@ -39,17 +39,18 @@ from conda_build.index import update_index
 console = boa_config.console
 
 
-def find_all_recipes(target, config):
+def find_all_recipes(target, config, is_pyproject_recipe=False):
     if os.path.isdir(target):
         cwd = target
     else:
         cwd = os.getcwd()
-    yamls = glob.glob(os.path.join(cwd, "recipe.yaml"))
-    yamls += glob.glob(os.path.join(cwd, "**", "recipe.yaml"))
+    recipe_filename = "pyproject.toml" if is_pyproject_recipe else "recipe.yaml"
+    recipe_files = glob.glob(os.path.join(cwd, recipe_filename))
+    recipe_files += glob.glob(os.path.join(cwd, "**", recipe_filename))
 
     recipes = {}
-    for fn in yamls:
-        yml = render(fn, config=config)
+    for fn in recipe_files:
+        yml = render(fn, config=config, is_pyproject_recipe=is_pyproject_recipe)
 
         try:
             validate(yml)
@@ -195,9 +196,10 @@ def build_recipe(
     skip_fast: bool = False,
     continue_on_failure: bool = False,
     rerun_build: bool = False,
+    pyproject_recipes = False,
 ):
 
-    ydoc = render(recipe_path, config=config)
+    ydoc = render(recipe_path, config=config, is_pyproject_recipe=pyproject_recipes)
     # We need to assemble the variants for each output
     variants = {}
     # if we have a outputs section, use that order the outputs
@@ -496,7 +498,8 @@ def run_build(args: argparse.Namespace) -> None:
     console.print(f"Updating build index: {(config.output_folder)}\n")
     update_index(config.output_folder, verbose=config.debug, threads=1)
 
-    all_recipes = find_all_recipes(args.target, config)  # [noqa]
+    is_pyproject_recipe = getattr(args, "pyproject_recipes", False)
+    all_recipes = find_all_recipes(args.target, config, is_pyproject_recipe)  # [noqa]
 
     console.print("\n[yellow]Assembling all recipes and variants[/yellow]\n")
 
@@ -516,6 +519,7 @@ def run_build(args: argparse.Namespace) -> None:
                     skip_fast=getattr(args, "skip_existing", "default") == "fast",
                     continue_on_failure=getattr(args, "continue_on_failure", False),
                     rerun_build=rerun_build,
+                    pyproject_recipes=getattr(args, "pyproject_recipes", False),
                 )
                 rerun_build = False
             except BoaRunBuildException:
