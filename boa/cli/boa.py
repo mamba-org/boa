@@ -65,6 +65,18 @@ def main(config=None):
         help="Validate recipe.yaml",
     )
 
+    test_parser = argparse.ArgumentParser(add_help=False)
+    test_parser.add_argument(
+        "--extra-deps",
+        action="append",
+        help="Extra dependencies to add to all test environment creation steps.",
+    )
+    subparsers.add_parser(
+        "test",
+        parents=[parent_parser, test_parser],
+        help="test an already built package (include_recipe of the package must be true)",
+    )
+
     build_parser = argparse.ArgumentParser(add_help=False)
     build_parser.add_argument(
         "-i",
@@ -201,6 +213,7 @@ def main(config=None):
     from boa.cli import convert
     from boa.cli import transmute
     from boa.cli import validate
+    from boa.cli import test
 
     if command == "convert":
         convert.main(args.target)
@@ -208,6 +221,10 @@ def main(config=None):
 
     if command == "validate":
         validate.main(args.target)
+        exit()
+
+    if command == "test":
+        test.main(args)
         exit()
 
     if command == "transmute":
