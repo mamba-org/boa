@@ -395,7 +395,7 @@ def build_recipe(
                 for final_out in final_outputs:
                     if not notest:
                         run_test(
-                            final_out,
+                            MetaData(final_out, o),
                             o.config,
                             stats,
                             move_broken=False,
