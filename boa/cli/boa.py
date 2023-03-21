@@ -4,12 +4,17 @@
 import sys
 import argparse
 
+print(sys.argv)
+if any('emscripten' in arg for arg in sys.argv):
+    print("Monkeypatching emscripten")
+    from boa.core import monkey_patch_emscripten
+    monkey_patch_emscripten.patch()
+
 from boa.core.config import init_global_config
 from boa._version import __version__
 from mamba.utils import init_api_context
 
 from conda_build.conda_interface import cc_conda_build
-
 banner = r"""
            _
           | |__   ___   __ _
