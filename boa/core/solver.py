@@ -1,6 +1,6 @@
 # Copyright (C) 2021, QuantStack
 # SPDX-License-Identifier: BSD-3-Clause
-
+from .monkeypatch import *
 import os
 import tempfile
 
@@ -46,6 +46,7 @@ def get_solver(subdir, output_folder="local"):
             os.makedirs(pkg_cache, exist_ok=True)
 
     if not solver_cache.get(subdir):
+        print("GET SOLVER")
         solver_cache[subdir] = MambaSolver([], subdir, output_folder)
 
     return solver_cache[subdir], pkg_cache
@@ -158,6 +159,7 @@ class MambaSolver:
 
         start_prio = len(self.channels) + len(self.index)
         for subdir, channel in self.local_index:
+            print(f"{subdir=} {channel=}")
             if not subdir.loaded():
                 continue
 
