@@ -22,7 +22,9 @@ def meta_vars(meta, skip_build_id=False):
     for key, value in meta.get_value("build/script_env", {}).items():
         if not value:
             warnings.warn(
-                f"The environment variable '{key}' is undefined.", UserWarning
+                f"The environment variable '{key}' is undefined.",
+                UserWarning,
+                stacklevel=1,
             )
         else:
             d[key] = value

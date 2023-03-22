@@ -1,10 +1,13 @@
 import pathlib
 from subprocess import check_call
+import sys
 import tarfile
 import json
 import os
 
 from pathlib import Path
+
+import pytest
 
 
 recipes_dir = pathlib.Path(__file__).parent / "recipes-v2"
@@ -51,6 +54,7 @@ def test_run_exports(tmp_path: Path):
         assert "info/run_exports.json" not in names
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="No pytorch on Windows")
 def test_build_with_channel_pins(tmp_path: Path):
     # Ensure that channel pins round trip correctly
     recipe = tests_dir / "metapackage-channel-pin"
@@ -60,7 +64,7 @@ def test_build_with_channel_pins(tmp_path: Path):
 
     with tarfile.open(channel_pins) as fin:
         info = json.load(fin.extractfile("info/index.json"))
-        assert "pytorch::pytorch" in info["depends"]
+        assert "conda-forge::pytorch" in info["depends"]
 
 
 def test_build_with_script_env(tmp_path: Path):
