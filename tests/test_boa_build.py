@@ -60,7 +60,7 @@ def test_build_with_channel_pins(tmp_path: Path):
 
     with tarfile.open(channel_pins) as fin:
         info = json.load(fin.extractfile("info/index.json"))
-        assert "pytorch::pytorch" in info["depends"]
+        assert "conda-forge::pytorch" in info["depends"]
 
 
 def test_build_with_script_env(tmp_path: Path):
