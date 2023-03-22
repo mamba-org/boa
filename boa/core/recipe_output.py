@@ -60,6 +60,7 @@ class Output:
 
         set_section("build")
         set_section("package")
+        set_section("about")
         set_section("app")
         set_section("extra")
         set_section("test")
