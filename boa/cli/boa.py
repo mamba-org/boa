@@ -161,6 +161,13 @@ def main(config=None):
         default=22,
     )
 
+    for k in ("perl", "lua", "python", "numpy", "r_base"):
+        conda_build_parser.add_argument(
+            "--{}".format(k),
+            dest="{}_variant".format(k),
+            help="Set the {} variant used by conda build.".format(k),
+        )
+
     subparsers.add_parser(
         "build",
         parents=[parent_parser, build_parser, variant_parser],
