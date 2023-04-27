@@ -34,3 +34,5 @@ jobs:
         conda config --add channels conda-forge
         conda config --set channel_priority strict
         pytest tests
+      env:
+        PYTHONUTF8: 1
