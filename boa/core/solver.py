@@ -218,10 +218,10 @@ class MambaSolver:
             error_string += f"\nThe reported errors are:\n{pstring}"
 
             if (
-                hasattr(api_solver, "explain_problems") 
+                hasattr(api_solver, "explain_problems")
                 # can cause errors in explain_problems
-                and "unsupported request" not in pstring  
-            ):  
+                and "unsupported request" not in pstring
+            ):
                 error_string += f"\n\n{api_solver.explain_problems()}"
 
             print(error_string)
