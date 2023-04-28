@@ -483,6 +483,13 @@ def run_build(args: argparse.Namespace) -> None:
 
     cbc["target_platform"] = [variant["target_platform"]]
 
+    # Command line variant
+    for lang in ("perl", "lua", "python", "numpy", "r_base"):
+        lang_variant = getattr(args, lang + "_variant", None)
+        if lang_variant:
+            cbc[lang] = [lang_variant]
+            variant[lang] = lang_variant
+
     if not os.path.exists(config.output_folder):
         mkdir_p(config.output_folder)
 
