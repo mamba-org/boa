@@ -234,7 +234,7 @@ class About(BaseModel):
     keywords: Optional[List[str]] = None
 
     # Paths in source tree
-    license_file: Optional[str] = None
+    license_file: Optional[List[str]] = None
     prelink_message: Optional[str] = None
     readme: Optional[str] = None
 
