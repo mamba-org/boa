@@ -1,0 +1,16 @@
+package:
+  name: multiple-license
+  version: 1.0.0
+
+build:
+  number: 0
+  script:
+    - echo "BUILDING IMPL" >> $PREFIX/multiple_license   # [unix]
+    - echo "BUILDING IMPL" >> %PREFIX%/multiple_license  # [win]
+
+about:
+  license: MIT
+  license_family: MIT
+  license_file:
+    - LICENSE
+    - NOTICE.md
