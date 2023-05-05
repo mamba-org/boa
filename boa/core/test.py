@@ -653,7 +653,7 @@ def run_test(
     move_broken=True,
     provision_only=False,
     solver=None,
-    extra_deps=[],
+    extra_deps=None,
 ):
     """
     Execute any test scripts for the given package.
