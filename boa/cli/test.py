@@ -18,5 +18,5 @@ def main(args):
         stats,
         move_broken=False,
         provision_only=False,
-        extra_deps=getattr(args, "extra_deps", [])
+        extra_deps=getattr(args, "extra_deps", []),
     )
