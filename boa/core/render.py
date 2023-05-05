@@ -173,9 +173,11 @@ def render(recipe_path, config=None, is_pyproject_recipe=False):
         if is_pyproject_recipe:
             try:  # Python >=3.11
                 import tomllib
+
                 ydoc = tomllib.load(fi)
-            except (ModuleNotFoundError, ImportError):  # Python <3.11
+            except ImportError:  # Python <3.11
                 import toml
+
                 ydoc = toml.load(fi)
         else:
             loader = YAML(typ="safe")

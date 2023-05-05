@@ -196,7 +196,7 @@ def build_recipe(
     skip_fast: bool = False,
     continue_on_failure: bool = False,
     rerun_build: bool = False,
-    pyproject_recipes = False,
+    pyproject_recipes=False,
 ):
 
     ydoc = render(recipe_path, config=config, is_pyproject_recipe=pyproject_recipes)

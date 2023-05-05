@@ -44,7 +44,8 @@ def main(config=None):
     parent_parser.add_argument(
         "--pyproject-recipes",
         action="store_true",
-        help="""Use [tool.boa] section from pyproject.toml as a recipe instead of a separate recipe.yaml.""")
+        help="""Use [tool.boa] section from pyproject.toml as a recipe instead of a separate recipe.yaml.""",
+    )
 
     variant_parser = argparse.ArgumentParser(add_help=False)
     variant_parser.add_argument(

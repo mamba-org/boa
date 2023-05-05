@@ -57,9 +57,11 @@ def get_metadata(yml, config, is_pyproject_recipe=False):
         if is_pyproject_recipe:
             try:  # Python >=3.11
                 import tomllib
+
                 d = tomllib.load(fi)["tool"]["boa"]
-            except (ModuleNotFoundError, ImportError):  # Python <3.11
+            except ImportError:  # Python <3.11
                 import toml
+
                 d = toml.load(fi)["tool"]["boa"]
         else:
             d = ruamel.yaml.safe_load(fi)
