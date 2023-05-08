@@ -12,7 +12,7 @@ console = Console()
 
 def main(recipe):
     cbc, config = get_config(recipe)
-    ydoc = render(recipe, config)
+    ydoc = render(recipe, config, is_pyproject_recipe=recipe.endswith(".toml"))
     console.print("\n\nNormalized Recipe:\n")
     console.print(ydoc)
     try:

@@ -166,15 +166,29 @@ def default_jinja_vars(config):
     return res
 
 
-def render(recipe_path, config=None):
+def render(recipe_path, config=None, is_pyproject_recipe=False):
     # console.print(f"\n[yellow]Rendering {recipe_path}[/yellow]\n")
     # step 1: parse YAML
-    with open(recipe_path) as fi:
-        loader = YAML(typ="safe")
-        ydoc = loader.load(fi)
+    with open(recipe_path, "r") as fi:
+        if is_pyproject_recipe:
+            try:  # Python >=3.11
+                import tomllib
+
+                ydoc = tomllib.load(fi)
+            except ImportError:  # Python <3.11
+                import toml
+
+                ydoc = toml.load(fi)
+        else:
+            loader = YAML(typ="safe")
+            ydoc = loader.load(fi)
 
     # step 2: fill out context dict
     context_dict = default_jinja_vars(config)
+    if is_pyproject_recipe:
+        # Use [tool.boa] section from pyproject as a recipe, everything else as the context.
+        context_dict["pyproject"] = ydoc
+        ydoc = ydoc["tool"]["boa"]
     context_dict.update(ydoc.get("context", {}))
     context_dict["environ"] = os.environ
     jenv = jinja2.Environment()

@@ -52,9 +52,19 @@ console = Console()
 log = logging.getLogger("boa")
 
 
-def get_metadata(yml, config):
+def get_metadata(yml, config, is_pyproject_recipe=False):
     with open(yml, "r") as fi:
-        d = ruamel.yaml.safe_load(fi)
+        if is_pyproject_recipe:
+            try:  # Python >=3.11
+                import tomllib
+
+                d = tomllib.load(fi)["tool"]["boa"]
+            except ImportError:  # Python <3.11
+                import toml
+
+                d = toml.load(fi)["tool"]["boa"]
+        else:
+            d = ruamel.yaml.safe_load(fi)
     o = Output(d, config)
     return MetaData(os.path.dirname(yml), o)
 
@@ -307,11 +317,17 @@ def _construct_metadata_for_test_from_package(package, config):
         #     os.path.join(info_dir, "recipe"), config=config, reset_build_id=False
         # )[0][0]
 
-        metadata = get_metadata(recipe_path, config)
-        # with open(os.path.join(info_dir, "recipe", "recipe.yaml")) as fi:
-        # metadata = yaml.load(fi)
+        try:
+            metadata = get_metadata(recipe_path, config)
+            # with open(os.path.join(info_dir, "recipe", "recipe.yaml")) as fi:
+            # metadata = yaml.load(fi)
+        except (SystemExit, FileNotFoundError):
+            # Try if it's a pyproject-based recipe
+            pyproject_path = os.path.join(info_dir, "recipe", "pyproject.toml")
+            metadata = get_metadata(pyproject_path, config, is_pyproject_recipe=True)
+            recipe_path = pyproject_path  # If it was successful, use pyproject.toml path as recipe_path
     # no recipe in package.  Fudge metadata
-    except (SystemExit, FileNotFoundError):
+    except (SystemExit, FileNotFoundError, KeyError):
         # force the build string to line up - recomputing it would
         #    yield a different result
         metadata = MetaData(
