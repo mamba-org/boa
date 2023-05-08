@@ -669,6 +669,7 @@ def run_test(
     move_broken=True,
     provision_only=False,
     solver=None,
+    extra_deps=None,
 ):
     """
     Execute any test scripts for the given package.
@@ -770,6 +771,8 @@ def run_test(
     # get_build_metadata(metadata)
 
     specs = metadata.get_test_deps(py_files, pl_files, lua_files, r_files)
+    if extra_deps is not None and len(extra_deps) > 0:
+        specs += extra_deps
 
     tests_metadata = metadata.output.data.get("test")
     exists_metadata = tests_metadata.get("exists", {})
