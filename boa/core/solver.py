@@ -4,6 +4,7 @@
 import os
 import tempfile
 
+from conda.base.constants import ChannelPriority
 from conda.core.solve import diff_for_unlink_link_precs
 from conda.common.serialize import json_dump
 from conda.models.prefix_graph import PrefixGraph
@@ -199,6 +200,10 @@ class MambaSolver:
             If the solver did not find a solution.
         """
         solver_options = [(libmambapy.SOLVER_FLAG_ALLOW_DOWNGRADE, 1)]
+
+        if context.channel_priority is ChannelPriority.STRICT:
+            solver_options.append((libmambapy.SOLVER_FLAG_STRICT_REPO_PRIORITY, 1))
+
         api_solver = libmambapy.Solver(self.pool, solver_options)
         _specs = specs
 
