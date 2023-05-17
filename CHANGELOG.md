@@ -1,3 +1,18 @@
+0.15.0 (May 17, 2023)
+=====================
+
+- Run export types by @wolfv in https://github.com/mamba-org/boa/pull/324
+- Fix pin_compatible by @ruben-arts in https://github.com/mamba-org/boa/pull/325
+- emscripten 32 - conditional monkeypatch by @wolfv in https://github.com/mamba-org/boa/pull/333
+- Fix #322 by adding "about" section in Output constructor by @moqmar in https://github.com/mamba-org/boa/pull/327
+- add support for the new error messages by @jaimergp in https://github.com/mamba-org/boa/pull/340
+- Switch to setup-micromamba by @pavelzw in https://github.com/mamba-org/boa/pull/339
+- Support passing build variants from cli by @frmdstryr in https://github.com/mamba-org/boa/pull/337
+- Allow for multiple license files by @dhirschfeld in https://github.com/mamba-org/boa/pull/342
+- Make it possible to include the recipe.yaml inside a pyproject.toml by @moqmar in https://github.com/mamba-org/boa/pull/345
+- Implement separate "boa test" command to fix #326 by @moqmar in https://github.com/mamba-org/boa/pull/343
+- fix: support strict channel priorities by @johanneskoester in https://github.com/mamba-org/boa/pull/347
+
 0.14.0 (November 10, 2022)
 ==========================
 
