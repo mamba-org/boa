@@ -1,3 +1,8 @@
+0.15.1 (June 21, 2023)
+======================
+
+ - Disable error messages for now to see if that fixes segfault issues observed on conda-forge (https://github.com/conda-forge/conda-forge.github.io/issues/1960) #352
+
 0.15.0 (May 17, 2023)
 =====================
 
