@@ -222,12 +222,13 @@ class MambaSolver:
             pstring = "\n".join(["- " + el for el in pstring.split("\n")])
             error_string += f"\nThe reported errors are:\n{pstring}"
 
-            if (
-                hasattr(api_solver, "explain_problems")
-                # can cause errors in explain_problems
-                and "unsupported request" not in pstring
-            ):
-                error_string += f"\n\n{api_solver.explain_problems()}"
+            # This might be the cause of segfaults, that's why it's commented out
+            # if (
+            #     hasattr(api_solver, "explain_problems")
+            #     # can cause errors in explain_problems
+            #     and "unsupported request" not in pstring
+            # ):
+            #     error_string += f"\n\n{api_solver.explain_problems()}"
 
             print(error_string)
             raise RuntimeError("Solver could not find solution." + error_string)
