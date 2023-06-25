@@ -126,7 +126,8 @@ def copy_recipe(m):
             _copy_output_recipe(m, recipe_dir)
         else:
             _copy_top_level_recipe(m.path, m.config, recipe_dir)
-            original_recipe = m.meta_path
+            if exists(m.meta_path):
+                original_recipe = m.meta_path
 
         output_metadata = m.copy()
         # hard code the build string, so that tests don't get it mixed up
