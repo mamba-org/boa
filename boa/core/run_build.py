@@ -479,6 +479,9 @@ def run_build(args: argparse.Namespace) -> None:
         config.zstd_compression_level = args.zstd_compression_level
 
     cbc, config = get_config(folder, variant, args.variant_config_files, config=config)
+    if config.variant and "cdt_name" in cbc:
+        # HACK: cdt_name is a list
+        config.variant["cdt_name"] = cbc["cdt_name"][0]
 
     if hasattr(args, "output_folder") and args.output_folder:
         config.output_folder = args.output_folder
