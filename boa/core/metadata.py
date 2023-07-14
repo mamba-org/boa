@@ -220,7 +220,7 @@ class MetaData:
                 # since channel names can be full urls many of these characters are potentially valid
                 for c in "=!@#$%^&*;\"'\\|<>?/":
                     if c in spec.name:
-                        breakpoint()
+
                         sys.exit(
                             "Error: bad character '%s' in package name "
                             "dependency '%s'" % (c, spec.name)
@@ -239,7 +239,7 @@ class MetaData:
                             parts[1],
                             parts[2],
                         )
-                    sys.exit(msg)
+                    raise RuntimeError(msg)
             specs.append(spec)
 
         return specs
