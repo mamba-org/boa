@@ -12,7 +12,8 @@ from conda.gateways.disk.create import mkdir_p
 import conda_build.environ
 from conda_build import api
 from conda_build.config import Config, get_channel_urls
-from conda_build.cli.main_build import parse_args
+from conda_build.cli.main_render import parse_args as parse_render
+from conda_build.cli.main_build import parse_args as parse_build
 from conda_build.index import update_index
 from conda_build.exceptions import DependencyNeedsBuildingError
 
@@ -242,15 +243,16 @@ def call_conda_build(action, config, **kwargs):
 
 def main():
     boa_config.is_mambabuild = True
-    _, args = parse_args(sys.argv[1:])
+    _, render_args = parse_render(sys.argv[1:])
+    _, build_args = parse_build(sys.argv[1:])
 
-    config = prepare(**args.__dict__)
+    build_configs = prepare(**build_args.__dict__)
 
-    if args.test:
+    if build_args.test:
         action = "test"
-    elif args.output:
+    elif render_args.output:
         action = "output"
     else:
         action = "build"
 
-    call_conda_build(action, config)
+    call_conda_build(action, build_configs)
