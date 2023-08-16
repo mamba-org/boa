@@ -2,7 +2,7 @@ import pytest
 import sys
 from pathlib import Path
 from queue import Queue
-from subprocess import CalledProcessError, PIPE, Popen, check_call
+from subprocess import CalledProcessError, PIPE, Popen, check_call, check_output
 from threading import Thread
 
 recipes_dir = Path(__file__).parent / "recipes"
@@ -75,3 +75,21 @@ def test_build_recipes(recipe):
 @pytest.mark.parametrize("recipe", notest_recipes)
 def test_build_notest(recipe):
     check_call(["conda", "mambabuild", recipe, "--no-test"])
+
+
+@pytest.mark.parametrize("recipe", recipes)
+def test_build_with_output_flags(recipe, tmp_path: Path):
+    recipe = recipes_dir / "environ"
+    proposed_output = check_output(
+        [
+            "conda",
+            "mambabuild",
+            recipe,
+            "--output-folder",
+            str(tmp_path),
+            "--output",
+        ]
+    ).decode()
+
+    assert proposed_output.startswith(str(tmp_path.absolute()))
+    assert sys.platform in proposed_output
