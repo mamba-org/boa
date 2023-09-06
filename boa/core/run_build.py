@@ -333,7 +333,7 @@ def build_recipe(
                     rm_rf(o.config.build_prefix)
                 mkdir_p(os.path.join(o.config.build_prefix, "conda-meta"))
                 try:
-                    MambaContext().target_prefix = o.config.build_prefix
+                    MambaContext().prefix_params.target_prefix = o.config.build_prefix
                     o.transactions["build"]["transaction"].print()
                     o.transactions["build"]["transaction"].execute(
                         PrefixData(o.config.build_prefix),
@@ -344,7 +344,7 @@ def build_recipe(
 
             if "host" in o.transactions:
                 mkdir_p(os.path.join(o.config.host_prefix, "conda-meta"))
-                MambaContext().target_prefix = o.config.host_prefix
+                MambaContext().prefix_params.target_prefix = o.config.host_prefix
                 o.transactions["host"]["transaction"].print()
                 o.transactions["host"]["transaction"].execute(
                     PrefixData(o.config.host_prefix)

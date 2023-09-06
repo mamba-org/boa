@@ -20,6 +20,7 @@ deps = [
     "prompt-toolkit",
     "joblib",
     "beautifulsoup4",
+    "boltons",
 ]
 
 setup(

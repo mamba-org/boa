@@ -536,10 +536,10 @@ class Output:
                 subdir, output_folder=self.config.output_folder
             )
             if env == "host":
-                MambaContext().target_prefix = self.config.host_prefix
+                MambaContext().prefix_params.target_prefix = self.config.host_prefix
                 # solver.replace_installed(self.config.host_prefix)
             elif env == "build":
-                MambaContext().target_prefix = self.config.build_prefix
+                MambaContext().prefix_params.target_prefix = self.config.build_prefix
                 # solver.replace_installed(self.config.build_prefix)
             t = solver.solve(specs, [pkg_cache])
 
