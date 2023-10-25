@@ -20,7 +20,7 @@ from conda.base.context import context
 
 from boa.core.solver import MambaSolver
 from boa.core.utils import normalize_subdir
-from mamba.utils import init_api_context
+from boa.core.utils import init_api_context
 from boa.core.config import boa_config
 
 only_dot_or_digit_re = re.compile(r"^[\d\.]+$")
