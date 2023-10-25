@@ -214,7 +214,6 @@ class Build(BaseModel):
 
 
 class About(BaseModel):
-
     # URLs
     home: Optional[str] = None
     dev_url: Optional[str] = None

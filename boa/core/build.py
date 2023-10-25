@@ -237,7 +237,6 @@ def select_files(files, include_files, exclude_files):
 
 
 def bundle_conda(metadata, initial_files, env, files_selector=None):
-
     files = post_process_files(metadata, initial_files)
 
     # first filter is so that info_files does not pick up ignored files
@@ -374,7 +373,6 @@ def bundle_conda(metadata, initial_files, env, files_selector=None):
 
 
 def write_build_scripts(m, script, build_file):
-
     with utils.path_prepended(m.config.host_prefix):
         with utils.path_prepended(m.config.build_prefix):
             env = environ.get_dict(m=m)
@@ -467,7 +465,6 @@ function feature()
 
 
 def execute_build_script(m, src_dir, env, provision_only=False):
-
     script_list = utils.ensure_list(m.get_value("build/script", None))
     if script_list:
         script = "\n".join(script_list)

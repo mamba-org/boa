@@ -590,7 +590,6 @@ class Output:
         self.data["build"]["run_exports"] = final_run_exports or None
 
     def finalize_solve(self, all_outputs):
-
         self._solve_env("build", all_outputs)
         self._solve_env("host", all_outputs)
         self._solve_env("run", all_outputs)

@@ -112,7 +112,7 @@ def find_all_recipes(target, config, is_pyproject_recipe=False):
 
     sorted_recipes = toposort.toposort(sort_recipes)
     num_recipes = len(sorted_recipes)
-    console.print(f"Found {num_recipes} recipe{'s'[:num_recipes^1]}")
+    console.print(f"Found {num_recipes} recipe{'s'[:num_recipes ^ 1]}")
     for rec in sorted_recipes:
         console.print(f" - {rec}")
 
@@ -198,7 +198,6 @@ def build_recipe(
     rerun_build: bool = False,
     pyproject_recipes=False,
 ):
-
     ydoc = render(recipe_path, config=config, is_pyproject_recipe=pyproject_recipes)
     # We need to assemble the variants for each output
     variants = {}
