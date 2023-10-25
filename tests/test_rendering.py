@@ -63,7 +63,6 @@ def get_outputs(
 
 
 def test_variants_zipping():
-
     cbc, sorted_outputs = get_outputs("cbc1.yaml")
     assert cbc == {
         "python": ["3.6", "3.7", "3.8"],
@@ -217,7 +216,6 @@ def test_compiler():
 
 
 def call_render(recipe):
-
     os.chdir(recipe.parent)
 
     print(["boa", "render", str(recipe.resolve()), "--json"])
