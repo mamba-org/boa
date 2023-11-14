@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import sys
 from conda.core.package_cache_data import PackageCacheData
-import ruamel
+from ruamel.yaml import YAML
 import tempfile
 from pathlib import Path
 from os.path import isdir, join
@@ -64,7 +64,8 @@ def get_metadata(yml, config, is_pyproject_recipe=False):
 
                 d = toml.load(fi)["tool"]["boa"]
         else:
-            d = ruamel.yaml.safe_load(fi)
+            loader = YAML(typ="safe", pure=True)
+            d = loader.load(fi)
     o = Output(d, config)
     return MetaData(os.path.dirname(yml), o)
 
