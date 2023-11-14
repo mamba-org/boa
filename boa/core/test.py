@@ -409,18 +409,14 @@ def check_file_existence(f_paths, check_parent_dir=False):
     for each_f in f_paths:
         if check_parent_dir and os.path.isdir(Path(each_f).parent):
             console.print(
-                f"[green]\N{check mark} {Path(each_f).parent} (directory)[/green]".encode(
-                    "utf-8"
-                )
+                f"[green]\N{check mark} {Path(each_f).parent} (directory)[/green]"
             )
         if os.path.isdir(each_f):
-            console.print(
-                f"[green]\N{check mark} {each_f} (directory)[/green]".encode("utf-8")
-            )
+            console.print(f"[green]\N{check mark} {each_f} (directory)[/green]")
         elif os.path.isfile(each_f):
-            console.print(f"[green]\N{check mark} {each_f}[/green]".encode("utf-8"))
+            console.print(f"[green]\N{check mark} {each_f}[/green]")
         else:
-            console.print(f"[red]\N{multiplication x} {each_f}[/red]".encode("utf-8"))
+            console.print(f"[red]\N{multiplication x} {each_f}[/red]")
             all_exist = False
     return all_exist
 
@@ -520,13 +516,9 @@ def check_cmake(prefix, cmake_find):
                         stderr=subprocess.DEVNULL,
                     )
                 if cmake_check.returncode == 0:
-                    console.print(
-                        f"[green]\N{check mark} {each_f}[/green]".encode("utf-8")
-                    )
+                    console.print(f"[green]\N{check mark} {each_f}[/green]")
                 else:
-                    console.print(
-                        f"[red]\N{multiplication x} {each_f}[/red]".encode("utf-8")
-                    )
+                    console.print(f"[red]\N{multiplication x} {each_f}[/red]")
                     test_cmake = False
     return test_cmake
 
@@ -553,11 +545,9 @@ def check_pkg_config(prefix, pkg_config):
                 pkg_config_exists.returncode == 0
                 and pkg_config_validate.returncode == 0
             ):
-                console.print(f"[green]\N{check mark} {each_f}[/green]".encode("utf-8"))
+                console.print(f"[green]\N{check mark} {each_f}[/green]")
             else:
-                console.print(
-                    f"[red]\N{multiplication x} {each_f}[/red]".encode("utf-8")
-                )
+                console.print(f"[red]\N{multiplication x} {each_f}[/red]")
                 test_pkg_config = False
     return test_pkg_config
 
@@ -579,13 +569,9 @@ def check_glob(prefix, glob_paths):
             each_glob_path = os.path.join(prefix, each_f)
             if glob(each_glob_path):
                 for each_gp in glob(each_glob_path):
-                    console.print(
-                        f"[green]\N{check mark} {each_gp}[/green]".encode("utf-8")
-                    )
+                    console.print(f"[green]\N{check mark} {each_gp}[/green]")
             else:
-                console.print(
-                    f"[red]\N{multiplication x} {each_glob_path}[/red]".encode("utf-8")
-                )
+                console.print(f"[red]\N{multiplication x} {each_glob_path}[/red]")
                 test_glob = False
     return test_glob
 
@@ -819,7 +805,7 @@ def run_test(
         pkg_cache_path = PackageCacheData.first_writable().pkgs_dir
 
     solver.replace_channels()
-    MambaContext().target_prefix = metadata.config.test_prefix
+    MambaContext().prefix_params.target_prefix = metadata.config.test_prefix
     transaction = solver.solve(specs, [pkg_cache_path])
 
     downloaded = transaction.fetch_extract_packages()

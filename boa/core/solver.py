@@ -9,7 +9,6 @@ from conda.core.solve import diff_for_unlink_link_precs
 from conda.common.serialize import json_dump
 from conda.models.prefix_graph import PrefixGraph
 from conda.core.prefix_data import PrefixData
-from conda._vendor.boltons.setutils import IndexedSet
 from conda.models.match_spec import MatchSpec
 from conda.common.url import remove_auth, split_anaconda_token
 from conda.core.index import _supplement_index_with_system
@@ -18,6 +17,8 @@ from conda.plan import get_blank_actions
 from conda.models.dist import Dist
 from conda_build.conda_interface import pkgs_dirs
 from conda.core.package_cache_data import PackageCacheData
+
+from boltons.setutils import IndexedSet
 
 import libmambapy
 
@@ -235,7 +236,7 @@ class MambaSolver:
             pkg_cache_path = pkgs_dirs
 
         package_cache = libmambapy.MultiPackageCache(pkg_cache_path)
-        return libmambapy.Transaction(api_solver, package_cache)
+        return libmambapy.Transaction(self.pool, api_solver, package_cache)
 
     def solve_for_action(self, specs, prefix):
         t = self.solve(specs)
