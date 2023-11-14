@@ -14,7 +14,7 @@ deps = [
     "jinja2",
     "setuptools",
     "rich",
-    "ruamel.yaml",
+    "ruamel.yaml >=0.18.0",
     "json5",
     "watchgod",
     "prompt-toolkit",

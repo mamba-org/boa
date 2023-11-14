@@ -43,7 +43,6 @@ def order_output_dict(d):
 
 
 def main(docname):
-
     with open(docname, "r") as fi:
         lines = fi.readlines()
     context = {}

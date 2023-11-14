@@ -21,16 +21,13 @@ from conda.core.package_cache_data import PackageCacheData
 from boltons.setutils import IndexedSet
 
 import libmambapy
-import mamba
-from mamba.utils import get_index, load_channels, to_package_record_from_subjson
 
+from boa.core.utils import get_index, load_channels, to_package_record_from_subjson
 from boa.core.config import boa_config
 
 console = boa_config.console
 
 solver_cache = {}
-
-MAMBA_17_UP = mamba.version_info >= (0, 17, 0)
 
 
 def refresh_solvers():

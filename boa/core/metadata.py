@@ -51,7 +51,6 @@ def build_string_from_metadata(metadata):
             ("mro", "mro-base", 3),
             ("mro", "mro-base_impl", 3),
         ):
-
             for ms in metadata.ms_depends("run"):
                 for name in ensure_list(names):
                     if ms.name == name and name in build_pkg_names:
@@ -97,7 +96,6 @@ def build_string_from_metadata(metadata):
 
 
 class MetaData:
-
     path: str
     uses_new_style_compiler_activation: bool = False
     uses_vcs_in_meta: bool = False

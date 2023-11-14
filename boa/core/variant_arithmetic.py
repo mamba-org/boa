@@ -121,7 +121,6 @@ def get_dependency_variants(variant_keys, conda_build_config, config):
 
 
 def apply_variants(output, variants, cbc):
-
     final_outputs = []
 
     # this is all a bit hacky ... will have to clean that up eventually
