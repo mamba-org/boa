@@ -216,6 +216,9 @@ def get_index(
                 channel, channel_platform, full_url, pkgs_dirs, repodata_fn
             )
 
+            sd.download_and_check_targets(dlist)
+            sd.finalize_checks()
+
             index.append(
                 (sd, {"platform": channel_platform, "url": url, "channel": channel})
             )
