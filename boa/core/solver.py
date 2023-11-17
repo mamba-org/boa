@@ -122,6 +122,7 @@ class MambaSolver:
         self.output_folder = output_folder or "local"
         self.pool = libmambapy.Pool()
         self.repos = []
+
         self.index = load_channels(
             self.pool, self.channels, self.repos, platform=platform
         )
