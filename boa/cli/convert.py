@@ -128,9 +128,7 @@ def main(docname):
             wo_skip_lines.append(line)
 
     rest_lines = wo_skip_lines
-    result_yaml.update(
-        yaml.load("".join(rest_lines))
-    )
+    result_yaml.update(yaml.load("".join(rest_lines)))
 
     if len(skips) != 0:
         result_yaml["build"]["skip"] = skips
