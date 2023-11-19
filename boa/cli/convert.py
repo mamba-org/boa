@@ -129,7 +129,7 @@ def main(docname):
 
     rest_lines = wo_skip_lines
     result_yaml.update(
-        ruamel.yaml.load("".join(rest_lines), ruamel.yaml.RoundTripLoader)
+        yaml.load("".join(rest_lines))
     )
 
     if len(skips) != 0:
