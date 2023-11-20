@@ -6,11 +6,16 @@ import ruamel
 from ruamel.yaml.representer import RoundTripRepresenter
 from ruamel.yaml.comments import CommentedMap
 from ruamel.yaml import YAML
+from ruamel.yaml.parser import ParserError
 from collections import OrderedDict
 import re
 
 
 class MyRepresenter(RoundTripRepresenter):
+    pass
+
+
+class UnevenSelectorException(Exception):
     pass
 
 
@@ -68,27 +73,19 @@ def main(docname):
     result_yaml = CommentedMap()
     result_yaml["context"] = context
 
-    def has_selector(s):
-        return s.strip().endswith("]")
+    selector_re = re.compile("( *)(-?)(.*)# \[(.*)\]")
 
-    quoted_lines = []
+    selector_lines = []
     for line in rest_lines:
-        if has_selector(line):
-            selector_start = line.rfind("[")
-            selector_end = line.rfind("]")
-            selector_content = line[selector_start + 1 : selector_end]
-
-            if line.strip().startswith("-"):
-                line = (
-                    line[: line.find("-") + 1]
-                    + f" sel({selector_content}): "
-                    + line[
-                        line.find("-") + 1 : min(line.rfind("#"), line.rfind("["))
-                    ].strip()
-                    + "\n"
-                )
-        quoted_lines.append(line)
-    rest_lines = quoted_lines
+        m = selector_re.match(line)
+        if m and m.group(2):
+            line = m.group(1) + "- sel(" + m.group(4) + "):" + m.group(3) + "\n"
+        elif m:
+            sel_line = m.group(1) + "- sel(" + m.group(4) + "):\n"
+            selector_lines.append(sel_line)
+            line = m.group(1) + "  " + m.group(3) + "\n"
+        selector_lines.append(line)
+    rest_lines = selector_lines
 
     def check_if_quoted(s):
         s = s.strip()
@@ -128,7 +125,18 @@ def main(docname):
             wo_skip_lines.append(line)
 
     rest_lines = wo_skip_lines
-    result_yaml.update(yaml.load("".join(rest_lines)))
+
+    try:
+        result_yaml.update(yaml.load("".join(rest_lines)))
+    except ParserError as e:
+        if "expected <block end>, but found '?'" == e.problem:
+            msg = str(
+                'Possible error due to selector lines disrupting yaml maps. Try adding a "- " before the offending entry to convert it to a list item:\n'
+                + e.problem_mark.get_snippet()
+            )
+            raise UnevenSelectorException(msg) from e
+        else:
+            raise
 
     if len(skips) != 0:
         result_yaml["build"]["skip"] = skips
