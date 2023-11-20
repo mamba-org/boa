@@ -73,7 +73,7 @@ def main(docname):
     result_yaml = CommentedMap()
     result_yaml["context"] = context
 
-    selector_re = re.compile("( *)(-?)(.*)# \[(.*)\]")
+    selector_re = re.compile("( *)(-?)(.*)# \\[(.*)\\]")
 
     selector_lines = []
     for line in rest_lines:
