@@ -6,16 +6,11 @@ import ruamel
 from ruamel.yaml.representer import RoundTripRepresenter
 from ruamel.yaml.comments import CommentedMap
 from ruamel.yaml import YAML
-from ruamel.yaml.parser import ParserError
 from collections import OrderedDict
 import re
 
 
 class MyRepresenter(RoundTripRepresenter):
-    pass
-
-
-class UnevenSelectorException(Exception):
     pass
 
 
@@ -76,14 +71,17 @@ def main(docname):
     selector_re = re.compile("( *)(-?)(.*)# \\[(.*)\\]")
 
     selector_lines = []
+    prev_selector_line = ""
     for line in rest_lines:
         m = selector_re.match(line)
         if m and m.group(2):
             line = m.group(1) + "- sel(" + m.group(4) + "):" + m.group(3) + "\n"
         elif m:
-            sel_line = m.group(1) + "- sel(" + m.group(4) + "):\n"
-            selector_lines.append(sel_line)
+            selector_line = m.group(1) + "sel(" + m.group(4) + "):\n"
+            if selector_line != prev_selector_line:
+                selector_lines.append(selector_line)
             line = m.group(1) + "  " + m.group(3) + "\n"
+            prev_selector_line = selector_line
         selector_lines.append(line)
     rest_lines = selector_lines
 
@@ -126,17 +124,7 @@ def main(docname):
 
     rest_lines = wo_skip_lines
 
-    try:
-        result_yaml.update(yaml.load("".join(rest_lines)))
-    except ParserError as e:
-        if "expected <block end>, but found '?'" == e.problem:
-            msg = str(
-                'Possible error due to selector lines disrupting yaml maps. Try adding a "- " before the offending entry to convert it to a list item:\n'
-                + e.problem_mark.get_snippet()
-            )
-            raise UnevenSelectorException(msg) from e
-        else:
-            raise
+    result_yaml.update(yaml.load("".join(rest_lines)))
 
     if len(skips) != 0:
         result_yaml["build"]["skip"] = skips
