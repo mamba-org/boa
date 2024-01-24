@@ -3,7 +3,9 @@
 
 import os
 from functools import partial
-from conda_build.jinja_context import cdt
+from conda_build.jinja_context import cdt as cb_cdt
+
+# cdt = partial(cb_cdt, config=config, permit_undefined_jinja=False),
 
 
 def pin_subpackage(name, max_pin="x.x.x.x.x", exact=False):
@@ -29,7 +31,7 @@ def jinja_functions(config, context_dict):
     return {
         "pin_subpackage": pin_subpackage,
         "pin_compatible": pin_compatible,
-        "cdt": partial(cdt, config=config, permit_undefined_jinja=False),
+        "cdt": partial(cb_cdt, config=config, permit_undefined_jinja=False),
         "compiler": compiler,
         "environ": os.environ,
     }
