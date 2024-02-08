@@ -13,8 +13,8 @@ import conda_build.environ
 from conda_build import api
 from conda_build.config import Config, get_channel_urls
 from conda_build.cli.main_build import parse_args
-from conda_build.index import update_index
 from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_index.index import update_index
 
 from conda.base.context import context
 
