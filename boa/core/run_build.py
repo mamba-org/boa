@@ -34,7 +34,7 @@ from conda.base.context import context
 from conda.gateways.disk.create import mkdir_p
 from conda_build import config as conda_build_config
 from conda_build.utils import on_win
-from conda_build.index import update_index
+from conda_index.index import update_index
 
 console = boa_config.console
 

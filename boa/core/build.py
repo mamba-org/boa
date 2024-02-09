@@ -29,13 +29,13 @@ from conda_build.conda_interface import env_path_backup_var_exists, TemporaryDir
 from conda_build.utils import tmp_chdir
 
 from conda_build import source, utils
-from conda_build.index import update_index
 from conda_build.post import (
     post_process,
     post_build,
     fix_permissions,
     get_build_metadata,
 )
+from conda_index.index import update_index
 
 from conda_build.exceptions import indent
 

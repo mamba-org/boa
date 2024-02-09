@@ -31,11 +31,11 @@ from conda_build.conda_interface import (
     pkgs_dirs,
 )
 from conda_build.create_test import create_all_test_files
-from conda_build.index import update_index
 from conda_build.post import post_build
 from conda_build.render import bldpkg_path, try_download
 from conda_build.utils import shutil_move_more_retrying
 from conda_build.variants import set_language_env_vars
+from conda_index.index import update_index
 
 from conda_build import utils
 from conda_build.environ import clean_pkg_cache
