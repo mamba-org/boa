@@ -394,8 +394,9 @@ def build_recipe(
             if final_outputs is not None:
                 for final_out in final_outputs:
                     if not notest:
+                        o.config.need_cleanup = False
                         run_test(
-                            final_out,
+                            MetaData(final_out, o),
                             o.config,
                             stats,
                             move_broken=False,
