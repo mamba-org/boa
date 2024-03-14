@@ -4,12 +4,13 @@
 import os
 import tempfile
 
+from boltons.setutils import IndexedSet
+
 from conda.base.constants import ChannelPriority
 from conda.core.solve import diff_for_unlink_link_precs
 from conda.common.serialize import json_dump
 from conda.models.prefix_graph import PrefixGraph
 from conda.core.prefix_data import PrefixData
-from conda._vendor.boltons.setutils import IndexedSet
 from conda.models.match_spec import MatchSpec
 from conda.common.url import remove_auth, split_anaconda_token
 from conda.core.index import _supplement_index_with_system
