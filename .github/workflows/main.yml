@@ -27,7 +27,7 @@ jobs:
             conda-build-version: '*'
             python-version: '*'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: install mamba
       uses: mamba-org/setup-micromamba@v1
       with:
