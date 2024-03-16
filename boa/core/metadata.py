@@ -149,7 +149,7 @@ class MetaData:
             if autotype and default is None and FIELDS.get(section, {}).get(key):
                 default = FIELDS[section][key]()
 
-        section = self.output.sections.get(section, {})
+        section = self.meta.get(section, {})
         if isinstance(section, list):
             return section[int(num)].get(key, default)
         else:
