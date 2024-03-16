@@ -710,7 +710,10 @@ def run_test(
         not hasattr(recipedir_or_package_or_metadata, "config")
         and os.path.isfile(recipedir_or_package_or_metadata)
         and recipedir_or_package_or_metadata.endswith(CONDA_PACKAGE_EXTENSIONS)
-        and os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[0]
+        and any(
+            os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dir
+            for pkgs_dir in pkgs_dirs
+        )
     )
     if not in_pkg_cache:
         clean_pkg_cache(metadata.dist(), metadata.config)
