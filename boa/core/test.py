@@ -16,6 +16,7 @@ from boa.core.solver import get_solver
 from libmambapy import PrefixData
 from libmambapy import Context as MambaContext
 
+from conda.common.url import path_to_url
 from conda.gateways.disk.create import mkdir_p
 
 from conda_build.utils import CONDA_PACKAGE_EXTENSIONS, get_site_packages
@@ -24,11 +25,6 @@ from conda_build.build import (
     create_info_files,
     get_all_replacements,
     log_stats,
-)
-from conda_build.conda_interface import (
-    url_path,
-    env_path_backup_var_exists,
-    pkgs_dirs,
 )
 from conda_build.create_test import create_all_test_files
 from conda_build.post import post_build
@@ -40,7 +36,7 @@ from conda_index.index import update_index
 from conda_build import utils
 from conda_build.environ import clean_pkg_cache
 
-from boa.core.utils import shell_path
+from boa.core.utils import env_path_backup_var_exists, pkgs_dirs, shell_path
 from boa.core.recipe_output import Output
 from boa.core.metadata import MetaData
 from boa.core import environ
@@ -359,7 +355,7 @@ def _construct_metadata_for_test_from_package(package, config):
 
     metadata.config.used_vars = list(hash_input.keys())
     urls = list(utils.ensure_list(metadata.config.channel_urls))
-    local_path = url_path(local_channel)
+    local_path = path_to_url(local_channel)
     # replace local with the appropriate real channel.  Order is maintained.
     urls = [url if url != "local" else local_path for url in urls]
     if local_path not in urls:

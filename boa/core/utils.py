@@ -32,6 +32,9 @@ if typing.TYPE_CHECKING:
 
 console = boa_config.console
 
+env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)
+pkgs_dirs = list(context.pkgs_dirs)
+
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
 elif utils.on_win:

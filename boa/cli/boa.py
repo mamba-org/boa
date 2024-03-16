@@ -4,6 +4,8 @@
 import sys
 import argparse
 
+from conda.base.context import context
+
 from boa.core import monkey_patch_emscripten
 
 if any("emscripten" in arg for arg in sys.argv):
@@ -14,7 +16,7 @@ from boa.core.config import init_global_config
 from boa._version import __version__
 from boa.core.utils import init_api_context
 
-from conda_build.conda_interface import cc_conda_build
+cc_conda_build = context.conda_build if hasattr(context, "conda_build") else {}
 
 banner = r"""
            _

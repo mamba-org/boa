@@ -15,12 +15,16 @@ from conda.models.match_spec import MatchSpec
 from conda.common.url import remove_auth, split_anaconda_token
 from conda.core.index import _supplement_index_with_system
 from conda.base.context import context
-from conda_build.conda_interface import pkgs_dirs
 from conda.core.package_cache_data import PackageCacheData
 
 import libmambapy
 
-from boa.core.utils import get_index, load_channels, to_package_record_from_subjson
+from boa.core.utils import (
+    get_index,
+    load_channels,
+    pkgs_dirs,
+    to_package_record_from_subjson,
+)
 from boa.core.config import boa_config
 
 console = boa_config.console
