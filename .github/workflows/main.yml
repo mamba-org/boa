@@ -16,8 +16,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.8', '*']  # Lowest and unbound version to test for.
         conda-channel: ['conda-forge', 'conda-canary/label/dev']
+        include:
+          # Lowest versions to test for.
+          - conda-channel: 'conda-forge'
+            conda-build-version: '3.25'
+            python-version: '3.8'
+          # Unbound/dev versions to test for.
+          - conda-channel: 'conda-canary/label/dev'
+            conda-build-version: '*'
+            python-version: '*'
     steps:
     - uses: actions/checkout@v2
     - name: install mamba
@@ -28,7 +36,7 @@ jobs:
           --channel-priority=flexible
           python=${{ matrix.python-version }}
           ${{ matrix.conda-channel }}::conda
-          ${{ matrix.conda-channel }}::conda-build
+          ${{ matrix.conda-channel }}::conda-build=${{ matrix.conda-build-version }}
     - name: Install boa
       shell: bash -l {0}
       run: |

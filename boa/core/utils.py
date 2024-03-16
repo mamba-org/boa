@@ -14,7 +14,6 @@ from conda.base.context import context
 from conda_build import utils
 from conda_build.config import get_or_merge_config
 from conda_build.variants import find_config_files, parse_config_file, combine_specs
-from conda_build import __version__ as cb_version
 from conda.base.constants import ChannelPriority
 from conda.gateways.connection.session import CondaHttpAuth
 from conda.core.index import check_allowlist
@@ -32,11 +31,6 @@ if typing.TYPE_CHECKING:
 
 
 console = boa_config.console
-
-if "+" in cb_version:
-    cb_version = cb_version[: cb_version.index("+")]
-cb_split_version = tuple(int(x) for x in cb_version.split("."))
-
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
@@ -58,11 +52,7 @@ def get_config(
         variant = {}
     config = get_or_merge_config(config, variant)
 
-    if cb_split_version >= (3, 20, 5):
-        config_files = find_config_files(folder, config)
-    else:
-        config_files = find_config_files(folder)
-
+    config_files = find_config_files(folder, config)
     all_files = [os.path.abspath(p) for p in config_files + additional_files]
 
     # reverse files an uniquify
