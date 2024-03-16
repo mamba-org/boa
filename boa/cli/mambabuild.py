@@ -105,7 +105,7 @@ def _get_solver(channel_urls, subdir, output_folder):
     return solver
 
 
-def mamba_get_install_actions(
+def mamba_get_package_records(
     prefix,
     specs,
     env,
@@ -138,7 +138,8 @@ def mamba_get_install_actions(
 
     _specs = [s.conda_build_form() for s in _specs]
     try:
-        solution = solver.solve_for_action(_specs, prefix)
+        # We only create fresh environments in builds and can ignore unlink precs.
+        _, link_precs = solver.solve_for_unlink_link_precs(_specs, prefix)
     except RuntimeError as e:
         conflict_packages = parse_problems(str(e))
 
@@ -149,10 +150,54 @@ def mamba_get_install_actions(
         err.subdir = subdir
         raise err
 
-    return solution
+    return link_precs
 
 
-conda_build.environ.get_install_actions = mamba_get_install_actions
+if hasattr(conda_build.environ, "get_package_records"):
+    # conda-build>=24.1 avoids the legacy "actions"/"Dist"-based installs.
+    conda_build.environ.get_package_records = mamba_get_package_records
+else:
+    # conda-build<24.1 needs get_package_records' result wrapped in "actions" dict.
+    def mamba_get_install_actions(
+        prefix,
+        specs,
+        env,
+        retries=0,
+        subdir=None,
+        verbose=True,
+        debug=False,
+        locking=True,
+        bldpkgs_dirs=None,
+        timeout=900,
+        disable_pip=False,
+        max_env_retry=3,
+        output_folder=None,
+        channel_urls=None,
+    ):
+        from conda.models.dist import Dist
+        from conda.plan import get_blank_actions
+
+        link_precs = mamba_get_package_records(
+            prefix=prefix,
+            specs=specs,
+            env=env,
+            retries=retries,
+            subdir=subdir,
+            verbose=verbose,
+            debug=debug,
+            locking=locking,
+            bldpkgs_dirs=bldpkgs_dirs,
+            timeout=timeout,
+            disable_pip=disable_pip,
+            max_env_retry=max_env_retry,
+            output_folder=output_folder,
+            channel_urls=channel_urls,
+        )
+        actions = get_blank_actions(prefix)
+        actions["LINK"].extend(Dist(prec) for prec in link_precs)
+        return actions
+
+    conda_build.environ.get_install_actions = mamba_get_install_actions
 
 
 def prepare(**kwargs):

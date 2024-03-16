@@ -15,8 +15,6 @@ from conda.models.match_spec import MatchSpec
 from conda.common.url import remove_auth, split_anaconda_token
 from conda.core.index import _supplement_index_with_system
 from conda.base.context import context
-from conda.plan import get_blank_actions
-from conda.models.dist import Dist
 from conda_build.conda_interface import pkgs_dirs
 from conda.core.package_cache_data import PackageCacheData
 
@@ -60,7 +58,9 @@ def get_url_from_channel(c):
         return split_anaconda_token(remove_auth(c))[0]
 
 
-def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
+def to_unlink_link_precs(
+    specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index
+):
     to_link_records = []
 
     prefix_data = PrefixData(prefix)
@@ -86,10 +86,7 @@ def to_action(specs_to_add, specs_to_remove, prefix, to_link, to_unlink, index):
         specs_to_add=specs_to_add,
     )
 
-    actions = get_blank_actions(prefix)
-    actions["UNLINK"].extend(Dist(prec) for prec in unlink_precs)
-    actions["LINK"].extend(Dist(prec) for prec in link_precs)
-    return actions
+    return unlink_precs, link_precs
 
 
 def get_virtual_packages():
@@ -239,7 +236,7 @@ class MambaSolver:
         package_cache = libmambapy.MultiPackageCache(pkg_cache_path)
         return libmambapy.Transaction(api_solver, package_cache)
 
-    def solve_for_action(self, specs, prefix):
+    def solve_for_unlink_link_precs(self, specs, prefix):
         t = self.solve(specs)
         if not boa_config.quiet and not boa_config.is_mambabuild:
             t.print()
@@ -248,7 +245,7 @@ class MambaSolver:
         specs_to_add = [MatchSpec(m) for m in mmb_specs[0]]
         specs_to_remove = [MatchSpec(m) for m in mmb_specs[1]]
 
-        return to_action(
+        return to_unlink_link_precs(
             specs_to_add,
             specs_to_remove,
             prefix,
