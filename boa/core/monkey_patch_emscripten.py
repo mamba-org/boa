@@ -32,8 +32,9 @@ def patch():
     # CONDA-BUILD MONKEY-PATCH
     ###############################################
 
+    from conda.base.context import non_x86_machines as non_x86_linux_machines
+
     from conda_build import utils, variants, environ
-    from conda_build.conda_interface import non_x86_linux_machines
     from conda_build import metadata
     from conda_build.features import feature_list
 

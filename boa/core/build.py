@@ -25,7 +25,7 @@ import encodings.idna  # NOQA
 import conda_package_handling.api
 
 # used to get version
-from conda_build.conda_interface import env_path_backup_var_exists, TemporaryDirectory
+from conda.gateways.disk.create import TemporaryDirectory
 from conda_build.utils import tmp_chdir
 
 from conda_build import source, utils
@@ -44,7 +44,11 @@ import conda_build.noarch_python as noarch_python
 if sys.platform == "win32":
     import boa.core.windows as windows
 
-from boa.core.utils import shell_path, get_sys_vars_stubs
+from boa.core.utils import (
+    env_path_backup_var_exists,
+    get_sys_vars_stubs,
+    shell_path,
+)
 from boa.core.recipe_handling import copy_recipe
 from boa.core.config import boa_config
 from boa.tui.exceptions import BoaRunBuildException
