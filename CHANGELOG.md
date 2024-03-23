@@ -1,3 +1,8 @@
+0.17.0 (March 21, 2024)
+=======================
+
+- Many fixes for the latest conda, conda-build and mamba versions (thanks @mbargull @jaimergp @bamarco @deepsihag) #395 #393 #384 #380
+
 0.15.1 (June 21, 2023)
 ======================
 
