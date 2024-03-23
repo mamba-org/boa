@@ -68,27 +68,22 @@ def main(docname):
     result_yaml = CommentedMap()
     result_yaml["context"] = context
 
-    def has_selector(s):
-        return s.strip().endswith("]")
+    selector_re = re.compile("( *)(-?)([^#]*)# \\[(.*)\\]\\W*")
 
-    quoted_lines = []
+    selector_lines = []
+    prev_selector_line = ""
     for line in rest_lines:
-        if has_selector(line):
-            selector_start = line.rfind("[")
-            selector_end = line.rfind("]")
-            selector_content = line[selector_start + 1 : selector_end]
-
-            if line.strip().startswith("-"):
-                line = (
-                    line[: line.find("-") + 1]
-                    + f" sel({selector_content}): "
-                    + line[
-                        line.find("-") + 1 : min(line.rfind("#"), line.rfind("["))
-                    ].strip()
-                    + "\n"
-                )
-        quoted_lines.append(line)
-    rest_lines = quoted_lines
+        m = selector_re.match(line)
+        if m and m.group(2):
+            line = m.group(1) + "- sel(" + m.group(4) + "):" + m.group(3) + "\n"
+        elif m:
+            selector_line = m.group(1) + "sel(" + m.group(4) + "):\n"
+            if selector_line != prev_selector_line:
+                selector_lines.append(selector_line)
+            line = m.group(1) + "  " + m.group(3) + "\n"
+            prev_selector_line = selector_line
+        selector_lines.append(line)
+    rest_lines = selector_lines
 
     def check_if_quoted(s):
         s = s.strip()
@@ -128,6 +123,7 @@ def main(docname):
             wo_skip_lines.append(line)
 
     rest_lines = wo_skip_lines
+
     result_yaml.update(yaml.load("".join(rest_lines)))
 
     if len(skips) != 0:
