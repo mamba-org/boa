@@ -1,6 +1,10 @@
 context:
   name: xtensor
   version: 0.23.10
+  env:
+    - somename: MYENV_VAR
+    - othername: SOMEOTHER_ENV_VAR
+
 
 package:
   name: '{{ name|lower }}'
@@ -12,28 +16,42 @@ source:
 
 build:
   number: 0
+  run_exports:
+    - pin_subpackage:
+        name: xtensor
+        max_pin: 'x.x.x'
 
 requirements:
   build:
-    - '{{ compiler("cxx") }}'
+    - compiler: cxx
     - cmake
-    - sel(unix): make
+    - if: unix
+      put: make
   host:
     - xtl >=0.7,<0.8
   run:
     - xtl >=0.7,<0.8
+    - pin_compatible:
+        name: xtl
+        max_pin: 'x.x'
+
   run_constrained:
     - xsimd >=7.4.8,<8
 
 test:
   commands:
-    - sel(unix): test -d ${PREFIX}/include/xtensor
-    - sel(unix): test -f ${PREFIX}/include/xtensor/xarray.hpp
-    - sel(unix): test -f ${PREFIX}/lib/cmake/xtensor/xtensorConfig.cmake
-    - sel(unix): test -f ${PREFIX}/lib/cmake/xtensor/xtensorConfigVersion.cmake
-    - sel(win): if not exist %LIBRARY_PREFIX%\include\xtensor\xarray.hpp (exit 1)
-    - sel(win): if not exist %LIBRARY_PREFIX%\lib\cmake\xtensor\xtensorConfig.cmake (exit 1)
-    - sel(win): if not exist %LIBRARY_PREFIX%\lib\cmake\xtensor\xtensorConfigVersion.cmake (exit 1)
+    - if: unix
+      put:
+        - test -d ${PREFIX}/include/xtensor
+        - test -f ${PREFIX}/include/xtensor/xarray.hpp
+        - test -f ${PREFIX}/lib/cmake/xtensor/xtensorConfig.cmake
+        - test -f ${PREFIX}/lib/cmake/xtensor/xtensorConfigVersion.cmake
+    - if: win
+      put:
+        - if not exist %LIBRARY_PREFIX%\include\xtensor\xarray.hpp (exit 1)
+        - if not exist %LIBRARY_PREFIX%\lib\cmake\xtensor\xtensorConfig.cmake (exit 1)
+        - if not exist %LIBRARY_PREFIX%\lib\cmake\xtensor\xtensorConfigVersion.cmake (exit 1)
+
   exists:
     include:
         - xtensor

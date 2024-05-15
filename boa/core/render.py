@@ -7,7 +7,7 @@ import os
 from boa.core.jinja_support import jinja_functions
 from conda_build.metadata import eval_selector, ns_cfg
 from collections.abc import Mapping, Iterable
-
+from boa.core.jinja_support import compiler, pin_subpackage, pin_compatible  # , cdt
 from boa.core.config import boa_config
 
 console = boa_config.console
@@ -37,20 +37,36 @@ def render_recursive(dict_or_array, context_dict, jenv):
                 render_recursive(value, context_dict, jenv)
 
 
+funcs = {
+    "compiler": compiler,
+    "pin_subpackage": pin_subpackage,
+    "pin_compatible": pin_compatible,
+    # 'cdt': cdt
+}
+
+
 def flatten_selectors(ydoc, namespace):
     if isinstance(ydoc, str):
         return ydoc
 
     if isinstance(ydoc, Mapping):
-        has_sel = any(k.startswith("sel(") for k in ydoc.keys())
-        if has_sel:
-            for k, v in ydoc.items():
-                selected = eval_selector(k[3:], namespace, [])
-                if selected:
-                    return v
+        if "if" in ydoc:
+            assert "put" in ydoc
+            selected = eval_selector(ydoc["if"], namespace, [])
+            if selected:
+                return ydoc["put"]
 
             return None
-
+        else:
+            for k in funcs.keys():
+                if k in ydoc:
+                    if k == "compiler":
+                        return funcs[k](ydoc[k])
+                    else:
+                        # expand as keyword arguments
+                        return funcs[k](**ydoc[k])
+                    # arg = ydoc[]
+                    # return special_keys[k](ydoc)
         for k, v in ydoc.items():
             ydoc[k] = flatten_selectors(v, namespace)
 
