@@ -37,6 +37,7 @@ setup(
     entry_points={
         "console_scripts": [
             "conda-mambabuild = boa.cli.mambabuild:main",
+            "conda-mambarender = boa.cli.mambabuild:main",
             "boa = boa.cli.boa:main",
         ]
     },
