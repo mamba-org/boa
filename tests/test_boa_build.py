@@ -14,16 +14,20 @@ recipes_dir = pathlib.Path(__file__).parent / "recipes-v2"
 tests_dir = pathlib.Path(__file__).parent / "tests-v2"
 
 
-def test_build_recipes():
+def test_build_recipes(tmp_path: Path):
     recipes = [str(x) for x in recipes_dir.iterdir() if x.is_dir()]
+    cbc_yaml = tmp_path / "conda_build_config.yaml"
+    cbc_yaml.write_text("cxx_compiler:  # [win]\n- vs2022  # [win]\n")
     for recipe in recipes:
-        check_call(["boa", "build", recipe])
+        check_call(["boa", "build", "-m", str(cbc_yaml), recipe])
 
 
-def test_build_notest():
+def test_build_notest(tmp_path: Path):
     recipes = [str(x) for x in recipes_dir.iterdir() if x.is_dir()]
     recipe = recipes[0]
-    check_call(["boa", "build", recipe, "--no-test"])
+    cbc_yaml = tmp_path / "conda_build_config.yaml"
+    cbc_yaml.write_text("cxx_compiler:  # [win]\n- vs2022  # [win]\n")
+    check_call(["boa", "build", "-m", str(cbc_yaml), recipe, "--no-test"])
 
 
 def test_run_exports(tmp_path: Path):
