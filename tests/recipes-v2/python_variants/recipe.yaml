@@ -1,0 +1,20 @@
+context:
+  name: test_simple_variants
+  version: 0.0.0
+
+package:
+  name: '{{ name|lower }}'
+  version: '{{ version }}'
+
+source:
+  - path: data
+    folder: data
+
+requirements:
+  host:
+    - python
+  run:
+    - python
+
+build:
+  number: 0
