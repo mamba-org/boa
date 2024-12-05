@@ -3,6 +3,7 @@
 > [!WARNING]
 > Boa is superseded by [`rattler-build`](http://github.com/prefix-dev/rattler-build).
 > It's a complete reimplementation of `conda-build` / `boa` in Rust and dramatically faster than `conda-build` and (even) `boa`.
+> This project is archived, no further public update will be made.
 
 ## The Fast Conda and Mamba Package Builder
 
